@@ -1,0 +1,1 @@
+source /home/jywoo/siemens/.venv/bin/activate

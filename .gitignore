@@ -1,0 +1,54 @@
+# 역할: 환경 변수, 로컬 설정 및 생성 파일이 Git에 포함되지 않도록 제외합니다.
+# 입력: 저장소 내 파일 경로 / 결과: 일치하는 미추적 파일을 Git 추적 대상에서 제외합니다.
+
+# [추가] 비밀 정보 유출 방지: 모든 하위 폴더의 환경 변수 파일 제외
+.env
+.env.*
+*.env
+.envrc
+
+# [추가] 로컬 Python 가상환경은 환경별로 재생성하므로 제외
+.venv/
+.venv-*/
+venv/
+env/
+ENV/
+
+# [추가] 실행 및 테스트 시 재생성되는 Python 캐시 제외
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.ipynb_checkpoints/
+
+# [추가] 빌드 및 패키징 산출물 제외
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# [추가] 인증 정보가 포함될 수 있는 로컬 도구 설정과 개인 키 제외
+.continue/
+.vscode/
+.idea/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# [추가] 로컬 실행 로그 및 운영체제 임시 파일 제외
+*.log
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
