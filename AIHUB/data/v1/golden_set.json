@@ -1,5 +1,6 @@
 {
-    "version": "1.0",
+    "version": "1.1",
+    "schema_note": "docs/input_schema.md 확정 반영: production_line 2종(LINE-BPR-01/02), supplier_code 3종(A/B/C) 화이트리스트 및 fixture_alignment_offset_mm>=0 검증이 aihub/schema.py에 추가됨.",
     "endpoint_spec": {
       "url_env": "ai_hub_endpoint_url",
       "response_key": "data",
@@ -55,23 +56,23 @@
       {
         "id": "G02-full-keyvalue",
         "category": "complete",
-        "query": "production_line=LINE-ASM-02, shift=NIGHT, supplier_code=SIM-SUP-A, planned_quantity=1200, ambient_humidity_pct=38.2, incoming_material_quality_score=91.4, coating_target_thickness_um=65.0, weld_energy_setting_pct=88.1, fixture_alignment_offset_mm=-0.045, process_setting_deviation_pct=4.2, tool_wear_pct=61.8, days_since_maintenance=95",
+        "query": "production_line=LINE-BPR-02, shift=NIGHT, supplier_code=SIM-SUP-A, planned_quantity=480, ambient_humidity_pct=42.3, incoming_material_quality_score=91.4, coating_target_thickness_um=98.0, weld_energy_setting_pct=102.5, fixture_alignment_offset_mm=0.35, process_setting_deviation_pct=6.1, tool_wear_pct=48.2, days_since_maintenance=25",
         "expected": {
           "status": "ok",
           "records": [
             {
-              "production_line": "LINE-ASM-02",
+              "production_line": "LINE-BPR-02",
               "shift": "NIGHT",
               "supplier_code": "SIM-SUP-A",
-              "planned_quantity": 1200,
-              "ambient_humidity_pct": 38.2,
+              "planned_quantity": 480,
+              "ambient_humidity_pct": 42.3,
               "incoming_material_quality_score": 91.4,
-              "coating_target_thickness_um": 65.0,
-              "weld_energy_setting_pct": 88.1,
-              "fixture_alignment_offset_mm": -0.045,
-              "process_setting_deviation_pct": 4.2,
-              "tool_wear_pct": 61.8,
-              "days_since_maintenance": 95
+              "coating_target_thickness_um": 98.0,
+              "weld_energy_setting_pct": 102.5,
+              "fixture_alignment_offset_mm": 0.35,
+              "process_setting_deviation_pct": 6.1,
+              "tool_wear_pct": 48.2,
+              "days_since_maintenance": 25
             }
           ],
           "missing_fields": []
@@ -79,22 +80,22 @@
         "expected_payload": {
           "data": [
             {
-              "production_line": "LINE-ASM-02",
+              "production_line": "LINE-BPR-02",
               "shift": "NIGHT",
               "supplier_code": "SIM-SUP-A",
-              "planned_quantity": 1200,
-              "ambient_humidity_pct": 38.2,
+              "planned_quantity": 480,
+              "ambient_humidity_pct": 42.3,
               "incoming_material_quality_score": 91.4,
-              "coating_target_thickness_um": 65.0,
-              "weld_energy_setting_pct": 88.1,
-              "fixture_alignment_offset_mm": -0.045,
-              "process_setting_deviation_pct": 4.2,
-              "tool_wear_pct": 61.8,
-              "days_since_maintenance": 95
+              "coating_target_thickness_um": 98.0,
+              "weld_energy_setting_pct": 102.5,
+              "fixture_alignment_offset_mm": 0.35,
+              "process_setting_deviation_pct": 6.1,
+              "tool_wear_pct": 48.2,
+              "days_since_maintenance": 25
             }
           ]
         },
-        "note": "키=값 나열 + 음수 오프셋 파싱."
+        "note": "[수정] 기존 LINE-ASM-02와 음수 오프셋(-0.045)은 새 화이트리스트/하한과 충돌해 LINE-BPR-02 + 양수 오프셋으로 교체. 키=값 나열 형식 파싱 검증은 유지."
       },
       {
         "id": "G03-full-colloquial-night",

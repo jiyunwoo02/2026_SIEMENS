@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
@@ -29,6 +30,8 @@ class ExtractionResult:
     """LLM에서 추출한 조건별 레코드와 부가 설명을 보관한다."""
 
     records: list[dict[str, Any]] = field(default_factory=list)
+    # [추가] 모호한 표현 때문에 null로 둔 필드명(ALL_FIELDS 순서, 중복 없음).
+    ambiguous_fields: list[str] = field(default_factory=list)
     notes: str | None = None
 
 
@@ -46,10 +49,17 @@ class QueryExtractor:
             json_schema=extraction_json_schema(),
             schema_name="defect_rate_extraction",
         )
-        return ExtractionResult(
-            records=[self._coerce(r) for r in (raw.get("records") or [])],
-            notes=raw.get("notes"),
-        )
+        # [수정] ambiguous_fields를 읽는다. json_object/prompt 폴백에서는 키가 없거나 잘못된
+        # 이름이 올 수 있으므로 알려진 필드만 남긴다.
+        raw_amb = raw.get("ambiguous_fields") or []
+        amb_set = {f for f in raw_amb if isinstance(f, str)} if isinstance(raw_amb, list) else set()
+        ambiguous = [f for f in ALL_FIELDS if f in amb_set]
+        records = [self._coerce(r) for r in (raw.get("records") or []) if isinstance(r, dict)]
+        # "모호한 값은 null" 원칙을 코드에서도 보장한다. LLM이 값과 모호 표시를 함께 내면 값을 버린다.
+        for rec in records:
+            for f in ambiguous:
+                rec[f] = None
+        return ExtractionResult(records=records, ambiguous_fields=ambiguous, notes=raw.get("notes"))
 
     @staticmethod
     def _coerce(item: dict[str, Any]) -> dict[str, Any]:
@@ -58,16 +68,21 @@ class QueryExtractor:
         out: dict[str, Any] = {}
         for f in ALL_FIELDS:
             v = item.get(f)
-            if v is None or (isinstance(v, str) and not v.strip()):
+            # [수정] bool은 int의 하위 타입이라 True가 1로 변환되므로 미확정(None)으로 처리한다.
+            if v is None or isinstance(v, bool) or (isinstance(v, str) and not v.strip()):
                 out[f] = None
                 continue
             expected = FIELD_SPEC[f]["type"]
             try:
                 # 정수 필드는 실수 변환 후 반올림하고, 문자열은 공백 제거·대문자화한다.
-                if expected == "integer":
-                    out[f] = int(round(float(v)))
-                elif expected == "number":
-                    out[f] = float(v)
+                if expected in ("integer", "number"):
+                    num = float(v)
+                    # [수정] NaN/inf는 범위 제약이 없는 필드에서 검증을 통과할 수 있어 미확정으로 처리한다.
+                    if not math.isfinite(num):
+                        raise ValueError("non-finite number")
+                    # [수정] mm→um 환산(0.0984*1000=98.39999...) 같은 부동소수점 오차를 없애기 위해
+                    # 소수점 6자리로 반올림한다. 골든 셋의 최대 자릿수(예: 0.112)보다 충분히 길다.
+                    out[f] = int(round(num)) if expected == "integer" else round(num, 6)
                 else:
                     out[f] = str(v).strip().upper()
             except (TypeError, ValueError):
@@ -143,17 +158,44 @@ class SlotFillingSession:
 
 
 def build_question(
-    missing: list[str], *, repeated: int = 0, known: dict[str, Any] | None = None
+    missing: list[str],
+    *,
+    repeated: int = 0,
+    known: dict[str, Any] | None = None,
+    ambiguous: list[str] | None = None,
+    no_conditions: bool = False,
 ) -> str:
-    """누락 필드의 설명과 확인된 값을 이용해 추가 입력 안내문을 만든다."""
+    """누락·모호 필드의 설명과 확인된 값을 이용해 추가 입력 안내문을 만든다.
+
+    입력:
+        missing: 값이 없는 필드 목록(모호 필드 포함).
+        repeated: 같은 누락 목록을 연속으로 물은 횟수.
+        known: 세션에 확인된 값.
+        ambiguous: [추가] 모호한 표현 때문에 null이 된 필드. missing에 없는 이름은 무시한다.
+        no_conditions: [추가] 질의에서 공정 조건을 전혀 찾지 못한 경우(N05) 안내 문구를 붙인다.
+    출력: Markdown 형식의 안내문.
+    """
     known = known or {}
-    lines = [f"- **{f}** — {FIELD_SPEC[f]['desc']}" for f in missing]
-    head = (
-        f"예측에 필요한 값 {len(missing)}개가 아직 없습니다. 아래 항목을 알려주세요.\n"
-        if len(missing) < len(ALL_FIELDS)
-        else "결함률 예측을 위해 아래 12개 값이 모두 필요합니다.\n"
-    )
-    body = head + "\n".join(lines)
+    amb_set = set(ambiguous or [])
+    amb = [f for f in missing if f in amb_set]
+    plain = [f for f in missing if f not in amb_set]
+    parts: list[str] = []
+    if no_conditions:
+        parts.append("질의에서 예측에 쓸 공정 조건을 찾지 못했습니다. 이 서비스는 공정 조건으로 결함률(%)을 예측합니다.")
+    # [수정] 모호한 항목은 "값이 없다"가 아니라 정확한 값을 요청하는 별도 문구로 안내한다.
+    if amb:
+        parts.append(
+            "다음 항목은 표현이 모호해 값을 확정하지 못했습니다. 정확한 수치(단위 포함)나 코드로 알려주세요.\n"
+            + "\n".join(f"- **{f}** — {FIELD_SPEC[f]['desc']}" for f in amb)
+        )
+    if plain:
+        head = (
+            "결함률 예측을 위해 아래 12개 값이 모두 필요합니다.\n"
+            if len(plain) == len(ALL_FIELDS)
+            else f"예측에 필요한 값 {len(plain)}개가 아직 없습니다. 아래 항목을 알려주세요.\n"
+        )
+        parts.append(head + "\n".join(f"- **{f}** — {FIELD_SPEC[f]['desc']}" for f in plain))
+    body = "\n\n".join(parts)
     # 확인된 값은 최대 6개만 보여주고 나머지는 개수로 요약한다.
     if known:
         confirmed = ", ".join(f"{k}={v}" for k, v in list(known.items())[:6])
@@ -179,6 +221,10 @@ class PipelineResult:
     unit: str = "percent"
     model_input: list[dict[str, Any]] = field(default_factory=list)
     missing_fields: list[str] = field(default_factory=list)
+    # [추가] missing_fields 중 모호한 표현 때문에 null이 된 필드(항상 부분집합).
+    ambiguous_fields: list[str] = field(default_factory=list)
+    # [추가] invalid_input일 때 범위·허용값 검증에 실패한 필드(ALL_FIELDS 순서, 중복 없음).
+    invalid_fields: list[str] = field(default_factory=list)
     known_slots: dict[str, Any] = field(default_factory=dict)
     errors: list[str] = field(default_factory=list)
     # ML 클라이언트가 보고한 호출 시간으로, LLM 처리 등 전체 실행 시간은 아니다.
@@ -192,13 +238,28 @@ class PipelineResult:
 class DefectRatePipeline:
     """질의 추출 → 슬롯 병합 → 입력 검증 → ML 예측 → 결과 설명을 조율한다."""
 
-    def __init__(self) -> None:
-        # 필수 설정을 확인하고 추출과 해설 생성에 사용할 LLM 클라이언트를 공유한다.
-        s = get_settings()
-        s.validate_runtime()
-        self._llm = SDCLLMClient(s)
-        self._extractor = QueryExtractor(client=self._llm)
-        self._ml = DefectRateMLClient()
+    def __init__(
+        self,
+        *,
+        extractor: QueryExtractor | None = None,
+        ml_client: DefectRateMLClient | None = None,
+        llm: SDCLLMClient | None = None,
+    ) -> None:
+        """구성 요소를 준비한다.
+
+        [수정] 테스트에서 LLM/ML 대역을 주입할 수 있도록 선택 인자를 추가했다.
+        인자를 생략하면 기존과 같이 설정을 검증하고 실제 클라이언트를 만든다.
+        extractor만 주고 llm을 생략하면 해설 단계는 수치 답변으로 대체된다.
+        """
+        if extractor is None or ml_client is None:
+            # 필수 설정을 확인한다. 설정 누락 시 RuntimeError(api.py에서 503으로 변환).
+            get_settings().validate_runtime()
+        if llm is None and extractor is None:
+            llm = SDCLLMClient(get_settings())
+        # 추출과 해설 생성에 같은 LLM 클라이언트를 공유한다.
+        self._llm = llm
+        self._extractor = extractor or QueryExtractor(client=llm)
+        self._ml = ml_client or DefectRateMLClient()
 
     def run(
         self,
@@ -220,6 +281,20 @@ class DefectRatePipeline:
                 known_slots=session.known(),
             )
 
+        # [추가] 예측 요청이 아니거나 공정 조건이 전혀 없고(records=[]) 세션에도 확인값이 없으면
+        # 골든 N05 규칙대로 records=[], missing_fields=12개 전체를 반환한다. 빈 레코드를 병합하지 않으므로 turn도
+        # 증가하지 않는다. 세션에 값이 있으면(예: "그대로 다시 예측") 기존처럼 병합 경로를 탄다.
+        if not extraction.records and not session.known():
+            missing = list(ALL_FIELDS)
+            session.track_missing(missing)
+            return PipelineResult(
+                status="need_more_info",
+                answer=build_question(
+                    missing, repeated=session.repeated_asks, no_conditions=True
+                ),
+                missing_fields=missing,
+            )
+
         # 모든 비교 조건 중 하나라도 값이 없으면 해당 필드를 추가 질문 대상으로 삼는다.
         merged = session.merge(extraction.records)
         missing = sorted(
@@ -229,12 +304,19 @@ class DefectRatePipeline:
         # 필수값이 모이기 전에는 ML API를 호출하지 않는다.
         if missing:
             session.track_missing(missing)
+            # [추가] 모호 필드는 실제로 누락된 필드만 남겨 ambiguous_fields ⊆ missing_fields를 보장한다.
+            # (세션에 이미 값이 있는 필드는 병합 후 null이 아니므로 제외된다.)
+            ambiguous = [f for f in missing if f in set(extraction.ambiguous_fields)]
             return PipelineResult(
                 status="need_more_info",
                 answer=build_question(
-                    missing, repeated=session.repeated_asks, known=session.known()
+                    missing,
+                    repeated=session.repeated_asks,
+                    known=session.known(),
+                    ambiguous=ambiguous,
                 ),
                 missing_fields=missing,
+                ambiguous_fields=ambiguous,
                 known_slots=session.known(),
                 model_input=merged,
             )
@@ -247,15 +329,20 @@ class DefectRatePipeline:
             reasons = [
                 f"{'.'.join(str(p) for p in err['loc'])}: {err['msg']}" for err in e.errors()
             ]
+            # [추가] 위반 필드 목록과 허용 범위 안내(FIELD_SPEC 설명)를 함께 제공한다.
+            bad = {str(err["loc"][0]) for err in e.errors() if err["loc"]}
+            invalid_fields = [f for f in ALL_FIELDS if f in bad]
             # 검증 오류에 나온 필드를 세션에서 제거하여 다음 발화에서 정정할 수 있게 한다.
-            for err in e.errors():
-                if err["loc"]:
-                    session.slots.pop(str(err["loc"][0]), None)
+            for f in invalid_fields:
+                session.slots.pop(f, None)
+            hints = [f"- **{f}** — {FIELD_SPEC[f]['desc']}" for f in invalid_fields]
             return PipelineResult(
                 status="invalid_input",
                 answer="입력값이 모델 허용 범위를 벗어났습니다. 다시 알려주세요.\n- "
-                + "\n- ".join(reasons),
+                + "\n- ".join(reasons)
+                + ("\n\n허용 범위:\n" + "\n".join(hints) if hints else ""),
                 errors=reasons,
+                invalid_fields=invalid_fields,
                 known_slots=session.known(),
             )
 
@@ -290,6 +377,9 @@ class DefectRatePipeline:
     def _explain(self, query: str, out: dict[str, Any]) -> str:
         """입력 조건과 실제 예측값을 LLM에 제공하여 한국어 해설을 생성한다."""
         # 해설용 수치만 소수점 네 자리로 반올림하며 원본 예측값은 수정하지 않는다.
+        # [추가] LLM 클라이언트 없이 생성된 경우(테스트 주입) 수치 답변으로 대체한다.
+        if self._llm is None:
+            return "예측 결함률: " + ", ".join(f"{p:.2f}%" for p in out["predictions"])
         context = {
             "user_query": query,
             "model_input": out["payload"]["data"],

@@ -1,0 +1,2 @@
+﻿case_id,category,record_index,field,expected,actual
+A06-ambiguous-all-qualitative,ambiguous,,(ambiguous_fields),ambient_humidity_pct;tool_wear_pct,production_line;shift;supplier_code;planned_quantity;ambient_humidity_pct;incoming_material_quality_score;coating_target_thickness_um;weld_energy_setting_pct;fixture_alignment_offset_mm;process_setting_deviation_pct;tool_wear_pct;days_since_maintenance

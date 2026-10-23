@@ -1,0 +1,1783 @@
+{
+  "version": "2.0",
+  "endpoint_spec": {
+    "url_env": "ai_hub_endpoint_url",
+    "response_key": "data",
+    "prediction_column": "prediction(defect_rate_pct)",
+    "unit": "percent"
+  },
+  "field_constraints": {
+    "production_line": {
+      "type": "string",
+      "enum": [
+        "LINE-BPR-01",
+        "LINE-BPR-02"
+      ]
+    },
+    "shift": {
+      "type": "string",
+      "enum": [
+        "DAY",
+        "NIGHT"
+      ]
+    },
+    "supplier_code": {
+      "type": "string",
+      "enum": [
+        "SIM-SUP-A",
+        "SIM-SUP-B",
+        "SIM-SUP-C"
+      ]
+    },
+    "planned_quantity": {
+      "type": "int",
+      "unit": "개",
+      "observed_range": [
+        440,
+        561
+      ]
+    },
+    "ambient_humidity_pct": {
+      "type": "float",
+      "unit": "%",
+      "observed_range": [
+        28,
+        86
+      ]
+    },
+    "incoming_material_quality_score": {
+      "type": "float",
+      "unit": "점",
+      "observed_range": [
+        62,
+        99
+      ]
+    },
+    "coating_target_thickness_um": {
+      "type": "float",
+      "unit": "um",
+      "observed_range": [
+        62,
+        120
+      ],
+      "note": "질의가 mm이면 x1000 환산"
+    },
+    "weld_energy_setting_pct": {
+      "type": "float",
+      "unit": "%",
+      "observed_range": [
+        76,
+        118
+      ]
+    },
+    "fixture_alignment_offset_mm": {
+      "type": "float",
+      "unit": "mm",
+      "min": 0,
+      "observed_range": [
+        0.02,
+        1.6
+      ],
+      "note": "음수 불가, 단위 변환 없음"
+    },
+    "process_setting_deviation_pct": {
+      "type": "float",
+      "unit": "%",
+      "observed_range": [
+        0,
+        16
+      ]
+    },
+    "tool_wear_pct": {
+      "type": "float",
+      "unit": "%",
+      "min": 0,
+      "max": 100,
+      "observed_range": [
+        2,
+        84
+      ]
+    },
+    "days_since_maintenance": {
+      "type": "int",
+      "unit": "일",
+      "observed_range": [
+        1,
+        60
+      ]
+    }
+  },
+  "categories": {
+    "complete": "12개 입력이 모두 명시적으로 제공됨 -> status=ok",
+    "partial": "일부만 제공됨 -> status=need_more_info, 누락 필드를 되묻고 API 미호출",
+    "none": "입력값이 전혀 없음(예측 의도만 있거나 범위 밖 질문) -> status=need_more_info, 12개 모두 누락",
+    "ambiguous": "값이 있으나 모호(정성 표현/범위/단위 없음/번복/미확정 코드) -> null 처리, status=need_more_info, ambiguous_fields에 표시",
+    "invalid": "추출은 되지만 제약(범위/허용값) 위반 -> status=invalid_input, API 미호출"
+  },
+  "conventions": [
+    "records: 예측 의도가 있는 질의는 레코드 1개 이상(값이 없으면 전 필드 null 레코드), 예측 요청이 아닌 질의는 []. 명시적 예측 문구 없이 공정 조건만 나열한 질의(A01~A05, A07, P08)와 필요한 입력을 묻는 질의(N04)도 예측 의도로 본다",
+    "missing_fields: records 내 null 필드의 합집합(중복 없음). invalid_input이면 []. 단, 예측 요청이 아니어서 records=[]이면 추출된 입력이 하나도 없으므로 12개 필드 전체(N05)",
+    "ambiguous_fields: 모호 표현 때문에 null이 된 필드. missing_fields의 부분집합",
+    "expected_payload: status=ok일 때만 {data: records}, 그 외 null",
+    "known_prediction_pct: 실측 검증된 값이 있는 경우에만 기재"
+  ],
+  "cases": [
+    {
+      "id": "C01-complete-natural",
+      "category": "complete",
+      "query": "LINE-BPR-01 주간조에서 SIM-SUP-B 자재로 533개 생산 예정입니다. 작업장 습도는 54.49%, 입고 자재 품질점수 83.95, 코팅 목표두께 79.22um, 용접 에너지 설정 92.67%, 지그 정렬 오프셋 0.112mm, 공정 설정편차 13.06%, 공구 마모도 14.41%이고 마지막 정비 후 30일 지났습니다. 결함률 예측해주세요.",
+      "expected": {
+        "status": "ok",
+        "records": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-B",
+            "planned_quantity": 533,
+            "ambient_humidity_pct": 54.49,
+            "incoming_material_quality_score": 83.95,
+            "coating_target_thickness_um": 79.22,
+            "weld_energy_setting_pct": 92.67,
+            "fixture_alignment_offset_mm": 0.112,
+            "process_setting_deviation_pct": 13.06,
+            "tool_wear_pct": 14.41,
+            "days_since_maintenance": 30
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": {
+        "data": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-B",
+            "planned_quantity": 533,
+            "ambient_humidity_pct": 54.49,
+            "incoming_material_quality_score": 83.95,
+            "coating_target_thickness_um": 79.22,
+            "weld_energy_setting_pct": 92.67,
+            "fixture_alignment_offset_mm": 0.112,
+            "process_setting_deviation_pct": 13.06,
+            "tool_wear_pct": 14.41,
+            "days_since_maintenance": 30
+          }
+        ]
+      },
+      "known_prediction_pct": 1.6498678908,
+      "note": "curl로 실측 검증된 유일한 케이스. 회귀 테스트 기준값."
+    },
+    {
+      "id": "C02-complete-keyvalue",
+      "category": "complete",
+      "query": "production_line=LINE-BPR-02, shift=NIGHT, supplier_code=SIM-SUP-A, planned_quantity=487, ambient_humidity_pct=71.3, incoming_material_quality_score=68.4, coating_target_thickness_um=104.5, weld_energy_setting_pct=108.2, fixture_alignment_offset_mm=0.85, process_setting_deviation_pct=7.9, tool_wear_pct=52.7, days_since_maintenance=12 결함률 예측",
+      "expected": {
+        "status": "ok",
+        "records": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 487,
+            "ambient_humidity_pct": 71.3,
+            "incoming_material_quality_score": 68.4,
+            "coating_target_thickness_um": 104.5,
+            "weld_energy_setting_pct": 108.2,
+            "fixture_alignment_offset_mm": 0.85,
+            "process_setting_deviation_pct": 7.9,
+            "tool_wear_pct": 52.7,
+            "days_since_maintenance": 12
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": {
+        "data": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 487,
+            "ambient_humidity_pct": 71.3,
+            "incoming_material_quality_score": 68.4,
+            "coating_target_thickness_um": 104.5,
+            "weld_energy_setting_pct": 108.2,
+            "fixture_alignment_offset_mm": 0.85,
+            "process_setting_deviation_pct": 7.9,
+            "tool_wear_pct": 52.7,
+            "days_since_maintenance": 12
+          }
+        ]
+      },
+      "note": "키=값 나열 형식. 필드명이 그대로 노출되어도 12개 필드를 정확히 매핑해야 함."
+    },
+    {
+      "id": "C03-complete-colloquial-night",
+      "category": "complete",
+      "query": "line-bpr-01 밤 근무에서 sim-sup-c 자재 써서 512개 만들 예정이에요. 습도 35.6퍼센트, 원자재 품질 94.1점, 코팅 목표 66마이크로미터, 용접 에너지는 81.5퍼센트로 세팅했고 지그 정렬 오차는 0.34밀리, 설정 편차 2.4퍼센트, 공구 마모 33.8퍼센트, 정비한 지 47일 됐어요. 불량률 얼마나 나올까요?",
+      "expected": {
+        "status": "ok",
+        "records": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-C",
+            "planned_quantity": 512,
+            "ambient_humidity_pct": 35.6,
+            "incoming_material_quality_score": 94.1,
+            "coating_target_thickness_um": 66.0,
+            "weld_energy_setting_pct": 81.5,
+            "fixture_alignment_offset_mm": 0.34,
+            "process_setting_deviation_pct": 2.4,
+            "tool_wear_pct": 33.8,
+            "days_since_maintenance": 47
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": {
+        "data": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-C",
+            "planned_quantity": 512,
+            "ambient_humidity_pct": 35.6,
+            "incoming_material_quality_score": 94.1,
+            "coating_target_thickness_um": 66.0,
+            "weld_energy_setting_pct": 81.5,
+            "fixture_alignment_offset_mm": 0.34,
+            "process_setting_deviation_pct": 2.4,
+            "tool_wear_pct": 33.8,
+            "days_since_maintenance": 47
+          }
+        ]
+      },
+      "note": "소문자 코드 대문자 정규화, '밤 근무'->NIGHT, 한글 단위('퍼센트','마이크로미터','밀리') 인식."
+    },
+    {
+      "id": "C04-complete-unit-conversion-mm",
+      "category": "complete",
+      "query": "LINE-BPR-02 주간조, SIM-SUP-A 자재로 461개 생산합니다. 코팅 목표두께는 0.0984mm, 지그 정렬 오차 1.12mm, 용접 에너지 99.6%, 공정 설정 편차 11.7%, 습도 62.8%, 자재 품질 77.25점, 공구 마모율 78.3%, 정비 후 58일 경과. 결함률 예측 부탁드려요.",
+      "expected": {
+        "status": "ok",
+        "records": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 461,
+            "ambient_humidity_pct": 62.8,
+            "incoming_material_quality_score": 77.25,
+            "coating_target_thickness_um": 98.4,
+            "weld_energy_setting_pct": 99.6,
+            "fixture_alignment_offset_mm": 1.12,
+            "process_setting_deviation_pct": 11.7,
+            "tool_wear_pct": 78.3,
+            "days_since_maintenance": 58
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": {
+        "data": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 461,
+            "ambient_humidity_pct": 62.8,
+            "incoming_material_quality_score": 77.25,
+            "coating_target_thickness_um": 98.4,
+            "weld_energy_setting_pct": 99.6,
+            "fixture_alignment_offset_mm": 1.12,
+            "process_setting_deviation_pct": 11.7,
+            "tool_wear_pct": 78.3,
+            "days_since_maintenance": 58
+          }
+        ]
+      },
+      "note": "코팅 두께만 mm->um(x1000) 환산(0.0984mm -> 98.4). 지그 오차는 mm 그대로 유지(1.12)."
+    },
+    {
+      "id": "C05-complete-english",
+      "category": "complete",
+      "query": "Please predict the defect rate for LINE-BPR-01, day shift, supplier SIM-SUP-A, 498 units planned. Ambient humidity is 44.2%, incoming material quality score 88.6, coating target thickness 91.3 um, weld energy setting 96.4%, fixture alignment offset 0.27 mm, process setting deviation 5.3%, tool wear 21.9%, and 8 days since the last maintenance.",
+      "expected": {
+        "status": "ok",
+        "records": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 498,
+            "ambient_humidity_pct": 44.2,
+            "incoming_material_quality_score": 88.6,
+            "coating_target_thickness_um": 91.3,
+            "weld_energy_setting_pct": 96.4,
+            "fixture_alignment_offset_mm": 0.27,
+            "process_setting_deviation_pct": 5.3,
+            "tool_wear_pct": 21.9,
+            "days_since_maintenance": 8
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": {
+        "data": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 498,
+            "ambient_humidity_pct": 44.2,
+            "incoming_material_quality_score": 88.6,
+            "coating_target_thickness_um": 91.3,
+            "weld_energy_setting_pct": 96.4,
+            "fixture_alignment_offset_mm": 0.27,
+            "process_setting_deviation_pct": 5.3,
+            "tool_wear_pct": 21.9,
+            "days_since_maintenance": 8
+          }
+        ]
+      },
+      "note": "영문 질의. 'day shift' -> DAY."
+    },
+    {
+      "id": "C06-complete-noisy-context",
+      "category": "complete",
+      "query": "어제(10/22) 회의에서 품질팀이 라인 점검 일정을 논의했고 점심은 구내식당이었어요. 아무튼 이번 lot 조건 공유드립니다. LINE-BPR-02 야간조, 공급사 SIM-SUP-B, 계획 수량 455개, 습도 58.7%, 품질점수 81.2, 코팅 73.8um, 용접 에너지 90.1%, 지그 오차 0.19mm, 설정 이탈 9.4%, 공구 마모 40.2%, 정비 25일 경과. 참고로 다음 주에는 납품 일정이 있습니다. 결함률 예측해 주세요.",
+      "expected": {
+        "status": "ok",
+        "records": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-B",
+            "planned_quantity": 455,
+            "ambient_humidity_pct": 58.7,
+            "incoming_material_quality_score": 81.2,
+            "coating_target_thickness_um": 73.8,
+            "weld_energy_setting_pct": 90.1,
+            "fixture_alignment_offset_mm": 0.19,
+            "process_setting_deviation_pct": 9.4,
+            "tool_wear_pct": 40.2,
+            "days_since_maintenance": 25
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": {
+        "data": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-B",
+            "planned_quantity": 455,
+            "ambient_humidity_pct": 58.7,
+            "incoming_material_quality_score": 81.2,
+            "coating_target_thickness_um": 73.8,
+            "weld_energy_setting_pct": 90.1,
+            "fixture_alignment_offset_mm": 0.19,
+            "process_setting_deviation_pct": 9.4,
+            "tool_wear_pct": 40.2,
+            "days_since_maintenance": 25
+          }
+        ]
+      },
+      "note": "날짜/잡담 등 노이즈 숫자가 섞여도 12개 필드만 정확히 추출."
+    },
+    {
+      "id": "C07-complete-multi-toolwear-compare",
+      "category": "complete",
+      "query": "LINE-BPR-01 야간조, SIM-SUP-C 자재, 512개, 습도 35.6%, 품질점수 94.1, 코팅 66.0um, 용접 에너지 81.5%, 지그 오차 0.34mm, 설정 편차 2.4%, 정비 47일 경과 조건에서 공구 마모율이 30%일 때와 70%일 때 결함률을 비교해줘.",
+      "expected": {
+        "status": "ok",
+        "records": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-C",
+            "planned_quantity": 512,
+            "ambient_humidity_pct": 35.6,
+            "incoming_material_quality_score": 94.1,
+            "coating_target_thickness_um": 66.0,
+            "weld_energy_setting_pct": 81.5,
+            "fixture_alignment_offset_mm": 0.34,
+            "process_setting_deviation_pct": 2.4,
+            "tool_wear_pct": 30.0,
+            "days_since_maintenance": 47
+          },
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-C",
+            "planned_quantity": 512,
+            "ambient_humidity_pct": 35.6,
+            "incoming_material_quality_score": 94.1,
+            "coating_target_thickness_um": 66.0,
+            "weld_energy_setting_pct": 81.5,
+            "fixture_alignment_offset_mm": 0.34,
+            "process_setting_deviation_pct": 2.4,
+            "tool_wear_pct": 70.0,
+            "days_since_maintenance": 47
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": {
+        "data": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-C",
+            "planned_quantity": 512,
+            "ambient_humidity_pct": 35.6,
+            "incoming_material_quality_score": 94.1,
+            "coating_target_thickness_um": 66.0,
+            "weld_energy_setting_pct": 81.5,
+            "fixture_alignment_offset_mm": 0.34,
+            "process_setting_deviation_pct": 2.4,
+            "tool_wear_pct": 30.0,
+            "days_since_maintenance": 47
+          },
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-C",
+            "planned_quantity": 512,
+            "ambient_humidity_pct": 35.6,
+            "incoming_material_quality_score": 94.1,
+            "coating_target_thickness_um": 66.0,
+            "weld_energy_setting_pct": 81.5,
+            "fixture_alignment_offset_mm": 0.34,
+            "process_setting_deviation_pct": 2.4,
+            "tool_wear_pct": 70.0,
+            "days_since_maintenance": 47
+          }
+        ]
+      },
+      "note": "what-if 비교. 공통 조건을 두 레코드에 복제하고 tool_wear_pct만 다르게."
+    },
+    {
+      "id": "C08-complete-multi-line-compare",
+      "category": "complete",
+      "query": "주간조, SIM-SUP-B 자재, 533개, 습도 54.49%, 품질점수 83.95, 코팅 79.22um, 용접 에너지 92.67%, 지그 오차 0.112mm, 설정 편차 13.06%, 공구 마모 14.41%, 정비 30일 경과 조건을 LINE-BPR-01과 LINE-BPR-02 두 라인에서 돌렸을 때 결함률을 비교해줘.",
+      "expected": {
+        "status": "ok",
+        "records": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-B",
+            "planned_quantity": 533,
+            "ambient_humidity_pct": 54.49,
+            "incoming_material_quality_score": 83.95,
+            "coating_target_thickness_um": 79.22,
+            "weld_energy_setting_pct": 92.67,
+            "fixture_alignment_offset_mm": 0.112,
+            "process_setting_deviation_pct": 13.06,
+            "tool_wear_pct": 14.41,
+            "days_since_maintenance": 30
+          },
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-B",
+            "planned_quantity": 533,
+            "ambient_humidity_pct": 54.49,
+            "incoming_material_quality_score": 83.95,
+            "coating_target_thickness_um": 79.22,
+            "weld_energy_setting_pct": 92.67,
+            "fixture_alignment_offset_mm": 0.112,
+            "process_setting_deviation_pct": 13.06,
+            "tool_wear_pct": 14.41,
+            "days_since_maintenance": 30
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": {
+        "data": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-B",
+            "planned_quantity": 533,
+            "ambient_humidity_pct": 54.49,
+            "incoming_material_quality_score": 83.95,
+            "coating_target_thickness_um": 79.22,
+            "weld_energy_setting_pct": 92.67,
+            "fixture_alignment_offset_mm": 0.112,
+            "process_setting_deviation_pct": 13.06,
+            "tool_wear_pct": 14.41,
+            "days_since_maintenance": 30
+          },
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-B",
+            "planned_quantity": 533,
+            "ambient_humidity_pct": 54.49,
+            "incoming_material_quality_score": 83.95,
+            "coating_target_thickness_um": 79.22,
+            "weld_energy_setting_pct": 92.67,
+            "fixture_alignment_offset_mm": 0.112,
+            "process_setting_deviation_pct": 13.06,
+            "tool_wear_pct": 14.41,
+            "days_since_maintenance": 30
+          }
+        ]
+      },
+      "note": "라인 2개 비교. 존재하는 라인은 BPR-01/02뿐."
+    },
+    {
+      "id": "C09-complete-json-paste",
+      "category": "complete",
+      "query": "아래 값으로 결함률 예측해줘: {\"production_line\": \"LINE-BPR-01\", \"shift\": \"NIGHT\", \"supplier_code\": \"SIM-SUP-A\", \"planned_quantity\": 541, \"ambient_humidity_pct\": 66.1, \"incoming_material_quality_score\": 72.9, \"coating_target_thickness_um\": 112.7, \"weld_energy_setting_pct\": 85.3, \"fixture_alignment_offset_mm\": 0.58, \"process_setting_deviation_pct\": 14.2, \"tool_wear_pct\": 63.5, \"days_since_maintenance\": 3}",
+      "expected": {
+        "status": "ok",
+        "records": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 541,
+            "ambient_humidity_pct": 66.1,
+            "incoming_material_quality_score": 72.9,
+            "coating_target_thickness_um": 112.7,
+            "weld_energy_setting_pct": 85.3,
+            "fixture_alignment_offset_mm": 0.58,
+            "process_setting_deviation_pct": 14.2,
+            "tool_wear_pct": 63.5,
+            "days_since_maintenance": 3
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": {
+        "data": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 541,
+            "ambient_humidity_pct": 66.1,
+            "incoming_material_quality_score": 72.9,
+            "coating_target_thickness_um": 112.7,
+            "weld_energy_setting_pct": 85.3,
+            "fixture_alignment_offset_mm": 0.58,
+            "process_setting_deviation_pct": 14.2,
+            "tool_wear_pct": 63.5,
+            "days_since_maintenance": 3
+          }
+        ]
+      },
+      "note": "JSON을 그대로 붙여넣은 입력."
+    },
+    {
+      "id": "C10-complete-boundary-values",
+      "category": "complete",
+      "query": "LINE-BPR-02 주간조, SIM-SUP-C 자재, 500개 생산. 습도 50%, 품질점수 90, 코팅 80um, 용접 에너지 100%, 지그 정렬 오차 0mm, 설정 편차 0%, 공구 마모율 100%, 정비 후 1일. 결함률 예측해줘.",
+      "expected": {
+        "status": "ok",
+        "records": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-C",
+            "planned_quantity": 500,
+            "ambient_humidity_pct": 50.0,
+            "incoming_material_quality_score": 90.0,
+            "coating_target_thickness_um": 80.0,
+            "weld_energy_setting_pct": 100.0,
+            "fixture_alignment_offset_mm": 0.0,
+            "process_setting_deviation_pct": 0.0,
+            "tool_wear_pct": 100.0,
+            "days_since_maintenance": 1
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": {
+        "data": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-C",
+            "planned_quantity": 500,
+            "ambient_humidity_pct": 50.0,
+            "incoming_material_quality_score": 90.0,
+            "coating_target_thickness_um": 80.0,
+            "weld_energy_setting_pct": 100.0,
+            "fixture_alignment_offset_mm": 0.0,
+            "process_setting_deviation_pct": 0.0,
+            "tool_wear_pct": 100.0,
+            "days_since_maintenance": 1
+          }
+        ]
+      },
+      "note": "경계값 테스트: fixture_alignment_offset_mm=0, tool_wear_pct=100은 유효(0 이상 / 0~100 포함). invalid_input으로 오판하면 안 됨."
+    },
+    {
+      "id": "P01-partial-missing-three",
+      "category": "partial",
+      "query": "LINE-BPR-01에서 533개 생산하는데 습도 54.49%, 자재 품질점수 83.95, 코팅 두께 79.22um, 용접 에너지 92.67%, 지그 오프셋 0.112mm, 설정편차 13.06%, 공구 마모 14.41%입니다. 결함률 알려줘요.",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": null,
+            "supplier_code": null,
+            "planned_quantity": 533,
+            "ambient_humidity_pct": 54.49,
+            "incoming_material_quality_score": 83.95,
+            "coating_target_thickness_um": 79.22,
+            "weld_energy_setting_pct": 92.67,
+            "fixture_alignment_offset_mm": 0.112,
+            "process_setting_deviation_pct": 13.06,
+            "tool_wear_pct": 14.41,
+            "days_since_maintenance": null
+          }
+        ],
+        "missing_fields": [
+          "shift",
+          "supplier_code",
+          "days_since_maintenance"
+        ],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "note": "핵심 케이스. 엔드포인트 호출 없이 3개 항목을 되물어야 함."
+    },
+    {
+      "id": "P02-partial-missing-one",
+      "category": "partial",
+      "query": "LINE-BPR-02 야간조, SIM-SUP-A 자재로 487개 생산합니다. 습도 71.3%, 품질점수 68.4, 코팅 104.5um, 용접 에너지 108.2%, 지그 오차 0.85mm, 설정 편차 7.9%, 공구 마모 52.7%입니다. 결함률 알려주세요.",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 487,
+            "ambient_humidity_pct": 71.3,
+            "incoming_material_quality_score": 68.4,
+            "coating_target_thickness_um": 104.5,
+            "weld_energy_setting_pct": 108.2,
+            "fixture_alignment_offset_mm": 0.85,
+            "process_setting_deviation_pct": 7.9,
+            "tool_wear_pct": 52.7,
+            "days_since_maintenance": null
+          }
+        ],
+        "missing_fields": [
+          "days_since_maintenance"
+        ],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "note": "1개만 누락. days_since_maintenance를 0 등으로 채우는 환각이 가장 흔함."
+    },
+    {
+      "id": "P03-partial-only-two",
+      "category": "partial",
+      "query": "LINE-BPR-01에서 520개 만들 예정인데 결함률 예측해줘.",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": null,
+            "supplier_code": null,
+            "planned_quantity": 520,
+            "ambient_humidity_pct": null,
+            "incoming_material_quality_score": null,
+            "coating_target_thickness_um": null,
+            "weld_energy_setting_pct": null,
+            "fixture_alignment_offset_mm": null,
+            "process_setting_deviation_pct": null,
+            "tool_wear_pct": null,
+            "days_since_maintenance": null
+          }
+        ],
+        "missing_fields": [
+          "shift",
+          "supplier_code",
+          "ambient_humidity_pct",
+          "incoming_material_quality_score",
+          "coating_target_thickness_um",
+          "weld_energy_setting_pct",
+          "fixture_alignment_offset_mm",
+          "process_setting_deviation_pct",
+          "tool_wear_pct",
+          "days_since_maintenance"
+        ],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "note": "10개 누락. 되묻기 메시지에 입력 템플릿을 함께 제시해야 함."
+    },
+    {
+      "id": "P04-partial-missing-categorical",
+      "category": "partial",
+      "query": "512개 생산 예정이고 습도 35.6%, 품질점수 94.1, 코팅 66um, 용접 에너지 81.5%, 지그 오차 0.34mm, 설정 편차 2.4%, 공구 마모 33.8%, 정비 47일 경과입니다. 결함률 예측해줘.",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": null,
+            "shift": null,
+            "supplier_code": null,
+            "planned_quantity": 512,
+            "ambient_humidity_pct": 35.6,
+            "incoming_material_quality_score": 94.1,
+            "coating_target_thickness_um": 66.0,
+            "weld_energy_setting_pct": 81.5,
+            "fixture_alignment_offset_mm": 0.34,
+            "process_setting_deviation_pct": 2.4,
+            "tool_wear_pct": 33.8,
+            "days_since_maintenance": 47
+          }
+        ],
+        "missing_fields": [
+          "production_line",
+          "shift",
+          "supplier_code"
+        ],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "note": "범주형 3개(라인/근무조/공급사)만 누락. 수치는 모두 제공됨."
+    },
+    {
+      "id": "P05-partial-missing-process-numeric",
+      "category": "partial",
+      "query": "LINE-BPR-02 주간조, SIM-SUP-A, 461개, 습도 62.8%, 품질점수 77.25, 코팅 98.4um, 공구 마모 78.3%, 정비 58일 경과 상태입니다. 결함률 예측해줘.",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 461,
+            "ambient_humidity_pct": 62.8,
+            "incoming_material_quality_score": 77.25,
+            "coating_target_thickness_um": 98.4,
+            "weld_energy_setting_pct": null,
+            "fixture_alignment_offset_mm": null,
+            "process_setting_deviation_pct": null,
+            "tool_wear_pct": 78.3,
+            "days_since_maintenance": 58
+          }
+        ],
+        "missing_fields": [
+          "weld_energy_setting_pct",
+          "fixture_alignment_offset_mm",
+          "process_setting_deviation_pct"
+        ],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "note": "공정 설정 수치 3개(용접/지그/편차)만 누락."
+    },
+    {
+      "id": "P06-partial-multi-shared-missing",
+      "category": "partial",
+      "query": "SIM-SUP-A 자재, 498개, 습도 44.2%, 품질점수 88.6, 코팅 91.3um, 용접 에너지 96.4%, 지그 오차 0.27mm, 설정 편차 5.3%, 공구 마모 21.9%, 정비 8일 경과 조건에서 LINE-BPR-01과 LINE-BPR-02의 결함률을 비교해줘.",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": null,
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 498,
+            "ambient_humidity_pct": 44.2,
+            "incoming_material_quality_score": 88.6,
+            "coating_target_thickness_um": 91.3,
+            "weld_energy_setting_pct": 96.4,
+            "fixture_alignment_offset_mm": 0.27,
+            "process_setting_deviation_pct": 5.3,
+            "tool_wear_pct": 21.9,
+            "days_since_maintenance": 8
+          },
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": null,
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 498,
+            "ambient_humidity_pct": 44.2,
+            "incoming_material_quality_score": 88.6,
+            "coating_target_thickness_um": 91.3,
+            "weld_energy_setting_pct": 96.4,
+            "fixture_alignment_offset_mm": 0.27,
+            "process_setting_deviation_pct": 5.3,
+            "tool_wear_pct": 21.9,
+            "days_since_maintenance": 8
+          }
+        ],
+        "missing_fields": [
+          "shift"
+        ],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "note": "비교 질의 + 공통 누락(shift). 두 레코드 모두 shift=null, missing_fields는 중복 없이 1개."
+    },
+    {
+      "id": "P07-partial-half-english",
+      "category": "partial",
+      "query": "What is the defect rate for LINE-BPR-01 on the night shift with supplier SIM-SUP-B, 505 units, humidity 47.5% and tool wear 26.4%?",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-B",
+            "planned_quantity": 505,
+            "ambient_humidity_pct": 47.5,
+            "incoming_material_quality_score": null,
+            "coating_target_thickness_um": null,
+            "weld_energy_setting_pct": null,
+            "fixture_alignment_offset_mm": null,
+            "process_setting_deviation_pct": null,
+            "tool_wear_pct": 26.4,
+            "days_since_maintenance": null
+          }
+        ],
+        "missing_fields": [
+          "incoming_material_quality_score",
+          "coating_target_thickness_um",
+          "weld_energy_setting_pct",
+          "fixture_alignment_offset_mm",
+          "process_setting_deviation_pct",
+          "days_since_maintenance"
+        ],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "note": "12개 중 6개만 제공(영문). 나머지 6개를 되물어야 함."
+    },
+    {
+      "id": "P08-partial-keyvalue",
+      "category": "partial",
+      "query": "production_line=LINE-BPR-02, shift=DAY, supplier_code=SIM-SUP-C, planned_quantity=470, tool_wear_pct=18.6",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-C",
+            "planned_quantity": 470,
+            "ambient_humidity_pct": null,
+            "incoming_material_quality_score": null,
+            "coating_target_thickness_um": null,
+            "weld_energy_setting_pct": null,
+            "fixture_alignment_offset_mm": null,
+            "process_setting_deviation_pct": null,
+            "tool_wear_pct": 18.6,
+            "days_since_maintenance": null
+          }
+        ],
+        "missing_fields": [
+          "ambient_humidity_pct",
+          "incoming_material_quality_score",
+          "coating_target_thickness_um",
+          "weld_energy_setting_pct",
+          "fixture_alignment_offset_mm",
+          "process_setting_deviation_pct",
+          "days_since_maintenance"
+        ],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "note": "키=값 형식의 부분 입력. 7개 누락."
+    },
+    {
+      "id": "N01-none-bare-request",
+      "category": "none",
+      "query": "결함률 예측해줘.",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": null,
+            "shift": null,
+            "supplier_code": null,
+            "planned_quantity": null,
+            "ambient_humidity_pct": null,
+            "incoming_material_quality_score": null,
+            "coating_target_thickness_um": null,
+            "weld_energy_setting_pct": null,
+            "fixture_alignment_offset_mm": null,
+            "process_setting_deviation_pct": null,
+            "tool_wear_pct": null,
+            "days_since_maintenance": null
+          }
+        ],
+        "missing_fields": [
+          "production_line",
+          "shift",
+          "supplier_code",
+          "planned_quantity",
+          "ambient_humidity_pct",
+          "incoming_material_quality_score",
+          "coating_target_thickness_um",
+          "weld_energy_setting_pct",
+          "fixture_alignment_offset_mm",
+          "process_setting_deviation_pct",
+          "tool_wear_pct",
+          "days_since_maintenance"
+        ],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "note": "예측 의도는 있으나 값이 전혀 없음. 12개 모두 되묻고 입력 템플릿 제시. 값을 지어내면 안 됨."
+    },
+    {
+      "id": "N02-none-vague-question",
+      "category": "none",
+      "query": "이번 lot 결함률이 어느 정도 나올까요?",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": null,
+            "shift": null,
+            "supplier_code": null,
+            "planned_quantity": null,
+            "ambient_humidity_pct": null,
+            "incoming_material_quality_score": null,
+            "coating_target_thickness_um": null,
+            "weld_energy_setting_pct": null,
+            "fixture_alignment_offset_mm": null,
+            "process_setting_deviation_pct": null,
+            "tool_wear_pct": null,
+            "days_since_maintenance": null
+          }
+        ],
+        "missing_fields": [
+          "production_line",
+          "shift",
+          "supplier_code",
+          "planned_quantity",
+          "ambient_humidity_pct",
+          "incoming_material_quality_score",
+          "coating_target_thickness_um",
+          "weld_energy_setting_pct",
+          "fixture_alignment_offset_mm",
+          "process_setting_deviation_pct",
+          "tool_wear_pct",
+          "days_since_maintenance"
+        ],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "note": "조건 정보 없는 예측 질문. 12개 모두 누락."
+    },
+    {
+      "id": "N03-none-english",
+      "category": "none",
+      "query": "Can you predict the defect rate for me?",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": null,
+            "shift": null,
+            "supplier_code": null,
+            "planned_quantity": null,
+            "ambient_humidity_pct": null,
+            "incoming_material_quality_score": null,
+            "coating_target_thickness_um": null,
+            "weld_energy_setting_pct": null,
+            "fixture_alignment_offset_mm": null,
+            "process_setting_deviation_pct": null,
+            "tool_wear_pct": null,
+            "days_since_maintenance": null
+          }
+        ],
+        "missing_fields": [
+          "production_line",
+          "shift",
+          "supplier_code",
+          "planned_quantity",
+          "ambient_humidity_pct",
+          "incoming_material_quality_score",
+          "coating_target_thickness_um",
+          "weld_energy_setting_pct",
+          "fixture_alignment_offset_mm",
+          "process_setting_deviation_pct",
+          "tool_wear_pct",
+          "days_since_maintenance"
+        ],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "note": "영문 무정보 요청."
+    },
+    {
+      "id": "N04-none-asks-required-inputs",
+      "category": "none",
+      "query": "결함률을 예측하려면 어떤 정보가 필요한가요?",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": null,
+            "shift": null,
+            "supplier_code": null,
+            "planned_quantity": null,
+            "ambient_humidity_pct": null,
+            "incoming_material_quality_score": null,
+            "coating_target_thickness_um": null,
+            "weld_energy_setting_pct": null,
+            "fixture_alignment_offset_mm": null,
+            "process_setting_deviation_pct": null,
+            "tool_wear_pct": null,
+            "days_since_maintenance": null
+          }
+        ],
+        "missing_fields": [
+          "production_line",
+          "shift",
+          "supplier_code",
+          "planned_quantity",
+          "ambient_humidity_pct",
+          "incoming_material_quality_score",
+          "coating_target_thickness_um",
+          "weld_energy_setting_pct",
+          "fixture_alignment_offset_mm",
+          "process_setting_deviation_pct",
+          "tool_wear_pct",
+          "days_since_maintenance"
+        ],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "note": "필요한 입력 항목을 묻는 질문. 12개 항목과 허용값을 안내해야 하며 API 호출 금지."
+    },
+    {
+      "id": "N05-none-out-of-scope",
+      "category": "none",
+      "query": "오늘 점심 메뉴 추천해줘.",
+      "expected": {
+        "status": "need_more_info",
+        "records": [],
+        "missing_fields": [
+          "production_line",
+          "shift",
+          "supplier_code",
+          "planned_quantity",
+          "ambient_humidity_pct",
+          "incoming_material_quality_score",
+          "coating_target_thickness_um",
+          "weld_energy_setting_pct",
+          "fixture_alignment_offset_mm",
+          "process_setting_deviation_pct",
+          "tool_wear_pct",
+          "days_since_maintenance"
+        ],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "note": "예측 요청이 아님(범위 밖). records는 비어 있고 값을 지어내지 않음."
+    },
+    {
+      "id": "A01-ambiguous-qualitative",
+      "category": "ambiguous",
+      "query": "LINE-BPR-01 주간조, SIM-SUP-B, 533개 생산. 습도는 평소보다 꽤 높은 편이고, 품질점수 83.95, 코팅 79.22um, 용접 에너지 92.67%, 지그 오차 0.112mm, 설정 편차 13.06%, 공구는 마모가 많이 진행됐어요. 정비는 30일 지났습니다.",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-B",
+            "planned_quantity": 533,
+            "ambient_humidity_pct": null,
+            "incoming_material_quality_score": 83.95,
+            "coating_target_thickness_um": 79.22,
+            "weld_energy_setting_pct": 92.67,
+            "fixture_alignment_offset_mm": 0.112,
+            "process_setting_deviation_pct": 13.06,
+            "tool_wear_pct": null,
+            "days_since_maintenance": 30
+          }
+        ],
+        "missing_fields": [
+          "ambient_humidity_pct",
+          "tool_wear_pct"
+        ],
+        "ambiguous_fields": [
+          "ambient_humidity_pct",
+          "tool_wear_pct"
+        ]
+      },
+      "expected_payload": null,
+      "note": "'꽤 높은 편', '많이 진행됐어요'는 수치화 불가 -> null. 임의의 값(예: 70, 80)으로 추정하면 안 됨."
+    },
+    {
+      "id": "A02-ambiguous-range",
+      "category": "ambiguous",
+      "query": "LINE-BPR-02 주간조, SIM-SUP-A 자재로 460~470개 사이 생산 예정이고 습도는 50에서 60% 사이예요. 품질점수 77.25, 코팅 98.4um, 용접 에너지 99.6%, 지그 오차 1.12mm, 설정 편차 11.7%, 공구 마모 78.3%, 정비 58일 경과.",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": null,
+            "ambient_humidity_pct": null,
+            "incoming_material_quality_score": 77.25,
+            "coating_target_thickness_um": 98.4,
+            "weld_energy_setting_pct": 99.6,
+            "fixture_alignment_offset_mm": 1.12,
+            "process_setting_deviation_pct": 11.7,
+            "tool_wear_pct": 78.3,
+            "days_since_maintenance": 58
+          }
+        ],
+        "missing_fields": [
+          "planned_quantity",
+          "ambient_humidity_pct"
+        ],
+        "ambiguous_fields": [
+          "planned_quantity",
+          "ambient_humidity_pct"
+        ]
+      },
+      "expected_payload": null,
+      "note": "범위 표현은 단일 값이 아님 -> null (평균/중간값으로 임의 확정 금지)."
+    },
+    {
+      "id": "A03-ambiguous-unitless-thickness",
+      "category": "ambiguous",
+      "query": "LINE-BPR-02 야간조, SIM-SUP-A, 487개, 습도 71.3%, 품질점수 68.4, 코팅 목표 두께는 0.08이에요. 용접 에너지 108.2%, 지그 오차 0.85mm, 설정 편차 7.9%, 공구 마모 52.7%, 정비 12일 경과.",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 487,
+            "ambient_humidity_pct": 71.3,
+            "incoming_material_quality_score": 68.4,
+            "coating_target_thickness_um": null,
+            "weld_energy_setting_pct": 108.2,
+            "fixture_alignment_offset_mm": 0.85,
+            "process_setting_deviation_pct": 7.9,
+            "tool_wear_pct": 52.7,
+            "days_since_maintenance": 12
+          }
+        ],
+        "missing_fields": [
+          "coating_target_thickness_um"
+        ],
+        "ambiguous_fields": [
+          "coating_target_thickness_um"
+        ]
+      },
+      "expected_payload": null,
+      "note": "단위 없는 '0.08'은 mm(=80um)인지 um인지 불명 -> null. 0.08 또는 80.0으로 임의 확정 금지."
+    },
+    {
+      "id": "A04-ambiguous-categorical",
+      "category": "ambiguous",
+      "query": "BPR 라인 중 한 곳에서 저녁 근무로 돌리고, 공급사는 A나 B 중 하나예요. 512개, 습도 35.6%, 품질점수 94.1, 코팅 66um, 용접 에너지 81.5%, 지그 오차 0.34mm, 설정 편차 2.4%, 공구 마모 33.8%, 정비 47일 경과.",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": null,
+            "shift": null,
+            "supplier_code": null,
+            "planned_quantity": 512,
+            "ambient_humidity_pct": 35.6,
+            "incoming_material_quality_score": 94.1,
+            "coating_target_thickness_um": 66.0,
+            "weld_energy_setting_pct": 81.5,
+            "fixture_alignment_offset_mm": 0.34,
+            "process_setting_deviation_pct": 2.4,
+            "tool_wear_pct": 33.8,
+            "days_since_maintenance": 47
+          }
+        ],
+        "missing_fields": [
+          "production_line",
+          "shift",
+          "supplier_code"
+        ],
+        "ambiguous_fields": [
+          "production_line",
+          "shift",
+          "supplier_code"
+        ]
+      },
+      "expected_payload": null,
+      "note": "라인(번호 없음)/근무조('저녁')/공급사('A나 B') 모두 코드로 확정 불가 -> null."
+    },
+    {
+      "id": "A05-ambiguous-self-contradiction",
+      "category": "ambiguous",
+      "query": "LINE-BPR-01 주간조, SIM-SUP-A, 498개, 습도는 44.2%라고 했는데 다시 보니 54.2%였나 헷갈리네요. 품질점수 88.6, 코팅 91.3um, 용접 에너지 96.4%, 지그 오차 0.27mm, 설정 편차 5.3%, 공구 마모 21.9%, 정비 8일 경과.",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 498,
+            "ambient_humidity_pct": null,
+            "incoming_material_quality_score": 88.6,
+            "coating_target_thickness_um": 91.3,
+            "weld_energy_setting_pct": 96.4,
+            "fixture_alignment_offset_mm": 0.27,
+            "process_setting_deviation_pct": 5.3,
+            "tool_wear_pct": 21.9,
+            "days_since_maintenance": 8
+          }
+        ],
+        "missing_fields": [
+          "ambient_humidity_pct"
+        ],
+        "ambiguous_fields": [
+          "ambient_humidity_pct"
+        ]
+      },
+      "expected_payload": null,
+      "note": "같은 질의 안에서 값이 번복됨(44.2 vs 54.2) -> null, 어느 쪽인지 확인 필요."
+    },
+    {
+      "id": "A06-ambiguous-all-qualitative",
+      "category": "ambiguous",
+      "query": "평소랑 비슷한 조건인데 공구 마모가 좀 심하고 습도도 높아요. 결함률 어떨까요?",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": null,
+            "shift": null,
+            "supplier_code": null,
+            "planned_quantity": null,
+            "ambient_humidity_pct": null,
+            "incoming_material_quality_score": null,
+            "coating_target_thickness_um": null,
+            "weld_energy_setting_pct": null,
+            "fixture_alignment_offset_mm": null,
+            "process_setting_deviation_pct": null,
+            "tool_wear_pct": null,
+            "days_since_maintenance": null
+          }
+        ],
+        "missing_fields": [
+          "production_line",
+          "shift",
+          "supplier_code",
+          "planned_quantity",
+          "ambient_humidity_pct",
+          "incoming_material_quality_score",
+          "coating_target_thickness_um",
+          "weld_energy_setting_pct",
+          "fixture_alignment_offset_mm",
+          "process_setting_deviation_pct",
+          "tool_wear_pct",
+          "days_since_maintenance"
+        ],
+        "ambiguous_fields": [
+          "ambient_humidity_pct",
+          "tool_wear_pct"
+        ]
+      },
+      "expected_payload": null,
+      "note": "'평소랑 비슷한 조건'은 참조할 기준값이 없음. 모든 필드 null, 마모/습도는 모호 표현으로 표시."
+    },
+    {
+      "id": "A07-ambiguous-shift-and-recency",
+      "category": "ambiguous",
+      "query": "LINE-BPR-02에서 SIM-SUP-B 자재로 449개 생산합니다. 오후조이고 습도 80.2%, 품질점수 65.3, 코팅 118um, 용접 에너지 77.4%, 지그 오차 1.45mm, 설정 편차 3.1%, 공구 마모 8.9%예요. 정비는 얼마 전에 했어요.",
+      "expected": {
+        "status": "need_more_info",
+        "records": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": null,
+            "supplier_code": "SIM-SUP-B",
+            "planned_quantity": 449,
+            "ambient_humidity_pct": 80.2,
+            "incoming_material_quality_score": 65.3,
+            "coating_target_thickness_um": 118.0,
+            "weld_energy_setting_pct": 77.4,
+            "fixture_alignment_offset_mm": 1.45,
+            "process_setting_deviation_pct": 3.1,
+            "tool_wear_pct": 8.9,
+            "days_since_maintenance": null
+          }
+        ],
+        "missing_fields": [
+          "shift",
+          "days_since_maintenance"
+        ],
+        "ambiguous_fields": [
+          "shift",
+          "days_since_maintenance"
+        ]
+      },
+      "expected_payload": null,
+      "note": "'오후조'는 DAY/NIGHT 중 어느 쪽인지 불명, '얼마 전'은 일수 불명 -> null."
+    },
+    {
+      "id": "I01-invalid-toolwear-over-100",
+      "category": "invalid",
+      "query": "LINE-BPR-01 주간조, SIM-SUP-B, 533개, 습도 54.49%, 품질점수 83.95, 코팅 79.22um, 용접 92.67%, 오프셋 0.112mm, 편차 13.06%, 공구 마모 140%, 정비 후 30일. 결함률은?",
+      "expected": {
+        "status": "invalid_input",
+        "records": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-B",
+            "planned_quantity": 533,
+            "ambient_humidity_pct": 54.49,
+            "incoming_material_quality_score": 83.95,
+            "coating_target_thickness_um": 79.22,
+            "weld_energy_setting_pct": 92.67,
+            "fixture_alignment_offset_mm": 0.112,
+            "process_setting_deviation_pct": 13.06,
+            "tool_wear_pct": 140.0,
+            "days_since_maintenance": 30
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "invalid_field": "tool_wear_pct",
+      "note": "추출은 성공하되 Pydantic 범위 검증(0~100)에서 차단되어야 함."
+    },
+    {
+      "id": "I02-invalid-toolwear-negative",
+      "category": "invalid",
+      "query": "LINE-BPR-01 주간조, SIM-SUP-A, 498개, 습도 44.2%, 품질점수 88.6, 코팅 91.3um, 용접 96.4%, 오프셋 0.27mm, 편차 5.3%, 공구 마모 -5%, 정비 8일 경과. 결함률 예측해줘.",
+      "expected": {
+        "status": "invalid_input",
+        "records": [
+          {
+            "production_line": "LINE-BPR-01",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 498,
+            "ambient_humidity_pct": 44.2,
+            "incoming_material_quality_score": 88.6,
+            "coating_target_thickness_um": 91.3,
+            "weld_energy_setting_pct": 96.4,
+            "fixture_alignment_offset_mm": 0.27,
+            "process_setting_deviation_pct": 5.3,
+            "tool_wear_pct": -5.0,
+            "days_since_maintenance": 8
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "invalid_field": "tool_wear_pct",
+      "note": "하한 위반(0 미만)."
+    },
+    {
+      "id": "I03-invalid-negative-offset",
+      "category": "invalid",
+      "query": "LINE-BPR-02 야간조, SIM-SUP-A, 487개, 습도 71.3%, 품질점수 68.4, 코팅 104.5um, 용접 에너지 108.2%, 지그 정렬 오차 -0.05mm, 설정 편차 7.9%, 공구 마모 52.7%, 정비 12일 경과. 결함률은?",
+      "expected": {
+        "status": "invalid_input",
+        "records": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-A",
+            "planned_quantity": 487,
+            "ambient_humidity_pct": 71.3,
+            "incoming_material_quality_score": 68.4,
+            "coating_target_thickness_um": 104.5,
+            "weld_energy_setting_pct": 108.2,
+            "fixture_alignment_offset_mm": -0.05,
+            "process_setting_deviation_pct": 7.9,
+            "tool_wear_pct": 52.7,
+            "days_since_maintenance": 12
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "invalid_field": "fixture_alignment_offset_mm",
+      "note": "fixture_alignment_offset_mm은 0 이상이어야 함(음수 불가)."
+    },
+    {
+      "id": "I04-invalid-nonexistent-line",
+      "category": "invalid",
+      "query": "LINE-BPR-03 야간조, SIM-SUP-C, 512개, 습도 35.6%, 품질점수 94.1, 코팅 66um, 용접 81.5%, 오프셋 0.34mm, 편차 2.4%, 공구 마모 33.8%, 정비 47일 경과. 결함률 예측해줘.",
+      "expected": {
+        "status": "invalid_input",
+        "records": [
+          {
+            "production_line": "LINE-BPR-03",
+            "shift": "NIGHT",
+            "supplier_code": "SIM-SUP-C",
+            "planned_quantity": 512,
+            "ambient_humidity_pct": 35.6,
+            "incoming_material_quality_score": 94.1,
+            "coating_target_thickness_um": 66.0,
+            "weld_energy_setting_pct": 81.5,
+            "fixture_alignment_offset_mm": 0.34,
+            "process_setting_deviation_pct": 2.4,
+            "tool_wear_pct": 33.8,
+            "days_since_maintenance": 47
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "invalid_field": "production_line",
+      "note": "존재하지 않는 라인(실제 라인은 LINE-BPR-01/02뿐). 가장 비슷한 라인으로 임의 치환 금지."
+    },
+    {
+      "id": "I05-invalid-unknown-supplier",
+      "category": "invalid",
+      "query": "LINE-BPR-02 주간조, SIM-SUP-D 자재로 461개, 습도 62.8%, 품질점수 77.25, 코팅 98.4um, 용접 99.6%, 오프셋 1.12mm, 편차 11.7%, 공구 마모 78.3%, 정비 58일 경과. 결함률은?",
+      "expected": {
+        "status": "invalid_input",
+        "records": [
+          {
+            "production_line": "LINE-BPR-02",
+            "shift": "DAY",
+            "supplier_code": "SIM-SUP-D",
+            "planned_quantity": 461,
+            "ambient_humidity_pct": 62.8,
+            "incoming_material_quality_score": 77.25,
+            "coating_target_thickness_um": 98.4,
+            "weld_energy_setting_pct": 99.6,
+            "fixture_alignment_offset_mm": 1.12,
+            "process_setting_deviation_pct": 11.7,
+            "tool_wear_pct": 78.3,
+            "days_since_maintenance": 58
+          }
+        ],
+        "missing_fields": [],
+        "ambiguous_fields": []
+      },
+      "expected_payload": null,
+      "invalid_field": "supplier_code",
+      "note": "허용되지 않는 공급사 코드(A/B/C만 유효)."
+    }
+  ],
+  "multi_turn_cases": [
+    {
+      "id": "MT01-partial-to-complete",
+      "input_pattern": "partial -> partial -> complete",
+      "description": "누락 3개를 2턴에 걸쳐 채우는 기본 시나리오",
+      "turns": [
+        {
+          "user": "LINE-BPR-01에서 533개 생산하는데 습도 54.49%, 자재 품질점수 83.95, 코팅 두께 79.22um, 용접 에너지 92.67%, 지그 오프셋 0.112mm, 설정편차 13.06%, 공구 마모 14.41%입니다. 결함률 알려줘요.",
+          "expected_status": "need_more_info",
+          "expected_missing": [
+            "shift",
+            "supplier_code",
+            "days_since_maintenance"
+          ]
+        },
+        {
+          "user": "주간조이고 공급사는 SIM-SUP-B예요.",
+          "expected_status": "need_more_info",
+          "expected_missing": [
+            "days_since_maintenance"
+          ]
+        },
+        {
+          "user": "정비한 지 30일 됐습니다.",
+          "expected_status": "ok",
+          "expected_missing": [],
+          "expected_payload": {
+            "data": [
+              {
+                "production_line": "LINE-BPR-01",
+                "shift": "DAY",
+                "supplier_code": "SIM-SUP-B",
+                "planned_quantity": 533,
+                "ambient_humidity_pct": 54.49,
+                "incoming_material_quality_score": 83.95,
+                "coating_target_thickness_um": 79.22,
+                "weld_energy_setting_pct": 92.67,
+                "fixture_alignment_offset_mm": 0.112,
+                "process_setting_deviation_pct": 13.06,
+                "tool_wear_pct": 14.41,
+                "days_since_maintenance": 30
+              }
+            ]
+          },
+          "known_prediction_pct": 1.6498678908
+        }
+      ]
+    },
+    {
+      "id": "MT02-none-to-complete",
+      "input_pattern": "none -> partial -> complete",
+      "description": "값 없이 시작해 2턴에 걸쳐 12개를 모두 채우는 시나리오",
+      "turns": [
+        {
+          "user": "결함률 예측해줘.",
+          "expected_status": "need_more_info",
+          "expected_missing": [
+            "production_line",
+            "shift",
+            "supplier_code",
+            "planned_quantity",
+            "ambient_humidity_pct",
+            "incoming_material_quality_score",
+            "coating_target_thickness_um",
+            "weld_energy_setting_pct",
+            "fixture_alignment_offset_mm",
+            "process_setting_deviation_pct",
+            "tool_wear_pct",
+            "days_since_maintenance"
+          ]
+        },
+        {
+          "user": "LINE-BPR-02 주간조, SIM-SUP-A 자재로 470개 생산해요. 습도 55.2%, 품질점수 85.7, 코팅 90.5um입니다.",
+          "expected_status": "need_more_info",
+          "expected_missing": [
+            "weld_energy_setting_pct",
+            "fixture_alignment_offset_mm",
+            "process_setting_deviation_pct",
+            "tool_wear_pct",
+            "days_since_maintenance"
+          ]
+        },
+        {
+          "user": "용접 에너지 97.5%, 지그 오차 0.21mm, 설정 편차 6.8%, 공구 마모 29.3%, 정비한 지 15일 됐어요.",
+          "expected_status": "ok",
+          "expected_missing": [],
+          "expected_payload": {
+            "data": [
+              {
+                "production_line": "LINE-BPR-02",
+                "shift": "DAY",
+                "supplier_code": "SIM-SUP-A",
+                "planned_quantity": 470,
+                "ambient_humidity_pct": 55.2,
+                "incoming_material_quality_score": 85.7,
+                "coating_target_thickness_um": 90.5,
+                "weld_energy_setting_pct": 97.5,
+                "fixture_alignment_offset_mm": 0.21,
+                "process_setting_deviation_pct": 6.8,
+                "tool_wear_pct": 29.3,
+                "days_since_maintenance": 15
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT03-ambiguous-to-clarified",
+      "input_pattern": "ambiguous -> complete",
+      "description": "모호한 표현을 되묻고 구체 수치로 확정하는 시나리오",
+      "turns": [
+        {
+          "user": "LINE-BPR-01 주간조, SIM-SUP-B, 533개 생산. 습도는 꽤 높은 편이고, 품질점수 83.95, 코팅 79.22um, 용접 92.67%, 지그 0.112mm, 설정 편차 13.06%, 공구 마모 14.41%, 정비 30일 경과.",
+          "expected_status": "need_more_info",
+          "expected_missing": [
+            "ambient_humidity_pct"
+          ]
+        },
+        {
+          "user": "습도는 61.5%예요.",
+          "expected_status": "ok",
+          "expected_missing": [],
+          "expected_payload": {
+            "data": [
+              {
+                "production_line": "LINE-BPR-01",
+                "shift": "DAY",
+                "supplier_code": "SIM-SUP-B",
+                "planned_quantity": 533,
+                "ambient_humidity_pct": 61.5,
+                "incoming_material_quality_score": 83.95,
+                "coating_target_thickness_um": 79.22,
+                "weld_energy_setting_pct": 92.67,
+                "fixture_alignment_offset_mm": 0.112,
+                "process_setting_deviation_pct": 13.06,
+                "tool_wear_pct": 14.41,
+                "days_since_maintenance": 30
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT04-invalid-to-corrected",
+      "input_pattern": "invalid -> complete",
+      "description": "범위 위반 입력을 안내받고 올바른 값으로 정정하는 시나리오",
+      "turns": [
+        {
+          "user": "LINE-BPR-01 주간조, SIM-SUP-B, 533개, 습도 54.49%, 품질점수 83.95, 코팅 79.22um, 용접 92.67%, 오프셋 0.112mm, 편차 13.06%, 공구 마모 140%, 정비 후 30일. 결함률은?",
+          "expected_status": "invalid_input",
+          "expected_missing": [],
+          "expected_invalid_field": "tool_wear_pct"
+        },
+        {
+          "user": "죄송해요, 공구 마모율은 40%입니다.",
+          "expected_status": "ok",
+          "expected_missing": [],
+          "expected_payload": {
+            "data": [
+              {
+                "production_line": "LINE-BPR-01",
+                "shift": "DAY",
+                "supplier_code": "SIM-SUP-B",
+                "planned_quantity": 533,
+                "ambient_humidity_pct": 54.49,
+                "incoming_material_quality_score": 83.95,
+                "coating_target_thickness_um": 79.22,
+                "weld_energy_setting_pct": 92.67,
+                "fixture_alignment_offset_mm": 0.112,
+                "process_setting_deviation_pct": 13.06,
+                "tool_wear_pct": 40.0,
+                "days_since_maintenance": 30
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT05-whatif-followup",
+      "input_pattern": "complete -> complete",
+      "description": "예측 완료 후 특정 필드만 변경하는 후속 질의 (나머지 값은 이전 턴 유지)",
+      "turns": [
+        {
+          "user": "LINE-BPR-01 주간조에서 SIM-SUP-B 자재로 533개 생산 예정입니다. 작업장 습도는 54.49%, 입고 자재 품질점수 83.95, 코팅 목표두께 79.22um, 용접 에너지 설정 92.67%, 지그 정렬 오프셋 0.112mm, 공정 설정편차 13.06%, 공구 마모도 14.41%이고 마지막 정비 후 30일 지났습니다. 결함률 예측해주세요.",
+          "expected_status": "ok",
+          "expected_missing": [],
+          "expected_payload": {
+            "data": [
+              {
+                "production_line": "LINE-BPR-01",
+                "shift": "DAY",
+                "supplier_code": "SIM-SUP-B",
+                "planned_quantity": 533,
+                "ambient_humidity_pct": 54.49,
+                "incoming_material_quality_score": 83.95,
+                "coating_target_thickness_um": 79.22,
+                "weld_energy_setting_pct": 92.67,
+                "fixture_alignment_offset_mm": 0.112,
+                "process_setting_deviation_pct": 13.06,
+                "tool_wear_pct": 14.41,
+                "days_since_maintenance": 30
+              }
+            ]
+          },
+          "known_prediction_pct": 1.6498678908
+        },
+        {
+          "user": "그럼 공구 마모가 70%까지 올라가면?",
+          "expected_status": "ok",
+          "expected_missing": [],
+          "expected_payload": {
+            "data": [
+              {
+                "production_line": "LINE-BPR-01",
+                "shift": "DAY",
+                "supplier_code": "SIM-SUP-B",
+                "planned_quantity": 533,
+                "ambient_humidity_pct": 54.49,
+                "incoming_material_quality_score": 83.95,
+                "coating_target_thickness_um": 79.22,
+                "weld_energy_setting_pct": 92.67,
+                "fixture_alignment_offset_mm": 0.112,
+                "process_setting_deviation_pct": 13.06,
+                "tool_wear_pct": 70.0,
+                "days_since_maintenance": 30
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT06-correction",
+      "input_pattern": "complete -> complete",
+      "description": "사용자가 앞 턴의 값을 정정하는 시나리오",
+      "turns": [
+        {
+          "user": "LINE-BPR-01 야간조, SIM-SUP-B, 533개, 습도 54.49%, 품질점수 83.95, 코팅 79.22um, 용접 92.67%, 지그 0.112mm, 설정 편차 13.06%, 공구 마모 14.41%, 정비 30일 경과. 결함률 예측해줘.",
+          "expected_status": "ok",
+          "expected_missing": [],
+          "expected_payload": {
+            "data": [
+              {
+                "production_line": "LINE-BPR-01",
+                "shift": "NIGHT",
+                "supplier_code": "SIM-SUP-B",
+                "planned_quantity": 533,
+                "ambient_humidity_pct": 54.49,
+                "incoming_material_quality_score": 83.95,
+                "coating_target_thickness_um": 79.22,
+                "weld_energy_setting_pct": 92.67,
+                "fixture_alignment_offset_mm": 0.112,
+                "process_setting_deviation_pct": 13.06,
+                "tool_wear_pct": 14.41,
+                "days_since_maintenance": 30
+              }
+            ]
+          }
+        },
+        {
+          "user": "아 죄송해요, 야간조가 아니라 주간조입니다.",
+          "expected_status": "ok",
+          "expected_missing": [],
+          "expected_payload": {
+            "data": [
+              {
+                "production_line": "LINE-BPR-01",
+                "shift": "DAY",
+                "supplier_code": "SIM-SUP-B",
+                "planned_quantity": 533,
+                "ambient_humidity_pct": 54.49,
+                "incoming_material_quality_score": 83.95,
+                "coating_target_thickness_um": 79.22,
+                "weld_energy_setting_pct": 92.67,
+                "fixture_alignment_offset_mm": 0.112,
+                "process_setting_deviation_pct": 13.06,
+                "tool_wear_pct": 14.41,
+                "days_since_maintenance": 30
+              }
+            ]
+          },
+          "known_prediction_pct": 1.6498678908
+        }
+      ]
+    }
+  ]
+}

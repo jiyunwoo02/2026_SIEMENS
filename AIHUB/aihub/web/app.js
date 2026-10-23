@@ -18,6 +18,28 @@
     "작업장 습도는 54.49%, 입고 자재 품질점수 83.95, 코팅 목표두께 79.22um, " +
     "용접 에너지 설정 92.67%, 지그 정렬 오프셋 0.112mm, 공정 설정편차 13.06%, " +
     "공구 마모도 14.41%이고 마지막 정비 후 30일 지났습니다. 결함률 예측해주세요.";
+  // [추가] 2026-10-22: 사용자가 어떤 값을 입력해야 하는지 알 수 있도록 안내 문구를 상수로 분리했다.
+  // 최초 로드와 새 대화 시작 두 곳에서 같은 문구를 쓴다. 항목명·허용값은 schema.py의 FIELD_SPEC과
+  // 수동으로 맞춘 것이므로, 스키마가 바뀌면 이 문구도 함께 수정해야 한다.
+  const welcomeMessage = [
+    "결함률 예측에는 아래 12개 값이 필요합니다. 한 번에 입력하거나 나눠서 입력해도 됩니다.",
+    "",
+    "• 생산 라인: LINE-BPR-01, LINE-BPR-02",
+    "• 교대조: 주간(DAY) / 야간(NIGHT)",
+    "• 공급사 코드: SIM-SUP-A, SIM-SUP-B, SIM-SUP-C",
+    "• 계획 생산 수량(개)",
+    "• 작업장 습도(%)",
+    "• 입고 자재 품질점수",
+    "• 코팅 목표 두께(um)",
+    "• 용접 에너지 설정(%)",
+    "• 지그 정렬 오프셋(mm)",
+    "• 공정 설정 편차(%)",
+    "• 공구 마모도(%)",
+    "• 마지막 정비 후 경과 일수",
+    "",
+    "라인 등 일부 값만 바꿔 여러 조건을 비교할 수도 있습니다. 예: \"LINE-BPR-01과 02 비교\"",
+    "부족한 값은 추가 질문으로 안내합니다. 전체 조건 예제 버튼으로 입력 형식을 확인할 수 있습니다.",
+  ].join("\n");
   // 세션 ID와 대화는 탭 메모리에만 보관한다. 새로고침하면 복원하지 않는다.
   let sessionId = null;
   let busy = false;
@@ -176,7 +198,8 @@
       ui.query.value = "";
       ui.session.textContent = "새 세션 · 아직 질의하지 않았습니다.";
       ui["result-status"].textContent = "질의를 보내면 결과가 표시됩니다.";
-      addMessage("assistant", "새 대화입니다. 생산 조건을 입력하거나 전체 조건 예제를 선택하세요.");
+      // [수정] 2026-10-22: 짧은 문구 대신 필요 입력 항목 안내(welcomeMessage)를 표시한다.
+      addMessage("assistant", `새 대화입니다.\n${welcomeMessage}`);
     } catch (error) {
       showError(`대화 초기화 실패: ${error.message} 기존 대화는 유지했습니다.`);
     } finally {
@@ -217,6 +240,7 @@
   ui.reset.addEventListener("click", reset);
   ui["example-full"].addEventListener("click", () => fillExample(fullExample));
   ui["example-partial"].addEventListener("click", () => fillExample("LINE-BPR-01 결함률 예측해줘"));
-  addMessage("assistant", "생산 조건을 알려주세요. 부족한 값은 추가 질문으로 안내합니다.");
+  // [수정] 2026-10-22: 최초 메시지에도 필요 입력 항목 안내를 표시한다.
+  addMessage("assistant", `생산 조건을 알려주세요.\n${welcomeMessage}`);
   checkHealth();
 })();

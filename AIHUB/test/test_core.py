@@ -85,8 +85,9 @@ def test_slot_filling_what_if_and_correction():
     assert s.slots["shift"] == "NIGHT"
 
     # 두 비교 조건에서 다른 생산 라인은 공통 슬롯에서 제외하고 같은 교대조는 저장한다.
+    # [수정] 운영 라인이 LINE-BPR-01/02 2종으로 확정되어 비교 대상도 실제 존재하는 두 번째 라인으로 맞춘다.
     a = _partial(**full)
-    b = _partial(**{**full, "production_line": "LINE-ASM-05"})
+    b = _partial(**{**full, "production_line": "LINE-BPR-02"})
     cmp_session = SlotFillingSession()
     cmp_session.merge([a, b])
     assert "production_line" not in cmp_session.slots
@@ -122,16 +123,21 @@ def test_parse_real_ml_response():
         DefectRateMLClient().parse(broken, sent)
 
 
-def test_golden_g01_and_g10():
-    """골든 데이터의 정상 요청 본문과 범위 초과 입력 거부 동작을 검증한다."""
-    # 상대 경로는 현재 작업 디렉터리 기준이다(AIHUB 디렉터리에서 실행하는 것을 전제로 함).
-    golden = json.loads(Path("data/golden_set.json").read_text(encoding="utf-8"))
-    cases = {c["id"]: c for c in golden["cases"]}
-    # G01의 기대 레코드로 요청을 만들며, 자연어를 LLM으로 추출하는 과정은 실행하지 않는다.
-    g01 = cases["G01-full-natural"]
-    records = [DefectRateInput(**rec) for rec in g01["expected"]["records"]]
-    assert build_payload(records) == g01["expected_payload"]
-    # G10의 첫 번째 범위 초과 레코드는 입력 모델 생성 단계에서 거부되어야 한다.
-    g10 = cases["G10-out-of-range"]
+# [수정] 2026-10-22: v1 골든 셋(data/golden_set.json)이 data/v1/로 이동되어 경로가 깨져 있었다.
+# v2(data/golden_set_v2.json)의 C01/I01로 교체하고, 실행 위치와 무관하게 이 파일 기준 절대 경로를 쓴다.
+# ID 꼴이 "C01" 또는 "C01-..." 어느 쪽이어도 동작하도록 접두어(첫 "-" 앞)로 찾는다.
+GOLDEN_V2 = Path(__file__).resolve().parents[1] / "data" / "golden_set_v2.json"
+
+
+def test_golden_c01_and_i01():
+    """골든 v2의 정상 요청 본문(C01)과 제약 위반 입력 거부(I01)를 검증한다."""
+    golden = json.loads(GOLDEN_V2.read_text(encoding="utf-8"))
+    cases = {c["id"].split("-")[0]: c for c in golden["cases"]}
+    # C01의 기대 레코드로 요청을 만들며, 자연어를 LLM으로 추출하는 과정은 실행하지 않는다.
+    c01 = cases["C01"]
+    records = [DefectRateInput(**rec) for rec in c01["expected"]["records"]]
+    assert build_payload(records) == c01["expected_payload"]
+    # I01의 레코드는 입력 모델 생성 단계에서 거부되어야 한다.
+    i01 = cases["I01"]
     with pytest.raises(ValidationError):
-        DefectRateInput(**g10["expected"]["records"][0])
+        [DefectRateInput(**rec) for rec in i01["expected"]["records"]]

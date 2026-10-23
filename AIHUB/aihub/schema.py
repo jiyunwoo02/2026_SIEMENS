@@ -6,9 +6,10 @@ from pydantic import BaseModel, Field, field_validator
 
 # 교대조는 주간과 야간만 허용한다.
 ALLOWED_SHIFTS: list[str] = ["DAY", "NIGHT"]
+# [수정] docs/input_schema.md 확정: 실제 운영 라인은 2종, 공급사는 3종뿐이라 화이트리스트를 등록한다.
 # 빈 목록이면 코드 목록 검사를 생략한다. 값을 등록하면 해당 코드만 허용한다.
-ALLOWED_PRODUCTION_LINES: list[str] = []
-ALLOWED_SUPPLIER_CODES: list[str] = []
+ALLOWED_PRODUCTION_LINES: list[str] = ["LINE-BPR-01", "LINE-BPR-02"]
+ALLOWED_SUPPLIER_CODES: list[str] = ["SIM-SUP-A", "SIM-SUP-B", "SIM-SUP-C"]
 
 # 추출값 정규화와 입력 안내에 사용하는 문자열·수치 필드 분류.
 TEXT_FIELDS = ["production_line", "shift", "supplier_code"]
@@ -29,15 +30,19 @@ ALL_FIELDS = TEXT_FIELDS + NUMERIC_FIELDS
 # LLM 추출 프롬프트, JSON Schema, 추가 질문에서 함께 사용하는 필드 명세.
 # 설명에 적힌 수치 범위의 실제 검증은 아래 DefectRateInput에서 수행한다.
 FIELD_SPEC: dict[str, dict[str, Any]] = {
-    "production_line": {"type": "string", "desc": "생산 라인 코드 (예: LINE-BPR-01)"},
-    "shift": {"type": "string", "desc": "근무 교대조. DAY 또는 NIGHT"},
-    "supplier_code": {"type": "string", "desc": "공급업체 코드 (예: SIM-SUP-B)"},
+    # [수정] 화이트리스트 확정에 맞춰 설명에 허용값을 명시해 추출 단계의 추측(환각)을 줄인다.
+    # [수정] "~ 중 하나" 표현은 LLM이 허용값 밖 코드(LINE-BPR-03 등)를 null이나 비슷한 값으로 바꾸도록 유도할 수 있어
+    # "허용값" 안내로 바꾼다. 허용값 밖 코드는 그대로 추출돼 DefectRateInput에서 invalid_input으로 차단돼야 한다(골든 I04, I05).
+    "production_line": {"type": "string", "desc": "생산 라인 코드 (허용값: LINE-BPR-01, LINE-BPR-02)"},
+    "shift": {"type": "string", "desc": "근무 교대조 (허용값: DAY, NIGHT)"},
+    "supplier_code": {"type": "string", "desc": "공급업체 코드 (허용값: SIM-SUP-A, SIM-SUP-B, SIM-SUP-C)"},
     "planned_quantity": {"type": "integer", "desc": "계획 생산 수량 (개), 0 이상"},
     "ambient_humidity_pct": {"type": "number", "desc": "작업장 습도 (%), 0~100"},
     "incoming_material_quality_score": {"type": "number", "desc": "입고 자재 품질 점수, 0~100"},
     "coating_target_thickness_um": {"type": "number", "desc": "코팅 목표 두께 (um = 마이크로미터), 0 이상"},
     "weld_energy_setting_pct": {"type": "number", "desc": "용접 에너지 설정값 (%), 0~150"},
-    "fixture_alignment_offset_mm": {"type": "number", "desc": "지그 정렬 오프셋 (mm). 음수 가능"},
+    # [수정] docs/input_schema.md 확정: 오프셋은 0 이상만 유효(음수 불가)하여 설명을 갱신한다.
+    "fixture_alignment_offset_mm": {"type": "number", "desc": "지그 정렬 오프셋 (mm), 0 이상"},
     "process_setting_deviation_pct": {"type": "number", "desc": "공정 설정 편차 (%)"},
     "tool_wear_pct": {"type": "number", "desc": "공구 마모도 (%), 0~100"},
     "days_since_maintenance": {"type": "integer", "desc": "마지막 정비 이후 경과 일수, 0 이상"},
@@ -48,6 +53,9 @@ class DefectRateInput(BaseModel):
     """예측 API로 보낼 단일 레코드의 필수 필드와 허용 범위를 정의한다."""
 
     # 모든 필드는 필수이며, 문자열은 정규화 후에도 한 글자 이상이어야 한다.
+    # [검토] docs/input_schema.md의 확정 하드 제약은 코드 3종 화이트리스트, 오프셋>=0, 마모율 0~100뿐이다.
+    # 수량>=0, 습도·품질점수 0~100, 용접 0~150, 두께·경과일>=0은 사양에 없는 물리적 타당성 검사로 기존 코드에서 유지한다.
+    # (골든 셋 v2 어느 케이스도 이 검사에 걸리지 않음. 유지 여부는 architecture.md 미결 사항에서 결정)
     production_line: str = Field(min_length=1)
     shift: str = Field(min_length=1)
     supplier_code: str = Field(min_length=1)
@@ -57,8 +65,9 @@ class DefectRateInput(BaseModel):
     incoming_material_quality_score: float = Field(ge=0, le=100)
     coating_target_thickness_um: float = Field(ge=0)
     weld_energy_setting_pct: float = Field(ge=0, le=150)
-    # 오프셋과 공정 편차에는 별도의 상·하한을 두지 않아 음수도 허용한다.
-    fixture_alignment_offset_mm: float
+    # [수정] docs/input_schema.md 확정: 오프셋은 0 이상이어야 하므로 하한을 추가한다(이전: 하한 없음, 음수 허용).
+    fixture_alignment_offset_mm: float = Field(ge=0)
+    # 공정 편차는 별도의 상·하한을 두지 않아 음수도 허용한다.
     process_setting_deviation_pct: float
     tool_wear_pct: float = Field(ge=0, le=100)
     days_since_maintenance: int = Field(ge=0)
@@ -134,7 +143,8 @@ def extraction_json_schema() -> dict[str, Any]:
     return {
         "type": "object",
         "additionalProperties": False,
-        "required": ["records", "notes"],
+        # [수정] strict 모드는 모든 속성이 required여야 하므로 ambiguous_fields도 추가한다.
+        "required": ["records", "ambiguous_fields", "notes"],
         "properties": {
             # 비교 조건은 여러 레코드로 표현할 수 있고, 빈 배열도 허용한다.
             "records": {
@@ -146,6 +156,12 @@ def extraction_json_schema() -> dict[str, Any]:
                     "required": list(props.keys()),
                     "properties": props,
                 },
+            },
+            # [추가] 모호한 표현 때문에 null로 둔 필드명. 대화 응답의 ambiguous_fields와
+            # 되묻기 문구("값이 없습니다"가 아니라 "수치로 알려주세요")를 만드는 데 쓴다.
+            "ambiguous_fields": {
+                "type": "array",
+                "items": {"type": "string", "enum": list(ALL_FIELDS)},
             },
             # 부가 설명이 없으면 키를 생략하는 대신 null을 사용한다.
             "notes": {"type": ["string", "null"]},
