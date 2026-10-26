@@ -18,7 +18,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from aihub.llm import EXTRACTION_SYSTEM_PROMPT
+from aihub.llm import EXTRACTION_SYSTEM_PROMPT, build_extraction_user_content
 from aihub.pipeline import (
     DefectRatePipeline,
     ExtractionResult,
@@ -27,7 +27,8 @@ from aihub.pipeline import (
 )
 from aihub.schema import ALL_FIELDS, DefectRateInput, build_payload, extraction_json_schema
 
-GOLDEN_V2 = Path(__file__).resolve().parents[1] / "data" / "golden_set_v2.json"
+# [수정] 2026-10-26: 골든 v2가 data/v2/로 이동되어 경로가 깨져 있었다(수집 단계 FileNotFoundError). 경로만 변경, 로직 변경 없음.
+GOLDEN_V2 = Path(__file__).resolve().parents[1] / "data" / "v2" / "golden_set_v2.json"
 GOLDEN = json.loads(GOLDEN_V2.read_text(encoding="utf-8"))
 CASES: list[dict[str, Any]] = GOLDEN["cases"]
 MULTI_TURN: list[dict[str, Any]] = GOLDEN.get("multi_turn_cases", [])
@@ -200,19 +201,166 @@ def test_invalid_code_removed_from_session_for_correction():
     assert ml.calls == []
 
 
-def test_ambiguous_field_already_known_is_not_reported():
-    """세션에 이미 값이 있는 필드는 병합 후 null이 아니므로 ambiguous_fields에서 빠진다."""
+def test_out_of_whitelist_code_is_not_stored_while_slots_incomplete():
+    """[추가] 2026-10-23: 슬롯이 덜 찬 상태에서도 SIM-SUP-D는 invalid_input이어야 하고 세션에 저장되면 안 된다.
+
+    같은 발화의 유효한 값(라인, 교대조)은 유지된다.
+    """
+    rec = {f: None for f in ALL_FIELDS}
+    rec.update(production_line="LINE-BPR-01", shift="DAY", supplier_code="SIM-SUP-D")
+    pipe, ml = _pipeline(ExtractionResult(records=[rec]))
+    s = SlotFillingSession()
+    res = pipe.run("LINE-BPR-01, 주간, SIM-SUP-D", session=s, explain=False)
+    assert res.status == "invalid_input"
+    assert res.invalid_fields == ["supplier_code"]
+    assert res.missing_fields == []
+    assert "supplier_code" not in s.slots
+    assert s.slots == {"production_line": "LINE-BPR-01", "shift": "DAY"}
+    assert ml.calls == []
+
+
+def test_partial_valid_values_still_need_more_info():
+    """[추가] 사전 검증이 유효한 부분 입력을 막지 않는다(회귀 방지)."""
+    rec = {f: None for f in ALL_FIELDS}
+    rec.update(production_line="LINE-BPR-01", shift="DAY", supplier_code="SIM-SUP-A")
+    pipe, _ = _pipeline(ExtractionResult(records=[rec]))
+    res = pipe.run("LINE-BPR-01, 주간, SIM-SUP-A", session=SlotFillingSession(), explain=False)
+    assert res.status == "need_more_info"
+    assert "planned_quantity" in res.missing_fields
+
+
+def test_bare_number_is_reported_via_notes_not_assigned():
+    """[추가] 항목 불명 숫자('80')를 대화 응답에서 안내하고 planned_quantity는 비워둔다.
+
+    추출 결과가 정해진 뒤의 파이프라인 동작만 검증한다. 실제 LLM이 규칙 2-1을 따르는지는 별도 평가가 필요하다.
+    """
+    rec = {f: None for f in ALL_FIELDS}
+    rec.update(production_line="LINE-BPR-01", shift="DAY", supplier_code="SIM-SUP-A")
+    note = "'80'이(가) 어떤 항목의 값인지 알 수 없어 반영하지 않았습니다."
+    pipe, _ = _pipeline(ExtractionResult(records=[rec], notes=note))
+    s = SlotFillingSession()
+    res = pipe.run("LINE-BPR-01, 주간, SIM-SUP-A, 80", session=s, explain=False)
+    assert res.status == "need_more_info"
+    assert "planned_quantity" in res.missing_fields
+    assert "planned_quantity" not in s.slots
+    assert note in res.answer
+
+
+def test_two_remaining_fields_text_and_number_are_both_accepted():
+    """[추가] 2026-10-23: 남은 필드가 문자 1개(supplier_code)·숫자 1개(planned_quantity)뿐일 때,
+    항목명 없이 입력한 "SIM-SUP-B, 480"이 각각 필드에 매칭되어 예측까지 진행되는지 확인한다.
+
+    이 테스트는 추출 결과가 정해진 뒤의 파이프라인 동작만 검증한다. LLM이 규칙 2-1대로 매칭하는지는
+    실제 LLM 평가(test/golden_llm_extract.py 또는 멀티턴 시나리오)가 필요하다.
+    """
+    full = _case("C01")["expected"]["records"][0]
+    known = {k: v for k, v in full.items() if k not in ("supplier_code", "planned_quantity")}
+    rec = {f: None for f in ALL_FIELDS}
+    rec.update(supplier_code=full["supplier_code"], planned_quantity=full["planned_quantity"])
+    pipe, ml = _pipeline(ExtractionResult(records=[rec]))
+    res = pipe.run("SIM-SUP-B, 533", session=SlotFillingSession(slots=dict(known)), explain=False)
+    assert res.status == "ok"
+    assert ml.calls == [_case("C01")["expected_payload"]]
+
+
+def test_extraction_user_content_lists_still_needed_fields():
+    """[추가] 확인된 값이 있을 때 아직 필요한 값 목록이 요청에 포함되고, 비어 있으면 질의 원문만 전달한다."""
+    full = _case("C01")["expected"]["records"][0]
+    known = {k: v for k, v in full.items() if k not in ("supplier_code", "planned_quantity")}
+    content = build_extraction_user_content("SIM-SUP-B, 533", known)
+    needed_part = content.split("[아직 필요한 값]")[1].split("[이번 발화]")[0]
+    assert "supplier_code" in needed_part and "planned_quantity" in needed_part
+    assert "tool_wear_pct" not in needed_part  # 이미 확인된 필드는 목록에 없어야 한다.
+    # 모든 값이 확인된 경우
+    assert "없음" in build_extraction_user_content("그대로", dict(full)).split("[아직 필요한 값]")[1]
+    # 확인된 값이 없으면 질의 원문 그대로(기존 동작 유지)
+    assert build_extraction_user_content("안녕", {}) == "안녕"
+
+
+def test_validate_provided_fields_reports_only_given_fields():
+    """[추가] 필드 단위 검증은 전달된 필드의 위반만 보고하고 None은 건너뛴다."""
+    from aihub.schema import validate_provided_fields
+
+    assert validate_provided_fields({}) == {}
+    assert validate_provided_fields({"supplier_code": None}) == {}
+    assert validate_provided_fields({"supplier_code": "sim-sup-a"}) == {}
+    assert set(validate_provided_fields({"supplier_code": "SIM-SUP-D", "tool_wear_pct": 140})) == {
+        "supplier_code",
+        "tool_wear_pct",
+    }
+    assert validate_provided_fields({"fixture_alignment_offset_mm": -0.1}).keys() == {
+        "fixture_alignment_offset_mm"
+    }
+
+
+def test_ambiguous_field_already_known_is_cleared_and_reported():
+    """[수정] 2026-10-26 (동작 변경): 세션에 이미 값이 있는 필드를 모호하게 정정하면
+    슬롯이 비워지고 missing_fields·ambiguous_fields에 나타나야 한다(이전: 기존 값이 조용히 유지되어 목록에서 빠짐).
+
+    습도(확인됨)와 공구 마모(미확인)를 모두 모호하게 말한 발화로, 두 필드가 모두 되묻기 대상이 되고
+    나머지 확인값은 유지되며 ML은 호출되지 않는다.
+    """
     full = _case("C01")["expected"]["records"][0]
     known = {k: v for k, v in full.items() if k != "tool_wear_pct"}
     rec = {f: None for f in ALL_FIELDS}
-    pipe, _ = _pipeline(
+    pipe, ml = _pipeline(
         ExtractionResult(records=[rec], ambiguous_fields=["ambient_humidity_pct", "tool_wear_pct"])
     )
-    res = pipe.run("습도는 좀 높고 공구도 꽤 닳았어요", session=SlotFillingSession(slots=known), explain=False)
+    s = SlotFillingSession(slots=known)
+    res = pipe.run("습도는 좀 높고 공구도 꽤 닳았어요", session=s, explain=False)
     assert res.status == "need_more_info"
+    # ALL_FIELDS 순서: ambient_humidity_pct가 tool_wear_pct보다 앞이다.
+    assert res.missing_fields == ["ambient_humidity_pct", "tool_wear_pct"]
+    assert res.ambiguous_fields == ["ambient_humidity_pct", "tool_wear_pct"]
+    assert "ambient_humidity_pct" not in s.slots
+    assert s.slots["production_line"] == full["production_line"]  # 다른 확인값은 유지
+    assert "모호" in res.answer
+    assert ml.calls == []
+
+
+def test_vague_correction_of_confirmed_field_asks_again_instead_of_predicting():
+    """[추가] 2026-10-26: 12개가 모두 확인된 뒤 "습도가 꽤 높아졌다면?"이 오면
+    기존 습도(54.49)로 예측하지 않고 습도를 되묻는다. 이후 수치를 입력하면 예측이 진행된다.
+
+    추출 결과는 대역이므로 실제 LLM이 프롬프트대로 ambiguous_fields를 내는지는 검증하지 않는다.
+    """
+    full = _case("C01")["expected"]["records"][0]
+    s = SlotFillingSession(slots=dict(full))
+    blank = {f: None for f in ALL_FIELDS}
+
+    # 1턴: 모호한 정정 -> 재질문, 예측 미호출, 습도 슬롯 제거
+    ml = FakeML()
+    vague = DefectRatePipeline(
+        extractor=FakeExtractor(ExtractionResult(records=[blank], ambiguous_fields=["ambient_humidity_pct"])),
+        ml_client=ml,
+    )
+    res = vague.run("습도가 꽤 높아졌다면?", session=s, explain=False)
+    assert res.status == "need_more_info"
+    assert res.missing_fields == ["ambient_humidity_pct"]
+    assert res.ambiguous_fields == ["ambient_humidity_pct"]
+    assert "ambient_humidity_pct" not in s.known()
+    assert ml.calls == []
+
+    # 2턴: 수치 확정 -> 나머지는 이전 값 유지, 습도만 새 값으로 예측
+    answer = dict(blank, ambient_humidity_pct=61.5)
+    confirm = DefectRatePipeline(extractor=FakeExtractor(ExtractionResult(records=[answer])), ml_client=ml)
+    res2 = confirm.run("61.5%입니다", session=s, explain=False)
+    assert res2.status == "ok"
+    assert ml.calls == [{"data": [dict(full, ambient_humidity_pct=61.5)]}]
+
+
+def test_ambiguous_field_not_in_session_behaves_as_before():
+    """[추가] 2026-10-26: 세션에 없던 필드의 모호 표시는 기존대로 누락+모호 처리되고 다른 슬롯은 유지된다(회귀 방지)."""
+    full = _case("C01")["expected"]["records"][0]
+    known = {k: v for k, v in full.items() if k != "tool_wear_pct"}
+    pipe, _ = _pipeline(
+        ExtractionResult(records=[{f: None for f in ALL_FIELDS}], ambiguous_fields=["tool_wear_pct"])
+    )
+    s = SlotFillingSession(slots=dict(known))
+    res = pipe.run("공구가 꽤 닳았어요", session=s, explain=False)
     assert res.missing_fields == ["tool_wear_pct"]
     assert res.ambiguous_fields == ["tool_wear_pct"]
-    assert "모호" in res.answer
+    assert s.known() == known
 
 
 # ---------------------------------------------------------------------------
@@ -291,6 +439,12 @@ def test_extraction_schema_has_ambiguous_fields():
 
 @pytest.mark.parametrize("keyword", [
     "ambiguous_fields", "오후조", "LINE-BPR-03", "마이크로미터", "범위", "번복", "모든 필드가 null인 레코드",
+    # [추가] 2026-10-26: 확인된 필드를 모호하게 정정하는 경우의 지침 키워드
+    "모호하게 바꾸려 하면", "증감량을 추정해",
+    # [추가] 2026-10-23: 항목 표시 없는 숫자 규칙(2-1)의 핵심 키워드
+    "항목 표시가 없는 숫자",
+    # [추가] 2026-10-23: 단위 환산·남은 필드 매칭 규칙의 핵심 키워드
+    "센티", "cm는 x10", "[아직 필요한 값]", "필드별 기준 단위",
 ])
 def test_extraction_prompt_mentions_rules(keyword):
     """추출 프롬프트에 갱신된 규칙의 핵심 키워드가 포함돼 있는지 확인한다(회귀 방지용)."""

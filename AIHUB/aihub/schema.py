@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 # 교대조는 주간과 야간만 허용한다.
 ALLOWED_SHIFTS: list[str] = ["DAY", "NIGHT"]
@@ -106,6 +106,49 @@ class DefectRateInput(BaseModel):
     def to_row(self) -> dict[str, Any]:
         """검증된 모델에서 공통 입력 필드만 뽑아 전송용 딕셔너리로 변환한다."""
         return {f: getattr(self, f) for f in ALL_FIELDS}
+
+
+# [추가] 2026-10-23: 필드 단위 검증용 기준 행. 모든 값이 유효하므로, 검사할 필드만 바꿔 넣으면
+# 해당 필드의 위반만 결과에 나타난다. 검증 규칙은 DefectRateInput 한 곳에서만 관리한다(중복 정의 금지).
+_VALID_REFERENCE_ROW: dict[str, Any] = {
+    "production_line": ALLOWED_PRODUCTION_LINES[0] if ALLOWED_PRODUCTION_LINES else "LINE-REF",
+    "shift": "DAY",
+    "supplier_code": ALLOWED_SUPPLIER_CODES[0] if ALLOWED_SUPPLIER_CODES else "SUP-REF",
+    "planned_quantity": 500,
+    "ambient_humidity_pct": 50.0,
+    "incoming_material_quality_score": 80.0,
+    "coating_target_thickness_um": 80.0,
+    "weld_energy_setting_pct": 100.0,
+    "fixture_alignment_offset_mm": 0.1,
+    "process_setting_deviation_pct": 0.0,
+    "tool_wear_pct": 10.0,
+    "days_since_maintenance": 10,
+}
+
+
+def validate_provided_fields(values: dict[str, Any]) -> dict[str, str]:
+    """일부 필드만 채워진 상태에서도 값이 있는 필드를 개별 검증한다.
+
+    [추가] 2026-10-23: 슬롯이 12개 모두 차기 전에는 DefectRateInput 검증이 실행되지 않아
+    허용값 밖 코드(예: SIM-SUP-D)가 세션에 저장되던 문제를 막기 위해 추가했다.
+
+    입력: 필드명 -> 값 딕셔너리. None인 값은 "미확정"이므로 검사하지 않는다.
+    출력: 위반한 필드명 -> 오류 메시지. 위반이 없으면 빈 딕셔너리.
+    예외: 발생시키지 않는다(위반은 반환값으로 알린다).
+    """
+    provided = {k: v for k, v in values.items() if k in ALL_FIELDS and v is not None}
+    if not provided:
+        return {}
+    try:
+        DefectRateInput(**{**_VALID_REFERENCE_ROW, **provided})
+    except ValidationError as e:
+        # 기준 행은 항상 유효하므로, 위반은 실제로 넘겨받은 필드에서만 발생한다.
+        return {
+            str(err["loc"][0]): err["msg"]
+            for err in e.errors()
+            if err["loc"] and str(err["loc"][0]) in provided
+        }
+    return {}
 
 
 def build_payload(records: list[DefectRateInput]) -> dict[str, Any]:

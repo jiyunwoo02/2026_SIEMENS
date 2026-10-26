@@ -17,7 +17,14 @@ from .llm import (
     build_extraction_user_content,
 )
 from .ml import DefectRateMLClient, MLEndpointError
-from .schema import ALL_FIELDS, FIELD_SPEC, NUMERIC_FIELDS, DefectRateInput, extraction_json_schema
+from .schema import (
+    ALL_FIELDS,
+    FIELD_SPEC,
+    NUMERIC_FIELDS,
+    DefectRateInput,
+    extraction_json_schema,
+    validate_provided_fields,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +171,7 @@ def build_question(
     known: dict[str, Any] | None = None,
     ambiguous: list[str] | None = None,
     no_conditions: bool = False,
+    notes: str | None = None,
 ) -> str:
     """누락·모호 필드의 설명과 확인된 값을 이용해 추가 입력 안내문을 만든다.
 
@@ -173,6 +181,8 @@ def build_question(
         known: 세션에 확인된 값.
         ambiguous: [추가] 모호한 표현 때문에 null이 된 필드. missing에 없는 이름은 무시한다.
         no_conditions: [추가] 질의에서 공정 조건을 전혀 찾지 못한 경우(N05) 안내 문구를 붙인다.
+        notes: [추가] 2026-10-23: 추출기가 남긴 부가 설명. 항목명 없는 숫자('80')를 어떤 필드에도
+            배정하지 않은 사유를 사용자에게 알리기 위해 안내문 앞에 덧붙인다.
     출력: Markdown 형식의 안내문.
     """
     known = known or {}
@@ -180,6 +190,9 @@ def build_question(
     amb = [f for f in missing if f in amb_set]
     plain = [f for f in missing if f not in amb_set]
     parts: list[str] = []
+    # [추가] 2026-10-23: 값을 버린 이유(예: "80"이 어떤 항목인지 알 수 없음)를 먼저 보여준다.
+    if notes and notes.strip():
+        parts.append(f"※ {notes.strip()}")
     if no_conditions:
         parts.append("질의에서 예측에 쓸 공정 조건을 찾지 못했습니다. 이 서비스는 공정 조건으로 결함률(%)을 예측합니다.")
     # [수정] 모호한 항목은 "값이 없다"가 아니라 정확한 값을 요청하는 별도 문구로 안내한다.
@@ -209,6 +222,29 @@ def build_question(
         )
         body += f"\n\n아래 형식으로 한 번에 입력하셔도 됩니다.\n```\n{template}\n```"
     return body
+
+
+def _invalid_result(reasons_by_field: dict[str, str], session: SlotFillingSession) -> "PipelineResult":
+    """위반 필드 -> 오류 메시지로 invalid_input 응답을 만든다.
+
+    [수정] 2026-10-23(로직 변경 없는 추출): 기존 ValidationError 처리 블록을 그대로 함수로 분리했다.
+    필드 단위 사전 검증과 최종 검증이 같은 응답 형식을 쓰기 위함이다.
+    위반 필드는 세션에서 제거하여 다음 발화에서 정정할 수 있게 한다.
+    """
+    invalid_fields = [f for f in ALL_FIELDS if f in reasons_by_field]
+    reasons = [f"{f}: {reasons_by_field[f]}" for f in invalid_fields]
+    for f in invalid_fields:
+        session.slots.pop(f, None)
+    hints = [f"- **{f}** — {FIELD_SPEC[f]['desc']}" for f in invalid_fields]
+    return PipelineResult(
+        status="invalid_input",
+        answer="입력값이 모델 허용 범위를 벗어났습니다. 다시 알려주세요.\n- "
+        + "\n- ".join(reasons)
+        + ("\n\n허용 범위:\n" + "\n".join(hints) if hints else ""),
+        errors=reasons,
+        invalid_fields=invalid_fields,
+        known_slots=session.known(),
+    )
 
 
 @dataclass
@@ -295,6 +331,29 @@ class DefectRatePipeline:
                 missing_fields=missing,
             )
 
+        # [수정] 2026-10-26 (로직 변경): 이미 확인된 필드를 모호하게 정정한 경우(예: 습도 54.49 확인 후
+        # "습도가 꽤 높아졌다면?") 추출값은 null이라 병합에서 기존 값이 조용히 유지되고,
+        # 그 결과 missing/ambiguous_fields에서 빠져 예측이 그대로 진행되던 문제를 막는다.
+        # 모호하다고 표시된 필드는 세션 슬롯에서 비워 병합 후 null이 되게 하고, 재질문 대상(missing)과
+        # 모호 필드(ambiguous_fields)로 남긴다. 기존 값으로 예측하면 사용자의 what-if 의도와 어긋나기 때문이다.
+        # 값이 없는 필드에 대한 pop은 영향이 없다(세션에 없던 필드는 기존대로 누락 처리).
+        for f in extraction.ambiguous_fields:
+            session.slots.pop(f, None)
+
+        # [추가] 2026-10-23: 슬롯이 다 차기 전에도 값이 있는 필드는 즉시 검증한다.
+        # 이전에는 12개가 모두 찬 뒤에만 검증해서 허용값 밖 코드(SIM-SUP-D)가 세션에 저장됐다.
+        # 위반 필드는 null로 바꿔 병합 대상에서 빼고(세션에 저장하지 않음), 같은 발화의 유효한 값은 유지한다.
+        bad_reasons: dict[str, str] = {}
+        for rec in extraction.records:
+            for f, msg in validate_provided_fields(rec).items():
+                bad_reasons.setdefault(f, msg)
+        if bad_reasons:
+            for rec in extraction.records:
+                for f in bad_reasons:
+                    rec[f] = None
+            session.merge(extraction.records)
+            return _invalid_result(bad_reasons, session)
+
         # 모든 비교 조건 중 하나라도 값이 없으면 해당 필드를 추가 질문 대상으로 삼는다.
         merged = session.merge(extraction.records)
         missing = sorted(
@@ -305,7 +364,8 @@ class DefectRatePipeline:
         if missing:
             session.track_missing(missing)
             # [추가] 모호 필드는 실제로 누락된 필드만 남겨 ambiguous_fields ⊆ missing_fields를 보장한다.
-            # (세션에 이미 값이 있는 필드는 병합 후 null이 아니므로 제외된다.)
+            # [수정] 2026-10-26: 모호 필드는 위에서 세션 슬롯을 비웠고 extract()가 모든 레코드에서 해당 값을
+            # null로 만들기 때문에, 이미 확인됐던 필드도 병합 후 missing에 남아 이 목록에 포함된다.
             ambiguous = [f for f in missing if f in set(extraction.ambiguous_fields)]
             return PipelineResult(
                 status="need_more_info",
@@ -314,6 +374,8 @@ class DefectRatePipeline:
                     repeated=session.repeated_asks,
                     known=session.known(),
                     ambiguous=ambiguous,
+                    # [추가] 2026-10-23: 항목 불명 수치를 버린 사유를 사용자에게 전달한다.
+                    notes=extraction.notes,
                 ),
                 missing_fields=missing,
                 ambiguous_fields=ambiguous,
@@ -326,25 +388,13 @@ class DefectRatePipeline:
         try:
             records = [DefectRateInput(**{f: row[f] for f in ALL_FIELDS}) for row in merged]
         except ValidationError as e:
-            reasons = [
-                f"{'.'.join(str(p) for p in err['loc'])}: {err['msg']}" for err in e.errors()
-            ]
-            # [추가] 위반 필드 목록과 허용 범위 안내(FIELD_SPEC 설명)를 함께 제공한다.
-            bad = {str(err["loc"][0]) for err in e.errors() if err["loc"]}
-            invalid_fields = [f for f in ALL_FIELDS if f in bad]
-            # 검증 오류에 나온 필드를 세션에서 제거하여 다음 발화에서 정정할 수 있게 한다.
-            for f in invalid_fields:
-                session.slots.pop(f, None)
-            hints = [f"- **{f}** — {FIELD_SPEC[f]['desc']}" for f in invalid_fields]
-            return PipelineResult(
-                status="invalid_input",
-                answer="입력값이 모델 허용 범위를 벗어났습니다. 다시 알려주세요.\n- "
-                + "\n- ".join(reasons)
-                + ("\n\n허용 범위:\n" + "\n".join(hints) if hints else ""),
-                errors=reasons,
-                invalid_fields=invalid_fields,
-                known_slots=session.known(),
-            )
+            # [수정] 2026-10-23: 사전 검증을 통과했더라도 남을 수 있는 위반에 대한 안전망으로 유지하며,
+            # 응답 생성은 _invalid_result로 통일했다(동작·메시지 형식 동일).
+            final_reasons: dict[str, str] = {}
+            for err in e.errors():
+                if err["loc"]:
+                    final_reasons.setdefault(str(err["loc"][0]), err["msg"])
+            return _invalid_result(final_reasons, session)
 
         # 검증을 통과한 레코드만 예측 클라이언트에 전달한다.
         try:

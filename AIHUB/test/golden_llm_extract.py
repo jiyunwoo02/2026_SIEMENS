@@ -1,4 +1,4 @@
-"""골든 셋 v2의 query를 실제 LLM에 보내 추출한 record를 CSV로 기록하고 expected와 비교한다.
+"""골든 셋 v2의 query를 실제 LLM에 보내 추출한 record를 CSV로 기록하고 expected와 비교한다. (261026: v2 -> v3)
 
 목적:
     data/golden_set_v2.json 의 단일 턴 케이스(C/P/N/A/I)의 query를 실제 SDC LLM 추출기
@@ -56,7 +56,7 @@ from aihub.llm import SDCLLMClient  # noqa: E402
 from aihub.pipeline import QueryExtractor  # noqa: E402
 from aihub.schema import ALL_FIELDS  # noqa: E402
 
-GOLDEN_PATH = ROOT / "data" / "golden_set_v2.json"
+GOLDEN_PATH = ROOT / "data" / "golden_set_v3.json"
 DEFAULT_OUT_DIR = ROOT / "test" / "results"
 
 # 레코드 CSV(golden_v2_llm_records_*.csv)의 컬럼. LLM이 추출한 레코드 1개당 1행이다.
@@ -305,8 +305,8 @@ def main(argv: list[str] | None = None) -> int:
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    records_path = args.out_dir / f"golden_v2_llm_records_{stamp}.csv"
-    diff_path = args.out_dir / f"golden_v2_llm_diff_{stamp}.csv"
+    records_path = args.out_dir / f"golden_v3_llm_records_{stamp}.csv"
+    diff_path = args.out_dir / f"golden_v3_llm_diff_{stamp}.csv"
     # utf-8-sig: Excel에서 한글 query가 깨지지 않도록 BOM을 붙인다.
     with records_path.open("w", newline="", encoding="utf-8-sig") as fp:
         w = csv.DictWriter(fp, fieldnames=RECORD_COLUMNS, extrasaction="ignore", restval="")

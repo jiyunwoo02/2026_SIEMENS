@@ -2,7 +2,7 @@
 
 한국어 자연어 질의에서 공정 조건 12개를 추출해 외부 결함률 예측 API로 전달하고, 반환된 예측값(%)을 LLM이 해설하는 대화형 서비스입니다. CLI, HTTP API, 로컬 웹 UI로 사용할 수 있습니다.
 
-- 핵심 원칙: **추측 금지**. 질의에 없거나 모호한 값은 `null`로 두고, 외부 예측 API를 호출하지 않은 채 추가 입력을 되묻습니다.
+- 핵심 원칙: **추측 금지**. 질의에 없거나 모호한 값은 `null`로 두고, 외부 예측 API를 호출하지 않은 채 추가 입력을 되묻습니다. 이미 확인된 값을 모호하게 바꾸려는 발화("습도가 꽤 높아졌다면?")도 기존 값으로 예측하지 않고 해당 항목을 다시 묻습니다(2026-10-26 반영).
 - 저장소 전체 개요: [`../README.md`](../README.md)
 - 같은 입력 컬럼을 쓰는 로컬 학습 데모: [`../ICX_DEMO/README.md`](../ICX_DEMO/README.md) (코드 연동은 없음)
 
@@ -22,9 +22,9 @@ AIHUB/
 │   ├── ml.py            예측 API 클라이언트 (재시도, 응답·에코 검증)
 │   ├── pipeline.py      추출 → 세션 병합 → 검증 → 예측 → 해설
 │   └── web/             로컬 웹 UI (index.html, app.js, style.css, ui.sh)
-├── data/                골든 셋(v2, v1), 예측용 입력 CSV
+├── data/                골든 셋(v3 현행, v2·v1은 data/v2/, data/v1/), 예측용 입력 CSV(data/base/)
 ├── docs/                상세 문서 (아래 참고)
-└── test/                pytest 3종 + curl 스모크 스크립트
+└── test/                pytest 3종, 실제 LLM 추출 비교 스크립트(golden_llm_extract.py), curl 스모크 스크립트
 ```
 
 ## 설치
@@ -79,6 +79,16 @@ bash test/curl_test.sh        # ML 엔드포인트만 직접 호출 (네트워�
 ```
 
 pytest는 LLM 추출을 대역으로 대체하므로, 실제 LLM의 추출 정확도는 별도 평가가 필요합니다.
+
+<!-- [수정] 2026-10-26 (문서 변경, 로직 변경 없음): 골든 셋 v3 기준 반영, golden_llm_extract.py 실행 방법 추가. 아직 실행해 확인하지 않았다 -->
+실제 LLM 추출 정확도는 골든 셋 v3의 단일 턴 질의를 LLM에 보내 기대값과 비교하는 스크립트로 확인합니다. `.env`의 `api_key`, `LLM_MODEL`과 네트워크가 필요하고 케이스 수만큼 실제 LLM이 호출됩니다(비용·쿼터 유의).
+
+```bash
+python test/golden_llm_extract.py                  # 전체 단일 턴 케이스
+python test/golden_llm_extract.py --only C01,P03   # 케이스 ID 접두어로 선택
+```
+
+결과는 `test/results/`에 CSV로 저장되며, 추출 단계만 비교합니다(멀티턴·ML 예측·해설 제외). 현재 pytest는 v2 골든 셋만 읽고 v3를 읽는 pytest는 없습니다.
 
 ## 문서
 

@@ -1,0 +1,2 @@
+﻿case_id,category,record_index,field,expected,actual
+I09-invalid-with-ambiguous-null,invalid,,(ambiguous_fields),,ambient_humidity_pct

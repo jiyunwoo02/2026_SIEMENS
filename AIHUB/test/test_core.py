@@ -126,7 +126,8 @@ def test_parse_real_ml_response():
 # [수정] 2026-10-22: v1 골든 셋(data/golden_set.json)이 data/v1/로 이동되어 경로가 깨져 있었다.
 # v2(data/golden_set_v2.json)의 C01/I01로 교체하고, 실행 위치와 무관하게 이 파일 기준 절대 경로를 쓴다.
 # ID 꼴이 "C01" 또는 "C01-..." 어느 쪽이어도 동작하도록 접두어(첫 "-" 앞)로 찾는다.
-GOLDEN_V2 = Path(__file__).resolve().parents[1] / "data" / "golden_set_v2.json"
+# [수정] 2026-10-26: 골든 v2가 data/v2/로 이동되어 경로가 다시 깨져 있었다. 경로만 변경, 로직 변경 없음.
+GOLDEN_V2 = Path(__file__).resolve().parents[1] / "data" / "v2" / "golden_set_v2.json"
 
 
 def test_golden_c01_and_i01():
