@@ -61,7 +61,7 @@ class DefectRateInput(BaseModel):
     supplier_code: str = Field(min_length=1)
     # ge는 최솟값 이상, le는 최댓값 이하를 뜻하며 경계값도 허용한다.
     planned_quantity: int = Field(ge=0)
-    ambient_humidity_pct: float = Field(ge=0, le=100)
+    ambient_humidity_pct: float = Field(ge=0, le=100) # ge: Greater than or equal
     incoming_material_quality_score: float = Field(ge=0, le=100)
     coating_target_thickness_um: float = Field(ge=0)
     weld_energy_setting_pct: float = Field(ge=0, le=150)

@@ -13,58 +13,140 @@
 | 핵심 원칙 | 질의에 명시되지 않았거나 **모호한** 값은 **추측하지 않고** `null` 처리, 누락·모호 시 **API를 호출하지 않고 되묻기** |
 
 ## 2. 전체 흐름
-
+공통 규칙 
+- ① 추측 금지 — 명시되지 않은 값과 모호한 값은 모두 null 
+- ② ok·endpoint_error를 제외한 모든 종료는 ML API 미호출 
+- ③ 되묻기·정정 후 재입력은 ①로 재진입하며, 확인된 세션 슬롯은 유지
 ```
-사용자 질의
-   │
-   ▼
-[QueryExtractor]  SDC LLM 구조화 출력 (json_schema → json_object → prompt 폴백)
-   │  · 명시되지 않은 값 = null (추측 금지)
-   │  · 모호한 값 = null + ambiguous_fields 표시
-   │  · 단위/표기 정규화, 수치 반올림, 비교 질의는 다중 레코드로 분리
-   │        ├─ LLM 호출·파싱 실패 → status=llm_error
-   │        └─ records=[] 이고 세션도 비어 있음 → status=need_more_info (12개 전체 안내)
-   ▼
-[validate_provided_fields] 값이 있는 필드만 개별 검증 (슬롯이 덜 차도 실행) <!-- [추가] 2026-10-23 -->
-   │        └─ 허용값·범위 위반 → status=invalid_input, 위반 필드는 세션에 저장하지 않음 (API 미호출)
-   ▼
-[이미 확인된 필드가 모호해졌으면 세션 슬롯 제거] <!-- [추가] 2026-10-26 로직, 2026-10-27 문서화: pipeline.py run() -->
-   ▼
-[SlotFillingSession.merge] 이전 턴의 확인값과 병합
-   │        └─ null 필드 있음(누락·모호) → status=need_more_info + 질문 반환 (API 미호출)
-   ▼
-[DefectRateInput] Pydantic 검증 (타입·범위·허용값) — 12개가 모두 찬 경우에만 도달 (필드 단위 검증을 통과한 값에 대한 최종 안전망)
-   │        └─ 범위·허용값 위반 → status=invalid_input, 위반 값은 세션에서 제거 (API 미호출)
-   ▼
-{"data": [ {12개 컬럼}, ... ]}
-   │
-   ▼
-[DefectRateMLClient] POST $AI_HUB_ENDPOINT_URL (재시도 + 타임아웃 + 에코 검증)
-   │        └─ 호출·응답 검증 실패 → status=endpoint_error
-   ▼
-predictions: [1.6498…, ...] (단위 %) → LLM 해설(선택) → status=ok
+┌──────────────┐
+│  사용자 질의  │ ◀─────────────────────────────────────┐
+└──────┬───────┘                                       │
+       ▼                                               │
+┌─────────────────────────────────────────┐            │
+│ ① QueryExtractor                        │            │
+│   SDC LLM 구조화 출력                    │            │
+│     json_schema → json_object → prompt  │            │
+│   · 미명시 = null / 모호 = null + flag   │            │
+│   · 단위·표기 정규화, 수치 반올림         │            │
+│   · 비교 질의 → 다중 레코드 분리          │            │
+│   out: records[], ambiguous_fields[]     │           │
+└──────┬──────────────────────────────────┘            │
+       │                                               │
+       ├─ LLM 호출·파싱 실패 ───────────────▶ ✗ llm_error
+       ├─ records=[] · 세션 비어 있음 ──────▶ ◼ need_more_info (12개 전체 안내)
+       ├─ records=[] · 세션에 확인값 있음 ── "기존 조건 그대로" → ② 로 진행
+       ▼
+┌─────────────────────────────────────────┐            │
+│ ② drop_ambiguous_slots  (병합 전)        │            │
+│   ambiguous_fields 에 오른 필드의         │   종료 분기 없음
+│   세션 슬롯을 즉시 비움                   │   (세션 정리)
+│   → 기존 값으로 조용히 예측되는 것을 차단  │            │
+└──────┬──────────────────────────────────┘            │
+       ▼                                               │
+┌─────────────────────────────────────────┐            │
+│ ③ validate_provided_fields              │            │
+│   값이 있는 필드만 개별 검증              │            │
+│   (슬롯이 덜 차 있어도 실행)              │            │
+└──────┬──────────────────────────────────┘            │
+       ├─ 허용값·범위 위반 ────────────────▶ ✗ invalid_input
+       │                                    (위반 필드는 세션에 미저장,
+       ▼                                     같은 발화의 유효값은 유지)
+┌─────────────────────────────────────────┐            │
+│ ④ SlotFillingSession.merge              │            │
+│   이전 턴 확인값과 병합 → 누락 검사        │            │
+└──────┬──────────────────────────────────┘            │
+       ├─ null 필드 존재 (누락·모호) ───────▶ ◼ need_more_info + 되묻기 질문
+       │                                               │
+       ▼  12/12 충족 시에만 진행                         │
+┌─────────────────────────────────────────┐            │
+│ ⑤ DefectRateInput (Pydantic)            │            │
+│   타입·범위·허용값 — 최종 안전망           │            │
+└──────┬──────────────────────────────────┘            │
+       ├─ 범위·허용값 위반 ────────────────▶ ✗ invalid_input
+       │                                    (위반 값 세션에서 제거)
+       ▼                                               │
+   {"data": [ {12개 컬럼}, ... ]}   ◀── 데이터 산출물     │
+       ▼                                               │
+┌─────────────────────────────────────────┐            │
+│ ⑥ DefectRateMLClient                    │            │
+│   POST $AI_HUB_ENDPOINT_URL             │            │
+│   재시도 + 타임아웃 + 에코 검증           │            │
+└──────┬──────────────────────────────────┘            │
+       ├─ 호출·응답 검증 실패 ─────────────▶ ✗ endpoint_error (model_input 반환)
+       ▼                                               │
+   predictions: [1.6498…, ...]  (단위 %)                │
+       ▼                                               │
+┌─────────────────────────────────────────┐            │
+│ ⑦ 응답 생성                              │            │
+│   explain=true  → LLM 해설               │            │
+│                   (실패 시 수치 답변 폴백) │           │
+│   explain=false → 수치 답변만             │            │
+└──────┬──────────────────────────────────┘            │
+       ▼                                               │
+   ✅ status = ok                                       │
+                                                       │
+◼ need_more_info / ✗ invalid_input ── 사용자 보충·정정 ──┘
+
 ```
 
 ```mermaid
 flowchart TD
-    A[사용자 질의] --> B[QueryExtractor<br/>SDC LLM 구조화 출력]
-    B -->|추출 실패| L[status = llm_error]
-    B -->|예측 요청 아님<br/>records 비고 세션도 비어 있음| D
-    B --> V[validate_provided_fields<br/>값 있는 필드 개별 검증]
+    A([사용자 질의]):::start
+
+    subgraph S1["① 질의 해석"]
+        B["QueryExtractor<br/><small>SDC LLM 구조화 출력<br/>json_schema → json_object → prompt</small>"]:::proc
+    end
+
+    subgraph S2["② 세션 정리 · 검증 · 슬롯 채우기"]
+        R["drop_ambiguous_slots<br/><small>모호해진 확인 필드를 세션에서 제거 (병합 전)</small>"]:::proc
+        V["validate_provided_fields<br/><small>값이 있는 필드만 개별 검증</small>"]:::proc
+        M["SlotFillingSession.merge<br/><small>이전 턴 확인값과 병합 · 누락 검사</small>"]:::proc
+        C["DefectRateInput<br/><small>Pydantic 최종 안전망</small>"]:::proc
+    end
+
+    subgraph S3["③ ML 추론"]
+        F["model_input<br/><small>{ data: [ 12개 컬럼, ... ] }</small>"]:::data
+        G["DefectRateMLClient<br/><small>POST AI_HUB_ENDPOINT_URL<br/>재시도 · 타임아웃 · 에코 검증</small>"]:::proc
+        H["predictions<br/><small>defect_rate_pct (단위 %)</small>"]:::out
+    end
+
+    subgraph S4["④ 응답 생성"]
+        I["LLM 해설<br/><small>실패 시 수치 답변으로 폴백</small>"]:::opt
+        J["status = ok"]:::ok
+    end
+
+    A --> B
+    B -->|LLM 호출·파싱 실패| L["status = llm_error<br/><small>세션 변경 없음</small>"]:::err
+    B -->|"records=[] · 세션도 비어 있음"| D
+    B -->|"records=[] · 세션에 확인값 있음<br/>(기존 조건 그대로)"| R
+    B -->|records 추출됨| R
+
+    R --> V
     V -->|허용값·범위 위반| E
-    V --> M[SlotFillingSession.merge<br/>이전 턴 값과 병합]
-    M -->|누락·모호 필드 있음| D[status = need_more_info<br/>되묻기 반환]
-    M -->|12개 모두 채워짐| C[DefectRateInput<br/>Pydantic 검증]
-    C -->|범위·허용값 위반| E[status = invalid_input<br/>위반 필드 안내, 세션에서 제거]
-    C -->|검증 통과| F["{ data: [ 12개 컬럼, ... ] }"]
-    F --> G[DefectRateMLClient<br/>POST AI_HUB_ENDPOINT_URL]
-    G -->|호출·응답 검증 실패| X[status = endpoint_error]
-    G --> H[predictions, 단위 %]
-    H -->|explain = true| I[LLM 해설<br/>실패 시 수치 답변으로 대체]
+    V --> M
+    M -->|"null 필드 존재 (누락·모호)"| D["status = need_more_info<br/><small>되묻기 질문 · 확인값 유지</small>"]:::warn
+    M -->|12개 모두 충족| C
+    C -->|범위·허용값 위반| E["status = invalid_input<br/><small>invalid_fields 안내 · 위반 값 세션 제거</small>"]:::err
+    C -->|검증 통과| F
+
+    F --> G
+    G -->|호출·응답 검증 실패| X["status = endpoint_error<br/><small>model_input 반환</small>"]:::err
+    G --> H
+    H -->|explain = true| I
     H -->|explain = false| J
-    I --> J[status = ok<br/>사용자 응답]
-    D -.사용자 추가 입력.-> A
+    I --> J
+
+    D -.사용자 보충 입력.-> A
     E -.사용자 정정 입력.-> A
+
+    classDef start fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef proc  fill:#eef2ff,stroke:#6366f1,color:#312e81
+    classDef data  fill:#f1f5f9,stroke:#94a3b8,color:#334155
+    classDef out   fill:#ecfeff,stroke:#06b6d4,color:#155e75
+    classDef opt   fill:#fef9c3,stroke:#eab308,color:#713f12
+    classDef ok    fill:#dcfce7,stroke:#22c55e,color:#14532d
+    classDef err   fill:#fee2e2,stroke:#ef4444,color:#7f1d1d
+    classDef warn  fill:#ffedd5,stroke:#f97316,color:#7c2d12
 ```
 
 ## 3. 컴포넌트 상세

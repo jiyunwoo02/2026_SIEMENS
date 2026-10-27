@@ -14,6 +14,8 @@ AIHUB/
 ├── pyproject.toml       pytest 설정
 ├── requirements.txt     의존성
 ├── aihub/               애플리케이션 패키지
+│   ├── __init__.py      공개 API 재노출(DefectRatePipeline 등), __version__
+│   ├── __main__.py      python -m aihub 진입점 (cli.main 호출)
 │   ├── cli.py           한 줄 / 대화형 CLI (python -m aihub)
 │   ├── api.py           FastAPI: UI, /health, /chat/predict, 세션 삭제
 │   ├── config.py        설정 로드·검증
@@ -21,11 +23,14 @@ AIHUB/
 │   ├── llm.py           SDC LLM 클라이언트, 추출·해설 프롬프트
 │   ├── ml.py            예측 API 클라이언트 (재시도, 응답·에코 검증)
 │   ├── pipeline.py      추출 → 세션 병합 → 검증 → 예측 → 해설
+│   ├── prompt/          추출 프롬프트 변경 이력 스냅샷 (llm.py가 import하지 않는 미사용 파일)
 │   └── web/             로컬 웹 UI (index.html, app.js, style.css, ui.sh)
 ├── data/                골든 셋(v3 현행, v2·v1은 data/v2/, data/v1/), 예측용 입력 CSV(data/base/)
 ├── docs/                상세 문서 (아래 참고)
 └── test/                pytest 3종, 실제 LLM 추출 비교 스크립트(golden_llm_extract.py), curl 스모크 스크립트
 ```
+
+<!-- [수정] 2026-10-27 (문서 변경, 로직 변경 없음): 트리에서 누락되었던 aihub/__init__.py, aihub/__main__.py, aihub/prompt/(미사용 프롬프트 스냅샷)를 docs/code_inventory.md 기준으로 추가. 소스(__init__.py, __main__.py, llm.py)를 직접 읽어 확인했으며 실행해 재확인하지는 않았다 -->
 
 ## 설치
 
@@ -92,13 +97,15 @@ python test/golden_llm_extract.py --only C01,P03   # 케이스 ID 접두어로 �
 
 ## 문서
 
+<!-- [수정] 2026-10-27 (문서 변경, 로직 변경 없음): 본 README의 다른 절에서 확인된 내용(미사용 prompt 스냅샷, 골든 셋 v3, 모호 발화 재질문 동작, 저장소 전체 README, ICX_DEMO)을 문서 목록 설명에 반영하고 관련 문서 표를 추가했다. 각 docs/*.md의 실제 본문은 다시 열어 대조하지 않았으므로 설명이 문서 내용과 다르면 확인이 필요하다 -->
+
 | 문서 | 내용 |
 |---|---|
-| [`docs/architecture.md`](docs/architecture.md) | 파이프라인 설계, 상태 정의, 멀티턴, 미결 사항 |
+| [`docs/architecture.md`](docs/architecture.md) | 파이프라인 설계, 상태 정의(`ok`, `need_more_info`, `invalid_input`, `llm_error`, `endpoint_error`), 멀티턴, 미결 사항 |
 | [`docs/input_schema.md`](docs/input_schema.md) | 12개 입력 필드와 규칙 |
-| [`docs/run.md`](docs/run.md) | pytest, CLI, HTTP, curl 실행 가이드 |
+| [`docs/run.md`](docs/run.md) | pytest, CLI, HTTP, curl 실행 가이드 (준비 단계에 작성자 환경의 절대 경로 포함, 위 "주의" 참고) |
 | [`docs/web_ui.md`](docs/web_ui.md) | 로컬 웹 UI 구현, API 계약, 제약 |
-| [`docs/code_inventory.md`](docs/code_inventory.md) | 파일별 역할 목록 |
+| [`docs/code_inventory.md`](docs/code_inventory.md) | 파일별 역할 목록 (`aihub/` 패키지, 미사용 `aihub/prompt/` 스냅샷 포함) |
 
 ## 주의
 

@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1130" height="716" viewBox="0 0 1130 716" font-family="Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="car" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0,0 L9,3.5 L0,7 z" fill="#0ea5e9"/></marker>
+  </defs>
+  <rect width="1130" height="716" fill="#ffffff"/>
+
+  <text x="40" y="36" font-size="19" font-weight="700" fill="#0f172a">턴별 데이터 흐름 — 추출 결과는 불완전하고, 세션이 빈칸을 채운다</text>
+  <text x="40" y="58" font-size="12.5" fill="#64748b">Turn 1에서 채워진 12칸이 세션에 남고, Turn 2는 언급된 1칸만 덮어쓴다. 나머지 11개의 null 은 "모름"이 아니라 "이번 발화에서 언급되지 않음"이다.</text>
+
+  <!-- turn bands -->
+  <rect x="320" y="78" width="360" height="26" rx="6" fill="#eef2ff" stroke="#c7d2fe"/>
+  <text x="500" y="96" font-size="12.5" font-weight="700" fill="#312e81" text-anchor="middle">Turn 1 — 12개 값을 한 번에 입력</text>
+  <rect x="730" y="78" width="360" height="26" rx="6" fill="#e0f2fe" stroke="#bae6fd"/>
+  <text x="910" y="96" font-size="12.5" font-weight="700" fill="#075985" text-anchor="middle">Turn 2 — what-if (MT14)</text>
+
+  <!-- queries -->
+  <text x="330" y="124" font-size="10.5" fill="#475569">"LINE-BPR-01 주간조에서 SIM-SUP-B 자재로 533개 생산 예정…</text>
+  <text x="330" y="139" font-size="10.5" fill="#475569"> 공구 마모도 14.41%, 마지막 정비 후 30일. 결함률 예측해주세요."</text>
+  <text x="740" y="124" font-size="10.5" fill="#475569">"그럼 지그 정렬 오차가 0.05cm라면 어떨까요?"</text>
+  <text x="740" y="139" font-size="10.5" fill="#94a3b8">직전 세션: Turn 1의 확인값 12개</text>
+  <text x="40" y="124" font-size="10.5" fill="#94a3b8">직전 세션</text>
+  <text x="40" y="139" font-size="10.5" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#cbd5e1">{ }  0/12</text>
+
+  <!-- column headers -->
+  <g>
+    <rect x="40"  y="158" width="280" height="38" fill="#f1f5f9" stroke="#e2e8f0"/>
+    <rect x="320" y="158" width="180" height="38" fill="#f1f5f9" stroke="#e2e8f0"/>
+    <rect x="500" y="158" width="180" height="38" fill="#eef2ff" stroke="#e2e8f0"/>
+    <rect x="730" y="158" width="180" height="38" fill="#f1f5f9" stroke="#e2e8f0"/>
+    <rect x="910" y="158" width="180" height="38" fill="#e0f2fe" stroke="#e2e8f0"/>
+    <g font-size="10.5" font-weight="700" fill="#334155">
+      <text x="52" y="176">입력 필드 (12)</text>
+      <text x="332" y="176">① 추출 결과</text>
+      <text x="512" y="176">④ 병합 후 = 세션</text>
+      <text x="742" y="176">① 추출 결과</text>
+      <text x="922" y="176">④ 병합 후 = 세션</text>
+    </g>
+    <g font-size="8.5" fill="#94a3b8">
+      <text x="52" y="190">schema.py :: DefectRateInput</text>
+      <text x="332" y="190">질의에서 12개 모두 추출</text>
+      <text x="512" y="190">{ } + 12 → 12/12 충족</text>
+      <text x="742" y="190">1개만 추출 · 11개 null</text>
+      <text x="922" y="190">세션 12 ⊕ 추출 1 → 12/12</text>
+    </g>
+  </g>
+
+  <!-- zebra -->
+  <g fill="#f8fafc">
+    <rect x="40" y="200" width="640" height="28"/><rect x="730" y="200" width="360" height="28"/>
+    <rect x="40" y="256" width="640" height="28"/><rect x="730" y="256" width="360" height="28"/>
+    <rect x="40" y="312" width="640" height="28"/><rect x="730" y="312" width="360" height="28"/>
+    <rect x="40" y="368" width="640" height="28"/><rect x="730" y="368" width="360" height="28"/>
+    <rect x="40" y="480" width="640" height="28"/><rect x="730" y="480" width="360" height="28"/>
+  </g>
+
+  <!-- highlighted row (index 8) -->
+  <rect x="40"  y="424" width="640" height="28" fill="#fffbeb" stroke="#fcd34d" stroke-width="1.1"/>
+  <rect x="730" y="424" width="360" height="28" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.3"/>
+
+  <!-- rows -->
+  <g font-size="9.5" font-family="ui-monospace, Menlo, Consolas, monospace">
+    <g fill="#94a3b8" text-anchor="end">
+      <text x="62" y="218">1</text><text x="62" y="246">2</text><text x="62" y="274">3</text>
+      <text x="62" y="302">4</text><text x="62" y="330">5</text><text x="62" y="358">6</text>
+      <text x="62" y="386">7</text><text x="62" y="414">8</text><text x="62" y="442">9</text>
+      <text x="62" y="470">10</text><text x="62" y="498">11</text><text x="62" y="526">12</text>
+    </g>
+    <g fill="#334155">
+      <text x="74" y="218">production_line</text>
+      <text x="74" y="246">shift</text>
+      <text x="74" y="274">supplier_code</text>
+      <text x="74" y="302">planned_quantity</text>
+      <text x="74" y="330">ambient_humidity_pct</text>
+      <text x="74" y="358">incoming_material_quality_score</text>
+      <text x="74" y="386">coating_target_thickness_um</text>
+      <text x="74" y="414">weld_energy_setting_pct</text>
+      <text x="74" y="470">process_setting_deviation_pct</text>
+      <text x="74" y="498">tool_wear_pct</text>
+      <text x="74" y="526">days_since_maintenance</text>
+    </g>
+    <text x="74" y="442" fill="#78350f" font-weight="700">fixture_alignment_offset_mm</text>
+
+    <!-- T1 추출 -->
+    <g fill="#475569" text-anchor="end">
+      <text x="488" y="218">"LINE-BPR-01"</text><text x="488" y="246">"DAY"</text>
+      <text x="488" y="274">"SIM-SUP-B"</text><text x="488" y="302">533</text>
+      <text x="488" y="330">54.49</text><text x="488" y="358">83.95</text>
+      <text x="488" y="386">79.22</text><text x="488" y="414">92.67</text>
+      <text x="488" y="470">13.06</text><text x="488" y="498">14.41</text>
+      <text x="488" y="526">30</text>
+    </g>
+    <text x="488" y="442" fill="#475569" text-anchor="end">0.112</text>
+
+    <!-- T1 병합 -->
+    <g fill="#312e81" text-anchor="end">
+      <text x="668" y="218">"LINE-BPR-01"</text><text x="668" y="246">"DAY"</text>
+      <text x="668" y="274">"SIM-SUP-B"</text><text x="668" y="302">533</text>
+      <text x="668" y="330">54.49</text><text x="668" y="358">83.95</text>
+      <text x="668" y="386">79.22</text><text x="668" y="414">92.67</text>
+      <text x="668" y="470">13.06</text><text x="668" y="498">14.41</text>
+      <text x="668" y="526">30</text>
+    </g>
+    <text x="668" y="442" fill="#312e81" text-anchor="end">0.112</text>
+
+    <!-- T2 추출 -->
+    <g fill="#cbd5e1" text-anchor="end">
+      <text x="898" y="218">null</text><text x="898" y="246">null</text><text x="898" y="274">null</text>
+      <text x="898" y="302">null</text><text x="898" y="330">null</text><text x="898" y="358">null</text>
+      <text x="898" y="386">null</text><text x="898" y="414">null</text>
+      <text x="898" y="470">null</text><text x="898" y="498">null</text><text x="898" y="526">null</text>
+    </g>
+    <text x="898" y="442" fill="#b45309" font-weight="700" text-anchor="end">0.5</text>
+
+    <!-- T2 병합 -->
+    <g fill="#075985" text-anchor="end">
+      <text x="1078" y="218">"LINE-BPR-01"</text><text x="1078" y="246">"DAY"</text>
+      <text x="1078" y="274">"SIM-SUP-B"</text><text x="1078" y="302">533</text>
+      <text x="1078" y="330">54.49</text><text x="1078" y="358">83.95</text>
+      <text x="1078" y="386">79.22</text><text x="1078" y="414">92.67</text>
+      <text x="1078" y="470">13.06</text><text x="1078" y="498">14.41</text>
+      <text x="1078" y="526">30</text>
+    </g>
+    <text x="1078" y="442" fill="#b45309" font-weight="700" text-anchor="end">0.5</text>
+  </g>
+
+  <!-- grid lines -->
+  <g stroke="#e2e8f0" stroke-width="1" fill="none">
+    <rect x="40" y="158" width="640" height="378"/>
+    <rect x="730" y="158" width="360" height="378"/>
+    <path d="M320,158 V536 M500,158 V536 M910,158 V536"/>
+  </g>
+
+  <!-- carry-over arrow -->
+  <path d="M686,352 H722" stroke="#0ea5e9" stroke-width="1.8" fill="none" marker-end="url(#car)"/>
+  <text x="705" y="330" font-size="9.5" fill="#0ea5e9" text-anchor="middle" transform="rotate(-90 705 330)">세션 이월 12/12</text>
+
+  <!-- summaries -->
+  <rect x="320" y="552" width="360" height="52" rx="8" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <text x="334" y="572" font-size="10.5" font-weight="700" fill="#4c1d95">③ 검증 통과 → ⑥ ML 호출</text>
+  <text x="334" y="590" font-size="10" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#6d28d9">predictions: 1.6498 (= 1.6498%) · status = ok</text>
+
+  <rect x="730" y="552" width="360" height="52" rx="8" fill="#ecfeff" stroke="#a5f3fc"/>
+  <text x="744" y="572" font-size="10.5" font-weight="700" fill="#155e75">0.5 ≥ 0 통과 → 1칸 교체 후 ML 재호출</text>
+  <text x="744" y="590" font-size="10" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#0e7490">지그 오차만 바뀐 재예측 · status = ok</text>
+
+  <!-- legend -->
+  <g font-size="9.5">
+    <rect x="40" y="552" width="260" height="52" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+    <text x="54" y="570" fill="#64748b" font-family="ui-monospace, Menlo, Consolas, monospace">null</text>
+    <text x="92" y="570" fill="#64748b">= 미언급 (추측 금지)</text>
+    <text x="54" y="590" fill="#b45309" font-weight="700" font-family="ui-monospace, Menlo, Consolas, monospace">0.5</text>
+    <text x="92" y="590" fill="#64748b">= 이번 턴에 교체된 값</text>
+  </g>
+
+  <!-- footer -->
+  <rect x="40" y="620" width="1050" height="78" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="58" y="642" font-size="11.5" fill="#475569">· 세션 = 12칸 딕셔너리. 매 턴 언급된 키만 갱신되고, 언급되지 않은 키는 이전 확인값이 그대로 유지된다.</text>
+  <text x="58" y="662" font-size="11.5" fill="#475569">· 단, 해당 필드가 ambiguous_fields 에 오르면 덮어쓰기가 아니라 삭제된다 (drop_ambiguous_slots, 병합 전 실행).</text>
+  <text x="58" y="682" font-size="11.5" fill="#475569">· 단위 환산(0.05cm → 0.5mm)은 LLM 프롬프트 [정규화] 절이 수행하고, 코드는 _coerce 에서 6자리 반올림만 한다.</text>
+</svg>

@@ -9,7 +9,18 @@ from typing import Any
 import httpx
 
 from .config import get_settings
-from .schema import ALL_FIELDS, ALLOWED_SHIFTS, FIELD_SPEC
+
+# [수정] 2026-10-27: "02라인"→LINE-BPR-02, "B공급사"→SIM-SUP-B 같은 한글 축약 표현이 실제로
+# 정규화되지 않고(schema.py에는 대소문자 정규화만 있음) 화이트리스트 검사에서 invalid_input으로
+# 차단될 수 있는 문제를 확인해, shift와 동일한 방식(프롬프트 명시)으로 별칭 규칙을 추가한다.
+# 코드 레벨 정규화가 아니므로 LLM이 규칙을 따르는지는 보장되지 않으며, 실제 LLM 호출로 검증되지 않았다.
+from .schema import (
+    ALL_FIELDS,
+    ALLOWED_PRODUCTION_LINES,
+    ALLOWED_SHIFTS,
+    ALLOWED_SUPPLIER_CODES,
+    FIELD_SPEC,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +80,10 @@ B. 값은 있으나 어느 필드인지 특정할 수 없다 -> 값을 버리고
 - 숫자만 추출하고 천 단위 쉼표는 제거한다("1,200" -> 1200).
 - 코드는 대문자로 정규화한다(line-bpr-01 -> LINE-BPR-01).
 - 교대조는 {ALLOWED_SHIFTS} 중 하나로: 주간·오전·낮·day·주간조 -> DAY / 야간·밤·night·야간조 -> NIGHT
+- 생산 라인은 {ALLOWED_PRODUCTION_LINES} 중 하나로: 1라인·01라인·라인1·라인 1 -> LINE-BPR-01 / 2라인·02라인·라인2·라인 2 -> LINE-BPR-02
+  (몇 번 라인인지 특정할 수 없으면 정규화하지 않고 [불확실한 값]의 미확정 코드로 처리한다)
+- 공급사는 {ALLOWED_SUPPLIER_CODES} 중 하나로: A공급사·공급사A·공급사 A·A사 -> SIM-SUP-A / B공급사·공급사B·공급사 B·B사 -> SIM-SUP-B / C공급사·공급사C·공급사 C·C사 -> SIM-SUP-C
+  (어느 공급사인지 특정할 수 없으면 정규화하지 않고 [불확실한 값]의 미확정 코드로 처리한다)
 - 한글 단위: 퍼센트=% / 마이크로미터·마이크론=um / 밀리·밀리미터=mm / 센티·센티미터=cm / 미터=m
 - 반드시 기준 단위로 환산해서 넣는다. 계산은 정확히 하고, 환산 후 범위 검증은 시스템이 한다.
   | 필드 | 기준 단위 | 환산 |

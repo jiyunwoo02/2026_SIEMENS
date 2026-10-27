@@ -52,7 +52,7 @@ def main() -> int:
         return 0
 
     # 질의가 없으면 입력을 반복해서 받으며 reset, exit, quit 명령을 처리한다.
-    print("질의를 입력하세요. (reset: 세션 초기화, exit: 종료)")
+    print("🤖 질의를 입력하세요. (reset: 세션 초기화, exit: 종료)")
     while True:
         try:
             q = input("\n> ").strip()
