@@ -1,0 +1,21 @@
+{
+    "data": [
+        {
+            "incoming_material_quality_score": 96.19936795236472,
+            "tool_wear_pct": 11.981241225213875,
+            "planned_quantity": 482.0,
+            "shift": "DAY",
+            "production_line": "LINE-BPR-02",
+            "process_setting_deviation_pct": 2.05927731567425,
+            "ambient_humidity_pct": 45.43426700751022,
+            "fixture_alignment_offset_mm": 0.87491013234385,
+            "supplier_code": "SIM-SUP-A",
+            "weld_energy_setting_pct": 111.44629679784423,
+            "coating_target_thickness_um": 97.65993400395705,
+            "days_since_maintenance": 57.0,
+            "confidence(1)": 0.01826481252131007,
+            "confidence(0)": 0.9817351874786899,
+            "prediction(high_defect_flag)": "0"
+        }
+    ]
+}
