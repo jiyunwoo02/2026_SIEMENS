@@ -1,0 +1,5 @@
+# [수정] pytest를 사용하지 않기로 해서(test/에 실제 .py 테스트 원본이 없었고, 실제 검증은
+# test/cli_smoke_test.sh, test/web_smoke_test.sh 수동 스모크 테스트로 대체함) [tool.pytest.ini_options]
+# 설정을 제거했습니다. 이 저장소에는 현재 pyproject.toml이 필요한 다른 설정
+# (빌드 시스템, 패키지 메타데이터 등)이 없습니다. 이 툴에는 파일 삭제 기능이 없어
+# 내용만 비웠습니다 - 필요 없다면 직접 삭제해도 됩니다: rm AIHUB-v2/pyproject.toml
