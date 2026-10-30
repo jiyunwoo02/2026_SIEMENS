@@ -19,7 +19,7 @@
       <header>
         <div>
           <p class="eyebrow">AIHUB / PREDICTION ASSISTANT</p>
-          <h1>생산 조건을 묻고,<br />결함률을 확인하세요.</h1>
+          <h1>생산 조건을 묻고,<br />결함률과 최적 조건을 확인하세요.</h1>
         </div>
         <button id="reset" type="button" class="secondary">새 대화</button>
       </header>
@@ -49,14 +49,14 @@
             ></textarea>
             <div class="examples">
               <button id="example-full" type="button" class="secondary">
-                전체 조건 예제
+                결함률 예측-전체 조건 예제
               </button>
               <button id="example-partial" type="button" class="secondary">
-                추가 질문 예제
+                결함률 예측-추가 질문 예제
               </button>
               <!-- [추가] 2026-10-28: 최적화(불량 최소화 조건 추천) 기능 예제 버튼. -->
               <button id="example-optimize" type="button" class="secondary">
-                최적화 예제
+                최적화-불량 최소화 예제
               </button>
             </div>
             <div class="form-footer">
@@ -69,7 +69,7 @@
             <!-- [수정] 예제의 세션 유지 동작을 명시해 누락 입력 테스트의 혼동을 방지한다. -->
             <p class="hint">
               해설을 꺼도 자연어 해석에는 실제 LLM을 호출합니다. 예제 버튼은
-              입력만 채웁니다. 추가 질문 예제는 ‘새 대화’ 후 사용하세요.
+              입력만 채웁니다. 추가 질문 예제는 우측 상단의 ‘새 대화’ 후 사용하세요.
               <!-- [추가] 2026-10-28: 최적화 예제는 조건 입력 없이도 바로 동작합니다(ML 예측 미호출). -->
               최적화 예제는 조건 입력 없이도 바로 동작합니다.
             </p>

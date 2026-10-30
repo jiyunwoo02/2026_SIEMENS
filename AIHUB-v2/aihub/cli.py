@@ -15,15 +15,18 @@ def main() -> int:
     # [수정] 2026-10-28: 결함률 예측만 안내하던 description/epilog에 최적화(불량 최소화/
     # 위험 조건 탐색/예측+최적화 동시 요청) 기능 예시를 추가했다(`--help` 출력에 반영).
     # 예시 문구는 llm.py의 EXTRACTION_SYSTEM_PROMPT [의도 분류] 절에 실제로 쓰이는 문구와 맞췄다.
+    # [수정] 2026-10-29: predict_and_find_risk(예측+위험 조건 탐색 동시 요청) 예시를 추가했다
+    # (schema.INTENTS, optimization.INTENT_TO_TARGET 참고).
     parser = argparse.ArgumentParser(
         description="AIHUB 결함률 예측 · 공정 최적화 어시스턴트",
         epilog=(
             "질의 예시:\n"
-            '  predict               : "LINE-BPR-01 결함률 예측해줘"\n'
-            '  optimize_reduce_defect: "불량률을 낮추려면 어떻게 해야 해" (조건 입력 불필요)\n'
+            '  predict                  : "LINE-BPR-01 결함률 예측해줘"\n'
+            '  optimize_reduce_defect   : "불량률을 낮추려면 어떻게 해야 해" (조건 입력 불필요)\n'
             '  optimize_find_defect_risk: "불량이 잘 나는 조건이 뭐야" (조건 입력 불필요)\n'
-            '  predict_and_optimize  : "이 조건 결함률 예측하고 줄이는 방법도 알려줘"\n'
-            "위 세 가지 최적화 의도는 ML 예측 API 대신(또는 함께) 최적화 API를 호출한다.\n"
+            '  predict_and_optimize     : "이 조건 결함률 예측하고 줄이는 방법도 알려줘"\n'
+            '  predict_and_find_risk    : "이 조건 결함률 예측하고, 불량이 더 심해지는 위험 조건도 알려줘"\n'
+            "위 네 가지 최적화 의도는 ML 예측 API 대신(또는 함께) 최적화 API를 호출한다.\n"
             "자세한 동작은 README.md와 docs/architecture.md를 참고하세요."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -61,7 +64,8 @@ def main() -> int:
             preds = ", ".join(f"{p:.2f}%" for p in res.predictions)
             print(f"\npredictions = [{preds}]  ({res.latency_ms}ms)")
         # [추가] 2026-10-28: 최적화 결과가 있으면(optimize_reduce_defect/find_defect_risk/
-        # predict_and_optimize) 응답 시간을 함께 보여준다. 상세 조건 내용은 res.answer에 이미 포함된다.
+        # predict_and_optimize/predict_and_find_risk) 응답 시간을 함께 보여준다. 상세 조건 내용은
+        # res.answer에 이미 포함된다. [수정] 2026-10-29: predict_and_find_risk 추가에 맞춰 주석 갱신(로직 변경 없음).
         if res.optimization:
             opt_latency = res.optimization.get("latency_ms", "?")
             print(f"\n(최적화 API 응답 시간: {opt_latency}ms)")
@@ -76,7 +80,7 @@ def main() -> int:
     print("🤖 결함률 예측 또는 공정 최적화를 요청하세요. (reset: 세션 초기화, exit: 종료)")
     print(
         '  예) "LINE-BPR-01 결함률 예측해줘" / "불량률을 낮추려면 어떻게 해야 해" / '
-        '"불량이 잘 나는 조건이 뭐야"'
+        '"불량이 잘 나는 조건이 뭐야" / "이 조건 예측하고 위험 조건도 알려줘"'
     )
     while True:
         try:

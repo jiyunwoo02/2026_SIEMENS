@@ -100,12 +100,19 @@ class DefectRateMLClient:
             raw, latency_ms = self._post(payload)
             results = self.parse(raw, payload["data"])
         # 예측값은 이미 퍼센트 단위이므로 100을 곱하거나 나누지 않는다.
+        # [수정] 반환 딕셔너리의 각 키가 의미하는 바를 설명하는 주석 추가 (로직 변경 없음)
         return {
+            # 외부 API로 전송한 요청 본문 ({"data": [...]}) 전체
             "payload": payload,
+            # 레코드별 예측 결과 객체 목록 (예측값, 응답 에코 입력, 누락 컬럼 포함)
             "results": results,
+            # results에서 예측값(defect_rate_pct)만 추출한 숫자 목록 (요청 순서와 동일)
             "predictions": [p.defect_rate_pct for p in results],
+            # 예측값의 단위. 이미 퍼센트(%) 값이므로 추가 환산이 필요 없음
             "unit": "percent",
+            # API 원본 응답 (MOCK_ML 모드에서는 {"mock": True})
             "raw": raw,
+            # 마지막 시도의 API 호출 소요 시간(ms). MOCK_ML 모드에서는 0
             "latency_ms": latency_ms,
         }
 

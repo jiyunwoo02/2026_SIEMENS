@@ -13,23 +13,22 @@
 | `__init__.py` | 패키지 공개 API 재노출(`DefectRatePipeline`, `PipelineResult`, `SlotFillingSession`, `DefectRateInput`, `build_payload`), `__version__ = "1.0.0"`. 최적화 관련 클래스(`OptimizationClient` 등)는 재노출하지 않는다 |
 | `__main__.py` | `python -m aihub` 진입점. `cli.main()`을 호출하고 반환값을 `SystemExit`으로 전달 |
 | `config.py` | `.env` 설정. 기존 LLM/예측 API 설정에 더해 **[신규]** 최적화 API 설정 3종(`optimization_api_url`, `optimization_api_token`, `optimization_timeout_seconds` 기본 180초, `optimization_max_retries` 기본 1회)을 추가. `validate_runtime()`은 최적화 설정을 시작 시점 필수값으로 검사하지 않는다(선택 기능으로 취급, 호출 시점에만 오류) |
-| `schema.py` | 12개 필드 정의, 라인·공급사 화이트리스트, `DefectRateInput` 검증, `validate_provided_fields()`. **[신규]** `INTENTS`(`predict`/`optimize_reduce_defect`/`optimize_find_defect_risk`/`predict_and_optimize`/`clarify` 5종), `FIELD_LABELS`(12개 필드 → 한글 라벨, `web/app.js`의 `welcomeMessage`와 수동 동기화 필요), `UNCONTROLLABLE_FIELDS`(현장에서 바꾸기 어려운 5개 필드, 명세의 예시를 그대로 사용해 담당자 확인 필요). 추출 JSON Schema(`extraction_json_schema()`)의 최상위 `required`에 `intent`가 추가됨 |
-| `llm.py` | SDC LLM 클라이언트 + 추출 프롬프트(`EXTRACTION_SYSTEM_PROMPT`) + 해설 프롬프트(`ANSWER_SYSTEM_PROMPT`, 변경 없음). 추출 프롬프트에 **[신규]** `[의도 분류 — intent]` 절이 추가되어 LLM이 `INTENTS` 중 하나를 고르게 한다. 단, **target 숫자(0/1)는 LLM이 직접 고르지 않고** `optimization.build_target()`이 코드로 고정 변환한다(프롬프트에도 "절대 직접 고르지 않는다"로 명시) |
+| `schema.py` | 12개 필드 정의, 라인·공급사 화이트리스트, `DefectRateInput` 검증, `validate_provided_fields()`. `INTENTS`(`predict`/`optimize_reduce_defect`/`optimize_find_defect_risk`/`predict_and_optimize`/`predict_and_find_risk`/`clarify` **6종** — **[수정] 2026-10-29**: 명세서(`docs/agent-v2/bak/chatbot_optimization_feature_spec.md`)에는 없는 `predict_and_find_risk`가 추가됨, 아래 `README.md` "배경" 절 참고), `FIELD_LABELS`(12개 필드 → 한글 라벨, `web/app.js`의 `welcomeMessage`와 수동 동기화 필요), `UNCONTROLLABLE_FIELDS`(현장에서 바꾸기 어려운 5개 필드로 제안됐던 상수). **[수정] 2026-10-29 (담당자 확인)**: 담당자가 이 상수를 **비활성화했다고 직접 확인**했다. `pipeline.py`의 `_format_conditions_table()`에서 이미 "참고값" 표시 기능이 제거된 것(2026-10-27)과 일관되며, 더 이상 사용되지 않는 것으로 정리됐다. 추출 JSON Schema(`extraction_json_schema()`)의 최상위 `required`에 `intent`가 추가됨 |
+| `llm.py` | SDC LLM 클라이언트 + 추출 프롬프트(`EXTRACTION_SYSTEM_PROMPT`) + 해설 프롬프트(`ANSWER_SYSTEM_PROMPT`, 변경 없음). 추출 프롬프트에 `[의도 분류 — intent]` 절이 있어 LLM이 `INTENTS`(6종) 중 하나를 고르게 한다. **[수정] 2026-10-29**: 해당 절에 `predict_and_find_risk`("이 조건 결함률 예측하고, 불량이 더 심해지는 위험 조건도 알려줘") 정의·예시가 추가됨(소스 확인, `predict_and_optimize`와 나란히 서술). 단, **target 숫자(0/1)는 LLM이 직접 고르지 않고** `optimization.build_target()`이 코드로 고정 변환한다(프롬프트에도 "절대 직접 고르지 않는다"로 명시) |
 | `ml.py` | 결함률 예측(POST) API 클라이언트 (재시도, 에코 검증). 이번 변경에서 수정되지 않음 |
-| `optimization.py` | **[신규]** 최적화(GET, `target` 쿼리 파라미터) API 클라이언트. `INTENT_TO_TARGET` 고정 사전(`optimize_reduce_defect`→`"1"`, `predict_and_optimize`→`"1"`, `optimize_find_defect_risk`→`"0"`), `build_target()`, `parse_optimization_response()`(`confidence(1)`/`confidence(0)`/`prediction(high_defect_flag)` 파싱, 나머지 키를 조건으로 간주), `OptimizationClient`(ml.py와 동일한 재시도 정책: 5xx·타임아웃만 재시도, 4xx는 즉시 실패). **[수정]** 모듈 docstring에서 `test/test_optimization.py` 언급을 제거했다(pytest 미사용 결정으로 애초에 작성되지 않았음). `INTENT_TO_TARGET` 매핑을 고정하는 자동 테스트는 여전히 없다 |
-| `pipeline.py` | **[확장]** 기존 추출·세션 병합·검증·예측·해설 흐름(`_run_predict`, `_gather_and_predict`)은 로직 변경 없이 유지. `DefectRatePipeline.run()`이 `intent`로 분기하여 `_run_optimize_only`(조건 입력 없이 최적화 API만 호출), `_run_predict_and_optimize`(예측 후 최적화 추가 호출, 최적화 실패해도 예측 결과는 반환), `_run_clarify`(API 미호출, 방향을 되묻는 고정 문구)로 라우팅한다. `_format_optimize_only`/`_format_predict_and_optimize`/`_format_conditions_table`이 최적화 결과를 Markdown으로 포맷하며, 두 포맷 함수 모두 "모델 기반 추정이며 실제 공정 결과를 보장하지 않는다"는 고지 문구를 포함한다. `PipelineResult`에 `intent`(기본값 `"predict"`, 하위 호환용), `optimization`(최적화 원본 파싱 결과 또는 `None`) 필드가 추가됨 |
-| `api.py` | FastAPI: 로컬 웹 UI 정적 제공(`GET /` → `web/index.html`, `GET /ui-assets/*`) + `/health`, `/chat/predict`, 세션 삭제. **이번 변경에서 수정되지 않음** — `/health` 응답에 최적화 API 설정 여부가 포함되지 않고, `/chat/predict`는 `PipelineResult.to_dict()`를 그대로 반환하므로 `intent`/`optimization` 필드는 결과적으로 함께 전달된다 |
-| `cli.py` | 한 줄/대화형 CLI (`python -m aihub`). 수정되지 않음. `res.answer`를 그대로 출력하므로 최적화 응답(최적 조건 표, 고지 문구)도 텍스트로는 보인다 |
+| `optimization.py` | 최적화(GET, `target` 쿼리 파라미터) API 클라이언트. `INTENT_TO_TARGET` 고정 사전(`optimize_reduce_defect`·`predict_and_optimize`→`"1"`, `optimize_find_defect_risk`·`predict_and_find_risk`→`"0"`; **[수정] 2026-10-29**: `predict_and_find_risk` 추가), `build_target()`, `parse_optimization_response()`(`confidence(1)`/`confidence(0)`/`prediction(high_defect_flag)` 파싱, 나머지 키는 조건으로 간주), `OptimizationClient`(ml.py와 동일한 재시도 정책: 5xx·타임아웃만 재시도, 4xx는 즉시 실패). 모듈 docstring이 작성되지 않은 `test/test_optimization.py`를 아직 언급하고 있으며, `INTENT_TO_TARGET` 매핑을 고정하는 자동 테스트는 없다 |
+| `pipeline.py` | 기존 추출·세션 병합·검증·예측·해설 흐름(`_run_predict`, `_gather_and_predict`, `_explain`)은 로직 변경 없이 유지. `run()`이 `intent`로 분기한다: `_run_optimize_only`(최적화 API만 호출), `_run_predict_and_optimize`(예측 후 최적화 추가 호출), `_run_clarify`(API 미호출, 방향을 되묻는 고정 문구). **[수정] 2026-10-29**: `_run_predict_and_optimize(extraction, session, intent)`가 `predict_and_find_risk`도 처리하도록 일반화되어 `build_target(intent)`로 target을 동적으로 정한다(기존에는 `target="1"` 하드코딩). 최적화가 실패해도(`OptimizationEndpointError`/`ValueError`) `status="ok"`, `optimization=None`, `errors=[...]`로 부분 성공을 반환한다. `_run_optimize_only(intent)`의 상태 매핑은 `ValueError`→`llm_error`, `OptimizationEndpointError`→`endpoint_error`, 성공→`ok`. 포맷 함수: `_format_conditions_table()`은 2026-10-27에 "참고값" 열이 제거되어 `항목 | 값` 2열 표만 만들고 `UNCONTROLLABLE_FIELDS`는 사용하지 않는다(담당자 확인으로 비활성화). `_format_optimize_only()`는 불량/정상 확률과 "모델 기반 추정" 고지를 표시한다. ⚠️ **알려진 불일치**: "참고값으로 표시된 항목은..." 문구가 남아 있지만 표에는 참고값 표시가 없다. `_format_predict_and_optimize()`는 `intent=="predict_and_find_risk"`에 따라 제목·라벨·실패 문구를 달리 렌더링하며, `defect_probability`만 표시한다. `shift`는 `_SHIFT_DISPLAY`(`DAY`→"주간 (DAY)", `NIGHT`→"야간 (NIGHT)", 그 외는 원문)로 표시한다. `PipelineResult`에 `intent`(기본 `"predict"`), `optimization`, `errors` 필드가 추가됐다. 위 내용은 모두 소스로 확인했다(`docs/architecture.md` 4.5절 참고) |
+| `api.py` | FastAPI: 웹 UI 정적 제공(`GET /`, `GET /ui-assets/*`) + `/health`, `/chat/predict`, 세션 삭제. **이번 변경에서 수정되지 않음** — `/health`에 최적화 API 설정 여부는 없고, `/chat/predict`는 `PipelineResult.to_dict()`를 그대로 반환하므로 `intent`/`optimization` 필드가 함께 전달된다 |
+| `cli.py` | 한 줄/대화형 CLI (`python -m aihub`). **[수정] 2026-10-28**: `--help`(`description`/`epilog`)와 대화형 배너에 최적화 의도 질의 예시를 추가하고, `res.optimization`이 있으면 최적화 API 응답 시간(`latency_ms`)을 별도 줄로 출력한다. **[수정] 2026-10-29**: `predict_and_find_risk` 예시를 추가해 최적화 의도가 "네 가지"로 바뀌었다(안내 문구만 변경, 로직 변경 없음). `res.answer`를 그대로 출력하므로 최적 조건 표·고지 문구도 텍스트로 보인다 |
 
 ### 하위 폴더
 
 | 경로 | 역할 |
 | --- | --- |
-| `prompt/llm_prompt_v1.py` | 추출 프롬프트 변경 이력 스냅샷. `llm.py`는 이 파일을 import하지 않는다(`__init__.py` 없음, 공식 서브패키지 아님). 단위 환산·항목 표시 없는 값 처리 규칙까지는 포함하지만 **intent 분류 절은 없다** (intent 도입 이전 스냅샷) |
-| `prompt/llm_prompt_v2.py` | 위와 동일한 성격의 스냅샷. 본문을 `llm.py`의 현재 `EXTRACTION_SYSTEM_PROMPT`와 대조한 결과, **`[의도 분류 — intent]` 절과 `shift` 외 `production_line`/`supplier_code`의 한글 별칭 정규화 규칙이 빠져 있어 llm.py보다 이전 버전**으로 보인다. 실행에는 영향이 없다 |
-| `web/index.html`, `web/app.js`, `web/style.css` | 로컬 웹 UI 정적 파일. `api.py`가 `/`(index.html)와 `/ui-assets/*`로 제공한다. **최적화 기능 미반영**(아래 "알려진 문제" 참고): `app.js`의 `statuses` 사전에 `clarify` 상태가 없어 해당 응답이 오면 `renderResult()`가 정상 응답 형식 오류로 처리하며, `optimization` 필드와 최적 조건 표를 별도로 렌더링하는 코드도 없다(응답 텍스트 `answer`와 `raw` JSON 영역에서만 확인 가능) |
-| `web/ui.sh` | 실행 가능한 스크립트가 아니라 `uvicorn` 실행 명령 한 줄을 적어 둔 메모(주석 처리된 프롬프트 포함) |
-| `web/bak/style.css` | 이전 스타일시트 백업으로 보이며 코드에서 참조되지 않는다 |
+| `prompt/prompt-v1.py` | **[수정] 파일명 정정**(`llm_prompt_v1.py` → `prompt-v1.py`). 추출 프롬프트 변경 이력 스냅샷이며 `llm.py`는 import하지 않는다(`__init__.py` 없음). `[의도 분류 — intent]` 절과 한글 별칭 정규화 규칙을 포함한다(이전 문서의 "intent 절 없음"은 사실이 아니었다). `llm.py`의 현재 프롬프트보다 `주의:` 절이 더 상세하고, `ANSWER_SYSTEM_PROMPT`도 "GBT 기반 회귀 모델" 설명 등으로 더 상세한 별도 버전이다 |
+| `prompt/prompt-v2.py` | **[수정] 파일명 정정**(`llm_prompt_v2.py` → `prompt-v2.py`). `EXTRACTION_SYSTEM_PROMPT`만 포함하며 intent 절과 별칭 정규화 규칙이 있다. `llm.py` 현재 버전과 거의 동일하고, 첫 문장만 "JSON으로 응답합니다"(현재는 "JSON으로만")로 다르다. `v1`/`v2` 이름이 실제 버전 순서를 반영하는지는 확인되지 않았다 |
+| `web/index.html`, `web/app.js`, `web/style.css` | 로컬 웹 UI 정적 파일. `api.py`가 `/`와 `/ui-assets/*`로 제공한다. **[수정] 2026-10-28**: `app.js`에 `clarify` 상태 추가, `describeStatus()`의 intent별 상태 문구, `clarify`를 정상 응답으로 처리하는 `renderResult()`, `optimization.latency_ms` 표시를 반영했고, `index.html`에는 최적화 예제 버튼(`example-optimize`)과 안내 문구를 추가했다. **[수정] 2026-10-29 (소스 확인)**: `describeStatus()`에 `predict_and_find_risk` 분기("⚠️ 예측 및 위험 조건 탐색 완료")와 `welcomeMessage` 예시 문구를 추가했다. `noMissingIsExpected`에 이 의도가 빠진 것은 조건 입력이 여전히 필요하기 때문이며 버그가 아니다. 최적화 조건 표 전용 렌더링 영역은 없고, 결과는 `answer` 텍스트(Markdown 표)와 `raw` JSON에서만 볼 수 있다 |
+| `web/ui.sh` | **[수정] 2026-10-28**: "메모"라는 이전 서술은 오류였고, 실제로 실행 가능한 스크립트다. 프로젝트 루트로 이동한 뒤(`.env` 로드용) `python -m uvicorn aihub.api:app --reload`를 실행한다. 포트는 첫 번째 인자(기본 8000), 호스트는 `HOST` 환경변수(기본 127.0.0.1)로 지정하며, `.env`가 없으면 경고만 출력하고 계속한다. `web/bak/style.css`는 존재하지 않아 해당 행을 제거했다 |
 
 ## 테스트 (`test/`)
 
@@ -50,14 +49,30 @@
 
 | 경로 | 역할 |
 | --- | --- |
-| `docs/architecture.md` | 전체 아키텍처 문서(intent 분기, 상태 정의, 컴포넌트별 상세 동작) |
+| `docs/architecture.md` | 전체 아키텍처 문서(intent 분기, 상태 정의, 컴포넌트별 동작) |
 | `docs/code_inventory.md` | 이 문서 |
-| `docs/agent-v2/optimization_chatbot_spec.md` | 최적화 전용 **독립 챗봇**으로 구상한 초기 명세서. `intent` enum이 4종(`optimize_reduce_defect`/`optimize_find_defect_risk`/`clarify`/`out_of_scope`)이며 `out_of_scope`는 `schema.INTENTS`에 없다. **실제 코드에 채택되지 않았다** |
-| `docs/agent-v2/pre-version/chatbot_optimization_feature_spec.md` | 기존 예측 파이프라인에 최적화 의도 3종(`optimize_reduce_defect`/`optimize_find_defect_risk`/`predict_and_optimize`)과 `clarify`를 **통합**하는 명세서. `schema.py`·`pipeline.py`·`optimization.py`가 이 문서의 4~6장 구조를 따른다 |
-| `docs/agent-v2/aistudio_optimization_troubleshooting.md` | Altair AI Studio에서 최적화(Prescriptive Analytics) 프로세스를 구성하며 겪은 트러블슈팅 기록. 이 저장소의 Python 코드와는 직접 관련이 없고, 서버(모델) 측 구성 참고 자료다 |
+| `docs/agent-v2/optimization_chatbot_spec.md` | 최적화 전용 독립 챗봇 초기 명세서. `intent` 4종(`optimize_reduce_defect`/`optimize_find_defect_risk`/`clarify`/`out_of_scope`)이며 `out_of_scope`는 `schema.INTENTS`에 없다. **실제 코드에 채택되지 않았다** |
+| `docs/agent-v2/bak/chatbot_optimization_feature_spec.md` | **[수정] 경로 정정**: 이전의 `pre-version/` 경로는 존재하지 않고 실제 경로는 `bak/`이다(파일시스템 확인). 기존 예측 파이프라인에 최적화 의도 3종(`optimize_reduce_defect`/`optimize_find_defect_risk`/`predict_and_optimize`)과 `clarify`를 통합하는 명세서이며, `schema.py`·`pipeline.py`·`optimization.py`가 4~6장 구조를 따른다. **`predict_and_find_risk`는 이 명세서에 없고 2026-10-29에 추가됐다**(`README.md` "배경" 절 참고) |
+| `docs/agent-v2/aistudio_optimization_troubleshooting.md` | Altair AI Studio 최적화(Prescriptive Analytics) 구성 트러블슈팅 기록. Python 코드와 직접 관련 없는 서버(모델) 측 참고 자료 |
 
 ## 변경 이력
 
-- (작성일 미상, 추가 수정): `docs/architecture.md`를 새로 작성하면서 문서 표에 항목을 추가했다. 기존에는 이 저장소에 architecture 문서가 없어 README가 AIHUB 쪽 문서를 대신 가리키는 문제가 있었다.
-- (작성일 미상, 이 문서 최초 작성): `AIHUB`의 `docs/code_inventory.md` 형식을 기준으로 `AIHUB-v2`용으로 새로 작성했다. 소스(`aihub/` 전체, `docs/agent-v2/` 3개 문서)를 직접 읽고 대조했으며, `test/`의 `.py` 원본 부재와 `test_optimization.py` 미존재, 웹 UI의 `clarify`/`optimization` 미반영은 모두 소스 열람으로 확인한 사실이다. CLI·HTTP·실제 외부 API 호출로 실행해 재확인하지는 않았다.
-- (추가 수정): pytest 미사용 결정에 따라 `requirements.txt`의 `pytest` 의존성, `pyproject.toml`의 `[tool.pytest.ini_options]`를 제거하고 "테스트 (`test/`)" 절을 실제 존재하는 파일(`curl_test_classification.sh`, `web_smoke_test.sh`, `cli_smoke_test.sh`, `results/`) 기준으로 다시 썼다. `aihub/optimization.py` docstring의 `test/test_optimization.py` 언급도 제거했다.
+- (작성일 미상) 이 문서 최초 작성: `AIHUB`의 `docs/code_inventory.md` 형식을 기준으로 `AIHUB-v2`용으로 작성했다. 소스(`aihub/` 전체, `docs/agent-v2/` 3개 문서)를 열람해 대조했으며, 실행 검증은 하지 않았다.
+- (작성일 미상) `docs/architecture.md` 신규 작성 후 문서 표에 항목을 추가했다. 이전에는 README가 AIHUB 쪽 문서를 대신 가리키고 있었다.
+- (작성일 미상) pytest 미사용 결정에 따라 `requirements.txt`의 `pytest`와 `pyproject.toml`의 `[tool.pytest.ini_options]`를 제거하고, "테스트 (`test/`)" 절을 실제 파일(`curl_test_classification.sh`, `web_smoke_test.sh`, `cli_smoke_test.sh`, `results/`) 기준으로 다시 썼다.
+- (소스 재대조) `optimization.py`, `cli.py`, `web/*`, `prompt/*`를 다시 읽고 이전 서술의 오류 6건을 정정했다.
+  1. `optimization.py` docstring의 `test/test_optimization.py` 언급은 제거되지 않고 남아 있다.
+  2. `cli.py`는 "수정되지 않음"이 아니라 2026-10-28에 최적화 안내 문구·응답시간 출력이 추가됐다.
+  3. `web/index.html`·`app.js`는 `clarify` 처리, intent별 상태 문구, 지연시간 표시, 예제 버튼이 반영됐다(최적화 조건 전용 렌더링 영역은 없음).
+  4. `web/ui.sh`는 메모가 아니라 실행 가능한 스크립트다.
+  5. `aihub/prompt/`의 실제 파일명은 `prompt-v1.py`/`prompt-v2.py`이며 둘 다 intent 분류 절을 포함한다.
+  6. 존재하지 않는 `web/bak/style.css` 행을 제거했다.
+- **[수정] 2026-10-29, `predict_and_find_risk` 추가 반영**: `schema.py`(`INTENTS` 5종→6종), `optimization.py`(`INTENT_TO_TARGET`에 `"0"` 매핑 추가), `llm.py`(프롬프트 예시 추가), `cli.py`·`web/app.js`(안내·상태 문구 추가)를 소스 열람으로 확인해 반영했다. 이 시점의 `pipeline.py` 내용은 README 서술에만 의존했다.
+- **[수정] 2026-10-29 (`pipeline.py` 소스 확인 1차)**: `_run_predict_and_optimize`/`_run_optimize_only`/`_run_clarify`/`_explain` 소스를 받아 추정 서술을 확인된 내용으로 교체했다(`intent` 인자, `build_target(intent)` 호출 등).
+- **[수정] 2026-10-29 (`pipeline.py` 소스 확인 2차)**: 포맷 함수 소스를 받아 `pipeline.py` 행을 정정했다.
+  1. `_format_conditions_table`의 "참고값" 열은 2026-10-27에 제거되어 2열 표만 남았다.
+  2. 그 결과 `_format_optimize_only`의 "참고값" 안내 문구와 표가 맞지 않는 **알려진 불일치**를 기록했다.
+  3. `_format_predict_and_optimize`가 `intent`별로 제목·라벨·문구를 달리 렌더링함을 확인했다.
+- **[수정] 2026-10-29 (담당자 확인)**: 담당자가 `UNCONTROLLABLE_FIELDS` 비활성화를 확인해 `schema.py`·`pipeline.py` 행의 "추가 확인 필요" 문구를 비활성화 사실로 교체했다.
+- **[수정] 2026-10-29 (소스 확인, 마무리)**: `_SHIFT_DISPLAY` 정의를 받아 `pipeline.py` 행의 마지막 미확인 항목을 해소했다. 이로써 `pipeline.py` 포맷 로직은 모두 소스로 확인됐으며, CLI·HTTP·실제 LLM 호출로는 재확인하지 않았다.
+- **[수정] 문서 요약**: 변경 이력의 각 항목을 의미 변경 없이 축약했다(포맷/분량 정리이며 내용 변경 아님).

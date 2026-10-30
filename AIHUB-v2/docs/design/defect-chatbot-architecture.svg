@@ -1,0 +1,361 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1960" viewBox="0 0 1600 1960">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5f5d58"/>
+    </marker>
+    <marker id="ahR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#c2412d"/>
+    </marker>
+    <marker id="ahA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#b7791f"/>
+    </marker>
+    <style>
+      text { font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; fill: #1d1c1a; }
+      .mono { font-family: "JetBrains Mono", D2Coding, Consolas, "SF Mono", monospace; }
+      .t-title { font-size: 26px; font-weight: 700; }
+      .t-sub { font-size: 15px; fill: #7a776f; }
+      .h { font-size: 18px; font-weight: 700; }
+      .hm { font-size: 17px; font-weight: 700; }
+      .b { font-size: 14px; }
+      .bb { font-size: 14px; font-weight: 700; }
+      .g { font-size: 13px; fill: #7a776f; }
+      .s { font-size: 12px; fill: #7a776f; }
+      .cap { font-size: 12px; font-weight: 700; fill: #7a776f; letter-spacing: .04em; }
+      .w { fill: #ffffff; }
+      .wl { fill: #a9a69e; font-size: 12px; letter-spacing: .06em; }
+      .chip { font-size: 12px; }
+      .box { fill: #ffffff; stroke: #1d1c1a; stroke-width: 1.5; }
+      .api { fill: #eaf0fb; stroke: #3b5bab; stroke-width: 1.5; }
+      .data { fill: #ecebe6; stroke: #c9c6bd; stroke-width: 1; }
+      .hdr { fill: #1d1c1a; }
+      .ln { fill: none; stroke: #5f5d58; stroke-width: 1.6; }
+      .lnR { fill: none; stroke: #c2412d; stroke-width: 1.5; stroke-dasharray: 5 4; }
+      .lnA { fill: none; stroke: #b7791f; stroke-width: 1.5; stroke-dasharray: 5 4; }
+      .pOk { fill: #e5f1e8; stroke: #2f7d4f; stroke-width: 1.3; }
+      .pErr { fill: #fbe9e6; stroke: #c2412d; stroke-width: 1.3; }
+      .pHalt { fill: #fbf1dc; stroke: #b7791f; stroke-width: 1.3; }
+      .tOk { fill: #1f5c38; font-size: 13px; font-weight: 700; }
+      .tErr { fill: #9a2f1f; font-size: 13px; font-weight: 700; }
+      .tHalt { fill: #8a5a12; font-size: 13px; font-weight: 700; }
+      .card { fill: #fbfaf8; stroke: #d6d3ca; stroke-width: 1; }
+      .div { stroke: #e3e0d8; stroke-width: 1; }
+      .new { fill: #6b46c1; }
+      .llm { fill: #efe9fb; stroke: #6b46c1; stroke-width: 1; }
+      .tLlm { fill: #553399; font-size: 11px; font-weight: 700; }
+      .ic { fill: #f4f3ef; stroke: #d6d3ca; stroke-width: 1; }
+      .add { fill: #fff7e6; stroke: #b7791f; stroke-width: 1; stroke-dasharray: 3 2; }
+      .tAdd { fill: #8a5a12; font-size: 11px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1960" fill="#f6f5f2"/>
+
+  <!-- Title -->
+  <text x="40" y="56" class="t-title">Defect-Rate Chatbot · 요청 처리 흐름</text>
+  <text x="40" y="84" class="t-sub">QueryExtractor → DefectRatePipeline.run() intent 분기 (intent 6종 · 5개 경로)</text>
+
+  <!-- User query -->
+  <rect x="690" y="104" width="220" height="46" rx="23" fill="#1d1c1a"/>
+  <text x="800" y="133" text-anchor="middle" class="bb w">사용자 질의</text>
+  <path class="ln" d="M800 150 V186" marker-end="url(#ah)"/>
+
+  <!-- QueryExtractor -->
+  <rect x="420" y="190" width="760" height="232" rx="12" class="box"/>
+  <text x="448" y="224" class="h">QueryExtractor</text>
+  <rect x="596" y="208" width="38" height="20" rx="4" class="llm"/>
+  <text x="615" y="222" text-anchor="middle" class="tLlm">LLM</text>
+  <text x="1152" y="223" text-anchor="end" class="g">SDC LLM 구조화 출력</text>
+
+  <text x="448" y="261" class="cap">폴백</text>
+  <rect x="490" y="244" width="112" height="24" rx="5" class="ic"/>
+  <text x="546" y="261" text-anchor="middle" class="mono chip">json_schema</text>
+  <path class="ln" d="M606 256 H626" marker-end="url(#ah)"/>
+  <rect x="630" y="244" width="112" height="24" rx="5" class="ic"/>
+  <text x="686" y="261" text-anchor="middle" class="mono chip">json_object</text>
+  <path class="ln" d="M746 256 H766" marker-end="url(#ah)"/>
+  <rect x="770" y="244" width="76" height="24" rx="5" class="ic"/>
+  <text x="808" y="261" text-anchor="middle" class="mono chip">prompt</text>
+
+  <line x1="448" y1="280" x2="1152" y2="280" class="div"/>
+
+  <text x="448" y="304" class="bb">① 12개 필드 추출</text>
+  <text x="572" y="304" class="g">기존과 동일 — 추측 금지 · 모호값 처리 · 다중 레코드 분리</text>
+
+  <rect x="448" y="317" width="40" height="19" rx="4" class="new"/>
+  <text x="468" y="331" text-anchor="middle" class="w" style="font-size:11px;font-weight:700">NEW</text>
+  <text x="498" y="332" class="bb">② intent 동시 추출</text>
+  <text x="630" y="332" class="g">아래 6종 중 하나</text>
+
+  <text x="448" y="358" class="cap">조건 불필요</text>
+  <rect x="536" y="343" width="172" height="22" rx="5" class="ic"/>
+  <text x="622" y="359" text-anchor="middle" class="mono chip">optimize_reduce_defect</text>
+  <rect x="716" y="343" width="194" height="22" rx="5" class="ic"/>
+  <text x="813" y="359" text-anchor="middle" class="mono chip">optimize_find_defect_risk</text>
+  <rect x="918" y="343" width="70" height="22" rx="5" class="ic"/>
+  <text x="953" y="359" text-anchor="middle" class="mono chip">clarify</text>
+
+  <text x="448" y="386" class="cap">조건 필요</text>
+  <rect x="536" y="371" width="66" height="22" rx="5" class="ic"/>
+  <text x="569" y="387" text-anchor="middle" class="mono chip">predict</text>
+  <rect x="610" y="371" width="158" height="22" rx="5" class="ic"/>
+  <text x="689" y="387" text-anchor="middle" class="mono chip">predict_and_optimize</text>
+  <rect x="776" y="371" width="166" height="22" rx="5" class="add"/>
+  <text x="859" y="387" text-anchor="middle" class="mono chip" style="fill:#8a5a12">predict_and_find_risk</text>
+  <text x="952" y="387" class="tAdd">← 추가 (10-29)</text>
+
+  <text x="448" y="412" class="g">스키마 enum 밖 · 누락 값 → 코드가 <tspan class="mono" style="fill:#1d1c1a">"clarify"</tspan>로 대체</text>
+
+  <!-- llm_error exit -->
+  <path class="lnR" d="M1180 306 H1256" marker-end="url(#ahR)"/>
+  <text x="1262" y="282" class="g">LLM 호출 · 파싱 실패</text>
+  <rect x="1262" y="290" width="170" height="32" rx="16" class="pErr"/>
+  <text x="1347" y="311" text-anchor="middle" class="mono tErr">status=llm_error</text>
+  <text x="1262" y="342" class="s">intent 문제에도 동일</text>
+
+  <path class="ln" d="M800 422 V466" marker-end="url(#ah)"/>
+
+  <!-- Pipeline -->
+  <rect x="540" y="470" width="520" height="78" rx="12" class="box" style="stroke-width:2"/>
+  <text x="800" y="503" text-anchor="middle" class="mono hm">DefectRatePipeline.run()</text>
+  <text x="800" y="530" text-anchor="middle" class="g">intent로 분기 — 아래 5개 경로 중 하나로</text>
+
+  <!-- Branch bus -->
+  <path class="ln" d="M800 548 V584"/>
+  <path class="ln" d="M210 584 H1090"/>
+  <path class="ln" d="M210 584 V616" marker-end="url(#ah)"/>
+  <path class="ln" d="M605 584 V616" marker-end="url(#ah)"/>
+  <path class="ln" d="M1090 584 V616" marker-end="url(#ah)"/>
+  <circle cx="800" cy="584" r="4" fill="#5f5d58"/>
+
+  <!-- ============ COLUMN A : clarify ============ -->
+  <rect x="40" y="620" width="340" height="96" rx="10" class="hdr"/>
+  <text x="60" y="646" class="wl">INTENT</text>
+  <text x="360" y="646" text-anchor="end" class="wl" style="letter-spacing:0">경로 A</text>
+  <text x="60" y="682" class="mono w" style="font-size:16px;font-weight:700">clarify</text>
+
+  <path class="ln" d="M210 716 V752" marker-end="url(#ah)"/>
+  <rect x="40" y="756" width="340" height="100" rx="10" class="box"/>
+  <text x="64" y="794" class="bb">어떤 API도 호출하지 않음</text>
+  <text x="64" y="822" class="g">방향을 되묻는 고정 문구 반환</text>
+
+  <path class="lnA" d="M210 856 V892" marker-end="url(#ahA)"/>
+  <rect x="120" y="896" width="180" height="34" rx="17" class="pHalt"/>
+  <text x="210" y="918" text-anchor="middle" class="mono tHalt">status=clarify</text>
+
+  <!-- ============ COLUMN B : optimize ============ -->
+  <rect x="410" y="620" width="390" height="96" rx="10" class="hdr"/>
+  <text x="430" y="646" class="wl">INTENT</text>
+  <text x="780" y="646" text-anchor="end" class="wl" style="letter-spacing:0">경로 B · 조건 입력 불필요</text>
+  <text x="430" y="676" class="mono w" style="font-size:15px;font-weight:700">optimize_reduce_defect</text>
+  <text x="430" y="700" class="mono w" style="font-size:15px;font-weight:700"><tspan style="fill:#8f8c84">| </tspan>optimize_find_defect_risk</text>
+
+  <path class="ln" d="M605 716 V752" marker-end="url(#ah)"/>
+  <rect x="410" y="756" width="390" height="110" rx="10" class="box"/>
+  <text x="434" y="786" class="mono bb">target = build_target(intent)</text>
+  <text x="776" y="786" text-anchor="end" class="s">고정 사전</text>
+  <line x1="434" y1="800" x2="776" y2="800" class="div"/>
+  <text x="434" y="826" class="b">불량 최소화</text>
+  <text x="560" y="826" class="g">→</text>
+  <text x="590" y="826" class="mono bb">"1"</text>
+  <text x="434" y="852" class="b">위험 탐색</text>
+  <text x="560" y="852" class="g">→</text>
+  <text x="590" y="852" class="mono bb">"0"</text>
+
+  <path class="ln" d="M605 866 V902" marker-end="url(#ah)"/>
+  <rect x="410" y="906" width="390" height="110" rx="10" class="api"/>
+  <text x="434" y="938" class="mono bb">OptimizationClient.optimize</text>
+  <text x="776" y="938" text-anchor="end" class="s" style="fill:#3b5bab;font-weight:700">EXTERNAL API</text>
+  <text x="434" y="966" class="mono" style="font-size:12.5px">GET $OPTIMIZATION_API_URL?target=…</text>
+  <text x="434" y="994" class="g">재시도 + 타임아웃</text>
+
+  <path class="ln" d="M605 1016 V1040"/>
+  <path class="lnR" d="M605 1040 H502 V1066" marker-end="url(#ahR)"/>
+  <path class="ln" d="M605 1040 H708 V1066" marker-end="url(#ah)"/>
+
+  <rect x="410" y="1070" width="184" height="144" rx="10" class="card"/>
+  <text x="428" y="1096" class="cap" style="fill:#c2412d">실패</text>
+  <text x="428" y="1120" class="b">호출 · 파싱 실패</text>
+  <rect x="424" y="1168" width="156" height="32" rx="16" class="pErr"/>
+  <text x="502" y="1189" text-anchor="middle" class="mono tErr">endpoint_error</text>
+
+  <rect x="616" y="1070" width="184" height="144" rx="10" class="card"/>
+  <text x="634" y="1096" class="cap" style="fill:#2f7d4f">성공</text>
+  <text x="634" y="1120" class="b">최적 조건 Markdown 표</text>
+  <text x="634" y="1140" class="b">+ 예상 확률</text>
+  <text x="634" y="1158" class="s">ML · LLM 미호출</text>
+  <rect x="630" y="1168" width="156" height="32" rx="16" class="pOk"/>
+  <text x="708" y="1189" text-anchor="middle" class="mono tOk">status=ok</text>
+
+  <!-- ============ COLUMN C : predict ============ -->
+  <rect x="840" y="620" width="500" height="96" rx="10" class="hdr"/>
+  <text x="860" y="646" class="wl">INTENT</text>
+  <text x="1320" y="646" text-anchor="end" class="wl" style="letter-spacing:0">경로 C · 조건 입력 필요 (기존 AIHUB와 동일한 결)</text>
+  <text x="860" y="676" class="mono w" style="font-size:15px;font-weight:700">predict</text>
+  <text x="860" y="700" class="mono w" style="font-size:15px;font-weight:700"><tspan style="fill:#8f8c84">| </tspan>predict_and_optimize <tspan style="fill:#8f8c84">| </tspan><tspan style="fill:#f0c46a">predict_and_find_risk</tspan></text>
+
+  <path class="ln" d="M1090 716 V752" marker-end="url(#ah)"/>
+  <rect x="840" y="756" width="500" height="200" rx="10" class="box"/>
+  <text x="864" y="788" class="mono hm">_gather_and_predict</text>
+  <text x="1316" y="788" text-anchor="end" class="s">공통 단계 · §4.3</text>
+  <line x1="864" y1="800" x2="1316" y2="800" class="div"/>
+
+  <circle cx="874" cy="823" r="10" fill="#1d1c1a"/>
+  <text x="874" y="827" text-anchor="middle" class="w" style="font-size:11px;font-weight:700">1</text>
+  <text x="894" y="828" class="mono bb">SlotFillingSession.merge</text>
+  <text x="894" y="847" class="g">이전 턴의 확인값과 병합</text>
+
+  <circle cx="874" cy="869" r="10" fill="#1d1c1a"/>
+  <text x="874" y="873" text-anchor="middle" class="w" style="font-size:11px;font-weight:700">2</text>
+  <text x="894" y="874" class="mono bb">validate_provided_fields</text>
+  <text x="894" y="893" class="g">값이 있는 필드만 개별 검증 (슬롯이 덜 차도 실행)</text>
+
+  <circle cx="874" cy="915" r="10" fill="#1d1c1a"/>
+  <text x="874" y="919" text-anchor="middle" class="w" style="font-size:11px;font-weight:700">3</text>
+  <text x="894" y="920" class="mono bb">DefectRateInput</text>
+  <text x="894" y="939" class="g">12개 모두 찼을 때 최종 타입 · 범위 검증</text>
+
+  <!-- gather exits -->
+  <path class="lnA" d="M1340 832 H1376" marker-end="url(#ahA)"/>
+  <text x="1382" y="808" class="g">누락 · 모호 필드 있음</text>
+  <rect x="1382" y="816" width="178" height="32" rx="16" class="pHalt"/>
+  <text x="1471" y="837" text-anchor="middle" class="mono tHalt">need_more_info</text>
+  <text x="1382" y="864" class="s">API 미호출</text>
+
+  <path class="lnA" d="M1340 920 H1376" marker-end="url(#ahA)"/>
+  <text x="1382" y="896" class="g">허용값 · 범위 위반</text>
+  <rect x="1382" y="904" width="178" height="32" rx="16" class="pHalt"/>
+  <text x="1471" y="925" text-anchor="middle" class="mono tHalt">invalid_input</text>
+  <text x="1382" y="952" class="s">API 미호출</text>
+
+  <path class="ln" d="M1090 956 V992" marker-end="url(#ah)"/>
+  <rect x="930" y="996" width="320" height="42" rx="8" class="data"/>
+  <text x="1090" y="1022" text-anchor="middle" class="mono" style="font-size:13px">{"data": [ {12개 컬럼}, ... ]}</text>
+
+  <path class="ln" d="M1090 1038 V1076" marker-end="url(#ah)"/>
+  <rect x="840" y="1080" width="500" height="110" rx="10" class="api"/>
+  <text x="864" y="1112" class="mono bb">DefectRateMLClient.predict</text>
+  <text x="1316" y="1112" text-anchor="end" class="s" style="fill:#3b5bab;font-weight:700">EXTERNAL API</text>
+  <text x="864" y="1140" class="mono" style="font-size:12.5px">POST $AI_HUB_ENDPOINT_URL</text>
+  <text x="864" y="1168" class="g">재시도 + 타임아웃 + 에코 검증</text>
+
+  <path class="lnR" d="M1340 1135 H1376" marker-end="url(#ahR)"/>
+  <text x="1382" y="1112" class="g">호출 · 응답 검증 실패</text>
+  <rect x="1382" y="1120" width="178" height="32" rx="16" class="pErr"/>
+  <text x="1471" y="1141" text-anchor="middle" class="mono tErr">endpoint_error</text>
+
+  <path class="ln" d="M1090 1190 V1226" marker-end="url(#ah)"/>
+  <rect x="910" y="1230" width="360" height="42" rx="8" class="data"/>
+  <text x="930" y="1256" class="mono" style="font-size:13px">predictions: [1.6498…, ...]</text>
+  <text x="1250" y="1256" text-anchor="end" class="s">단위 %</text>
+
+  <!-- sub-branch -->
+  <path class="ln" d="M1090 1272 V1300"/>
+  <path class="ln" d="M950 1300 H1330"/>
+  <path class="ln" d="M950 1300 V1326" marker-end="url(#ah)"/>
+  <path class="ln" d="M1330 1300 V1326" marker-end="url(#ah)"/>
+  <circle cx="1090" cy="1300" r="4" fill="#5f5d58"/>
+
+  <!-- C-1 predict -->
+  <rect x="840" y="1330" width="220" height="60" rx="10" class="hdr"/>
+  <text x="858" y="1352" class="wl">INTENT</text>
+  <text x="858" y="1376" class="mono w" style="font-size:15px;font-weight:700">predict</text>
+
+  <path class="ln" d="M950 1390 V1426" marker-end="url(#ah)"/>
+  <rect x="840" y="1430" width="220" height="90" rx="10" class="box"/>
+  <text x="860" y="1460" class="bb">LLM 해설</text>
+  <rect x="926" y="1446" width="38" height="20" rx="4" class="llm"/>
+  <text x="945" y="1460" text-anchor="middle" class="tLlm">LLM</text>
+  <text x="860" y="1486" class="g">선택 사항</text>
+  <text x="860" y="1506" class="mono s">explain=false면 생략</text>
+
+  <path class="ln" d="M950 1520 V1556" marker-end="url(#ah)"/>
+  <rect x="870" y="1560" width="160" height="34" rx="17" class="pOk"/>
+  <text x="950" y="1582" text-anchor="middle" class="mono tOk">status=ok</text>
+
+  <!-- C-2 predict_and_optimize | predict_and_find_risk -->
+  <rect x="1100" y="1330" width="460" height="74" rx="10" class="hdr"/>
+  <text x="1118" y="1352" class="wl">INTENT</text>
+  <rect x="1500" y="1340" width="40" height="19" rx="4" class="new"/>
+  <text x="1520" y="1354" text-anchor="middle" class="w" style="font-size:11px;font-weight:700">NEW</text>
+  <text x="1118" y="1374" class="mono w" style="font-size:14px;font-weight:700">predict_and_optimize</text>
+  <text x="1118" y="1394" class="mono w" style="font-size:14px;font-weight:700"><tspan style="fill:#8f8c84">| </tspan><tspan style="fill:#f0c46a">predict_and_find_risk</tspan></text>
+  <text x="1540" y="1394" text-anchor="end" style="font-size:11px;font-weight:700;fill:#f0c46a">추가 2026-10-29</text>
+
+  <path class="ln" d="M1330 1404 V1436" marker-end="url(#ah)"/>
+  <rect x="1100" y="1440" width="460" height="138" rx="10" class="box"/>
+  <text x="1122" y="1470" class="mono bb">target = build_target(intent)</text>
+  <line x1="1122" y1="1484" x2="1538" y2="1484" class="div"/>
+  <text x="1122" y="1508" class="mono b">predict_and_optimize</text>
+  <text x="1316" y="1508" class="g">→</text>
+  <text x="1340" y="1508" class="mono bb">"1"</text>
+  <text x="1374" y="1508" class="g">불량 최소화</text>
+  <text x="1122" y="1534" class="mono b" style="fill:#8a5a12">predict_and_find_risk</text>
+  <text x="1316" y="1534" class="g">→</text>
+  <text x="1340" y="1534" class="mono bb">"0"</text>
+  <text x="1374" y="1534" class="g">위험 조건 탐색</text>
+  <rect x="1122" y="1548" width="132" height="20" rx="4" class="add"/>
+  <text x="1188" y="1562" text-anchor="middle" class="tAdd">⚠ 명세서엔 없음</text>
+  <text x="1264" y="1562" class="s">2026-10-29 추가분</text>
+
+  <path class="ln" d="M1330 1578 V1610" marker-end="url(#ah)"/>
+  <rect x="1100" y="1614" width="460" height="118" rx="10" class="api"/>
+  <text x="1122" y="1646" class="mono bb">OptimizationClient.optimize</text>
+  <text x="1538" y="1646" text-anchor="end" class="s" style="fill:#3b5bab;font-weight:700">EXTERNAL API</text>
+  <text x="1122" y="1672" class="g">경로 B와 동일 (GET · 재시도 + 타임아웃)</text>
+  <text x="1122" y="1698" class="s"><tspan class="mono" style="fill:#1d1c1a">_run_predict_and_optimize</tspan>가 두 의도를 함께 처리하도록 일반화</text>
+  <text x="1122" y="1718" class="s" style="fill:#8a5a12">README.md 서술 기준 · pipeline.py 전체 재확인 아님 (8절 9번)</text>
+
+  <path class="ln" d="M1330 1732 V1756"/>
+  <path class="lnA" d="M1330 1756 H1210 V1782" marker-end="url(#ahA)"/>
+  <path class="ln" d="M1330 1756 H1450 V1782" marker-end="url(#ah)"/>
+
+  <rect x="1100" y="1786" width="220" height="150" rx="10" class="card"/>
+  <text x="1118" y="1812" class="cap" style="fill:#b7791f">실패 → 부분 성공</text>
+  <text x="1118" y="1836" class="b">예측 결과는 그대로 반환</text>
+  <text x="1118" y="1858" class="mono s">optimization=null</text>
+  <text x="1118" y="1878" class="s">errors에 사유 기록</text>
+  <rect x="1114" y="1890" width="192" height="32" rx="16" class="pOk" style="stroke-dasharray:4 3"/>
+  <text x="1210" y="1911" text-anchor="middle" class="mono tOk">status=ok (부분)</text>
+
+  <rect x="1340" y="1786" width="220" height="150" rx="10" class="card"/>
+  <text x="1358" y="1812" class="cap" style="fill:#2f7d4f">성공</text>
+  <text x="1358" y="1836" class="b">예측치 + 조건 표</text>
+  <text x="1358" y="1858" class="s">개선 조건 (optimize) 또는</text>
+  <text x="1358" y="1878" class="s">위험 조건 (find_risk)</text>
+  <rect x="1354" y="1890" width="192" height="32" rx="16" class="pOk"/>
+  <text x="1450" y="1911" text-anchor="middle" class="mono tOk">status=ok</text>
+
+  <!-- ============ LEGEND ============ -->
+  <rect x="40" y="1726" width="760" height="210" rx="12" fill="#ffffff" stroke="#e3e0d8"/>
+  <text x="64" y="1758" class="cap">LEGEND</text>
+
+  <rect x="64" y="1776" width="44" height="28" rx="6" class="box"/>
+  <text x="120" y="1795" class="b">내부 처리 단계</text>
+  <rect x="64" y="1818" width="44" height="28" rx="6" class="api"/>
+  <text x="120" y="1837" class="b">외부 API 호출</text>
+  <rect x="64" y="1860" width="44" height="28" rx="6" class="hdr"/>
+  <text x="120" y="1879" class="b">intent 분기</text>
+  <rect x="64" y="1902" width="44" height="22" rx="5" class="data"/>
+  <text x="120" y="1918" class="b">데이터 페이로드</text>
+
+  <rect x="300" y="1776" width="120" height="28" rx="14" class="pOk"/>
+  <text x="360" y="1795" text-anchor="middle" class="mono tOk">ok</text>
+  <text x="432" y="1795" class="b">정상 응답</text>
+  <rect x="300" y="1818" width="120" height="28" rx="14" class="pHalt"/>
+  <text x="360" y="1837" text-anchor="middle" class="mono tHalt">halt</text>
+  <text x="432" y="1837" class="b">추가 입력 · 확인 필요 (API 미호출)</text>
+  <rect x="300" y="1860" width="120" height="28" rx="14" class="pErr"/>
+  <text x="360" y="1879" text-anchor="middle" class="mono tErr">error</text>
+  <text x="432" y="1879" class="b">LLM · 엔드포인트 오류</text>
+
+  <rect x="300" y="1904" width="40" height="19" rx="4" class="new"/>
+  <text x="320" y="1918" text-anchor="middle" class="w" style="font-size:11px;font-weight:700">NEW</text>
+  <text x="350" y="1918" class="b">이번에 추가된 기능</text>
+  <rect x="510" y="1904" width="38" height="20" rx="4" class="llm"/>
+  <text x="529" y="1918" text-anchor="middle" class="tLlm">LLM</text>
+  <text x="558" y="1918" class="b">LLM 호출 지점</text>
+  <path class="lnR" d="M660 1914 H700"/>
+  <text x="710" y="1918" class="b">실패 경로</text>
+  <rect x="510" y="1864" width="44" height="20" rx="4" class="add"/>
+  <text x="566" y="1879" class="b">10-29 추가 (명세서 미반영)</text>
+</svg>

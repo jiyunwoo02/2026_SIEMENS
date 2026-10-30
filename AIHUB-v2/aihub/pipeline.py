@@ -273,21 +273,33 @@ def _format_condition_value(field_name: str, value: Any) -> str:
 
 
 def _format_conditions_table(conditions: dict[str, Any]) -> str:
-    """최적화 API가 돌려준 조건 dict를 Markdown 목록 문자열로 만든다.
+    """최적화 API가 돌려준 조건 dict(12개 필드)를 Markdown 표로 만든다.
 
-    [추가] 2026-10-27: FIELD_LABELS에 없는 키(사전에 없는 응답 필드)는 키 이름을 그대로 보여준다.
-    UNCONTROLLABLE_FIELDS에 속한 항목에는 "참고값" 안내를 덧붙인다(스펙 4.5/6.4).
+    [수정] 2026-10-27: 글머리 기호 목록 대신 표(table) 형태로 바꾸었다(12개 조건을 한눈에 비교하기 위함).
+    [수정] 2026-10-27: "비고" 열(note)을 제거하여 표는 "항목 | 값" 2열만 출력한다.
+        기존에는 UNCONTROLLABLE_FIELDS에 속한 항목에 "참고값"을 표시했으나(스펙 4.5/6.4), 더 이상 표시하지 않는다.
+        - 제거한 코드: note = "참고값" if key in UNCONTROLLABLE_FIELDS else ""
+        - 제거한 헤더: "| 항목 | 값 | 비고 |\n|---|---|---|"
+        - 제거한 행 형식: f"| {label_s} | {value_s} | {note} |"
+        - 영향: 이 함수에서는 UNCONTROLLABLE_FIELDS를 더 이상 사용하지 않는다(import는 다른 곳 사용 여부 확인 후 정리 필요).
+          _format_optimize_only()의 "※ 참고값으로 표시된 항목은..." 안내 문구는 표에 참고값 표시가 없어져 내용이 맞지 않으므로 함께 검토가 필요하다.
+    FIELD_LABELS에 없는 키(사전에 없는 응답 필드)는 키 이름을 그대로 보여준다.
     """
     ordered_keys = [f for f in ALL_FIELDS if f in conditions] + [
         k for k in conditions if k not in ALL_FIELDS
     ]
-    lines = []
+    rows = []
     for key in ordered_keys:
         label = FIELD_LABELS.get(key, key)
         value_str = _format_condition_value(key, conditions[key])
-        suffix = " _(참고값: 현장에서 바로 조정하기 어려운 값)_" if key in UNCONTROLLABLE_FIELDS else ""
-        lines.append(f"- **{label}**: {value_str}{suffix}")
-    return "\n".join(lines)
+        # [수정] 2026-10-27: note 제거(위 docstring 참고).
+        # 표 셀 구분자(|)가 값에 섞여 표가 깨지지 않도록 이스케이프한다.
+        label_s = str(label).replace("|", "\\|")
+        value_s = str(value_str).replace("|", "\\|")
+        rows.append(f"| {label_s} | {value_s} |")
+    # [수정] 2026-10-27: "비고" 열 제거에 따라 헤더를 2열로 변경했다.
+    header = "| 항목 | 값 |\n|---|---|"
+    return header + "\n" + "\n".join(rows)
 
 
 def _format_optimize_only(intent: str, result: dict[str, Any]) -> str:
@@ -315,24 +327,36 @@ def _format_predict_and_optimize(
     predictions: list[float],
     optimization: dict[str, Any] | None,
     optimization_error: str | None,
+    intent: str,
 ) -> str:
     """[추가] 2026-10-27: 예측과 최적화를 함께 요청한 경우의 답변(스펙 5.3/6.3).
+    [수정] 2026-10-29: predict_and_optimize(개선 조건 방향) 전용이던 문구를 predict_and_find_risk
+    (위험 조건 방향)도 함께 처리하도록 intent 인자를 추가했다. 두 의도 모두 같은 함수를 쓰며
+    OptimizationClient.optimize()가 돌려준 수치(confidence(1))는 그대로 "예상 불량 확률"로
+    보여준다 - target="0"으로 호출한 위험 조건 탐색에서는 이 값이 높게 나오는 것이 정상이다
+    (그 조건이 불량을 유발하도록 찾은 조건이기 때문). 머리말/라벨 문구만 방향에 맞게 바꾼다.
 
     최적화 호출이 실패해도(optimization=None) 예측 결과는 보여준다(부분 성공 허용, 스펙 6.2).
     """
     parts = ["현재 조건의 예측 결함률: " + ", ".join(f"{p:.2f}%" for p in predictions)]
+    is_risk = intent == "predict_and_find_risk"
+    headline = (
+        "불량이 발생하기 쉬운(위험) 조건입니다." if is_risk else "불량 확률을 최소화하는 개선 조건입니다."
+    )
+    prob_label = "위험 조건 적용 시 예상 불량 확률" if is_risk else "개선 조건 적용 시 예상 불량 확률"
+    fail_label = "위험 조건 계산" if is_risk else "개선 조건 계산"
     if optimization is not None:
         defect_pct = optimization["defect_probability"] * 100
         table = _format_conditions_table(optimization["conditions"])
         parts.append(
-            "불량 확률을 최소화하는 개선 조건입니다.\n\n"
+            f"{headline}\n\n"
             + table
-            + f"\n\n개선 조건 적용 시 예상 불량 확률: {defect_pct:.2f}%\n\n"
+            + f"\n\n{prob_label}: {defect_pct:.2f}%\n\n"
             # [추가] 2026-10-27: 스펙 6.3 필수 고지 문구를 추가했다(_format_optimize_only와 동일).
             "※ 이 결과는 모델 기반 추정이며 실제 공정 결과를 보장하지 않습니다."
         )
     elif optimization_error:
-        parts.append(f"※ 개선 조건 계산에는 실패했습니다: {optimization_error}")
+        parts.append(f"※ {fail_label}에는 실패했습니다: {optimization_error}")
     return "\n\n".join(parts)
 
 
@@ -422,9 +446,16 @@ class DefectRatePipeline:
         if intent == "clarify":
             return self._run_clarify()
         if intent in ("optimize_reduce_defect", "optimize_find_defect_risk"):
-            return self._run_optimize_only(intent)
-        if intent == "predict_and_optimize":
-            return self._run_predict_and_optimize(extraction, session)
+            return self._run_optimize_only(intent)  # [probe-anchor-A]
+        # [수정] 2026-10-29: predict_and_find_risk(예측 + 위험 조건 탐색) 추가에 맞춰
+        # predict_and_optimize 전용이던 분기를 두 의도 공통으로 넓혔다(_run_predict_and_optimize가
+        # intent 인자로 build_target()을 호출해 방향을 결정한다).
+        if intent in ("predict_and_optimize", "predict_and_find_risk"):  # [probe-G]
+                        return self._run_predict_and_optimize(
+                            extraction,  # [probe-P]
+                            session,
+                            intent
+            )
         # intent == "predict" (기존에 유일한 경로였다)
         return self._run_predict(query, extraction, session, explain)
 
@@ -433,8 +464,8 @@ class DefectRatePipeline:
     ) -> tuple[PipelineResult | None, dict[str, Any] | None]:
         """조건 병합 -> 검증 -> ML 예측까지의 공통 단계를 수행한다.
 
-        [수정] 2026-10-27(로직 변경 없는 추출): 이전 run() 본문을 그대로 옵긴 것이다. predict와
-        predict_and_optimize 두 의도가 동일한 조건 수집/검증 로직을 공유하기 위함이다.
+        [수정] 2026-10-27(로직 변경 없는 추출): 이전 run() 본문을 그대로 옵긴 것이다. predict,
+        predict_and_optimize, predict_and_find_risk 세 의도가 동일한 조건 수집/검증 로직을 공유하기 위함이다.
 
         반환: (early_result, data)
           - 조건이 부족하거나 검증 실패, ML 호출 실패 시: (PipelineResult, None) - 그대로 반환하면 된다.
@@ -566,10 +597,13 @@ class DefectRatePipeline:
             intent="predict",
         )
 
-    def _run_predict_and_optimize(
-        self, extraction: "ExtractionResult", session: SlotFillingSession
+    def _run_predict_and_optimize(self, extraction: "ExtractionResult", session: SlotFillingSession, intent: str
     ) -> PipelineResult:
-        """[추가] 2026-10-27: 현재 조건의 결함률 예측과 개선 조건 탐색을 함께 수행한다(스펙 5.3/6.3).
+        """[추가] 2026-10-27: 현재 조건의 결함률 예측과 개선/위험 조건 탐색을 함께 수행한다(스펙 5.3/6.3).
+        [수정] 2026-10-29: predict_and_optimize 전용이던 메서드를 predict_and_find_risk도 함께
+        처리하도록 확장했다. intent로 build_target()을 호출해 target을 동적으로 결정한다
+        (이전에는 "predict_and_optimize" 문자열과 target="1"이 하드코딩돼 있어 반대 방향
+        요청을 표현할 방법이 없었다 - schema.INTENTS, optimization.INTENT_TO_TARGET 참고).
 
         예측에 필요한 조건이 부족하면(기존 _run_predict와 동일 기준) 최적화를 호출하지 않고
         그대로 되묻는다. 조건이 충족된 이후에만 최적화 API를 호출하며, 최적화 호출이
@@ -583,17 +617,17 @@ class DefectRatePipeline:
         optimization_result: dict[str, Any] | None = None
         optimization_error: str | None = None
         try:
-            target = build_target("predict_and_optimize")
+            target = build_target(intent)
             optimization_result = OptimizationClient().optimize(target)
             logger.info(
-                "optimization intent=predict_and_optimize target=%s latency_ms=%s status=ok",
-                target, optimization_result.get("latency_ms"),
+                "optimization intent=%s target=%s latency_ms=%s status=ok",
+                intent, target, optimization_result.get("latency_ms"),
             )
         except (OptimizationEndpointError, ValueError) as e:
             optimization_error = str(e)
-            logger.info("optimization intent=predict_and_optimize status=error error=%s", e)
+            logger.info("optimization intent=%s status=error error=%s", intent, e)
 
-        answer = _format_predict_and_optimize(out["predictions"], optimization_result, optimization_error)
+        answer = _format_predict_and_optimize(out["predictions"], optimization_result, optimization_error, intent)
         return PipelineResult(
             status="ok",
             answer=answer,
@@ -602,7 +636,7 @@ class DefectRatePipeline:
             model_input=out["payload"]["data"],
             known_slots=session.known(),
             latency_ms=out["latency_ms"],
-            intent="predict_and_optimize",
+            intent=intent,
             optimization=optimization_result,
             errors=[optimization_error] if optimization_error else [],
         )

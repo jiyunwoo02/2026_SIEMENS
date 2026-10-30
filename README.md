@@ -42,8 +42,7 @@ Siemens AI Platform 관련 서비스 연동 및 로컬 머신러닝 데모 프�
 
 ## AIHUB-v2
 
-<!-- [추가] (문서 변경, 로직 변경 없음): AIHUB-v2가 루트 README에 누락되어 있어 추가했다. -->
-
+<!-- [수정] 2026-10-22: 날짜 누락된 변경 주석을 정리하고, 의도(intent) 분기 표와 확인되지 않은 항목 명시를 추가 (문서 변경, 로직 변경 없음) -->
 ### 목적
 
 `AIHUB`의 결함률 예측 기능(추출·슬롯 필링·검증·예측·해설)을 그대로 유지하면서, 자연어로 "불량을 줄이는 조건", "불량이 잘 나는 조건"을 물으면 별도의 **공정 최적화(Prescriptive Analytics) API**를 호출해 최적 조건과 예상 확률을 알려주는 기능을 추가한 버전입니다. 질의 의도(`intent`)는 LLM이 분류하고, 의도를 최적화 API의 `target`(`"0"`/`"1"`) 값으로 바꾸는 작업은 LLM이 아니라 코드가 고정된 사전으로 수행합니다(환각 방지).
@@ -51,9 +50,22 @@ Siemens AI Platform 관련 서비스 연동 및 로컬 머신러닝 데모 프�
 ### AIHUB와의 주요 차이
 
 - `aihub/optimization.py`(신규 모듈)가 최적화 API(GET, `target` 쿼리 파라미터)를 호출합니다. 기존 `aihub/ml.py`(POST, 결함률 예측)와는 별개입니다.
-- `aihub/schema.py`의 `INTENTS`에 `predict` 외에 `optimize_reduce_defect`, `optimize_find_defect_risk`, `predict_and_optimize`, `clarify` 4종이 추가되었습니다.
-- 로컬 웹 UI(`aihub/web/`)는 **아직 최적화 기능을 반영하지 못했습니다**(`clarify` 상태 처리 누락 등). 자세한 내용은 [`AIHUB-v2/README.md`의 "알려진 문제"](AIHUB-v2/README.md#알려진-문제--확인-필요-사항)를 보세요.
+- `aihub/schema.py`의 `INTENTS`에 `predict` 외에 `optimize_reduce_defect`, `optimize_find_defect_risk`, `predict_and_optimize`, `predict_and_find_risk`, `clarify` 5종이 추가되었습니다.
+- 로컬 웹 UI(`aihub/web/`)는 **아직 최적화 기능을 반영하지 못했습니다**(`clarify` 상태 처리 누락 등). CLI와 HTTP API는 최적화 결과를 다루지만, 웹 UI 화면에는 표시되지 않습니다. 자세한 내용은 [`AIHUB-v2/README.md`의 "알려진 문제"](AIHUB-v2/README.md#알려진-문제--확인-필요-사항)를 보세요.
 - `AIHUB-v2/docs/agent-v2/`에 이 기능을 기획한 명세서가 2종 있으며, 서로 다른 설계(독립 챗봇 vs 기존 파이프라인 통합)를 제안합니다. 실제 코드는 통합형 설계를 따릅니다.
+
+### 의도(intent) 구분
+
+| `intent` | 의미 | 호출 대상 |
+|---|---|---|
+| `predict` | 주어진 조건의 결함률 예측 (`AIHUB`와 동일) | 예측 API (`ml.py`) |
+| `optimize_reduce_defect` | 불량을 줄이는 조건 탐색 | 최적화 API (`optimization.py`) |
+| `optimize_find_defect_risk` | 불량이 잘 나는 위험 조건 탐색 | 최적화 API (`optimization.py`) |
+| `predict_and_optimize` | 예측과 최적화를 함께 요청 | 두 API 모두 (추정, 코드 확인 필요) |
+| `clarify` | 의도가 불분명해 되묻는 경우 | 호출 없음 (추정, 코드 확인 필요) |
+
+- 각 `intent`가 `target` `"0"`/`"1"` 중 어느 값에 대응하는지는 `aihub/optimization.py`의 매핑 사전을 직접 확인해야 합니다. 이 문서에서는 값을 단정하지 않습니다.
+- 표에서 "추정"으로 표시한 항목은 이 저장소의 기존 문서와 명칭을 근거로 한 것이며, 코드를 실행해 검증하지 않았습니다.
 
 폴더 구조, 설치, 설정, 실행 방법, 알려진 문제는 [`AIHUB-v2/README.md`](AIHUB-v2/README.md)를 보세요.
 

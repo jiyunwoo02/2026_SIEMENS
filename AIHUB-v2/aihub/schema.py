@@ -28,14 +28,20 @@ NUMERIC_FIELDS = [
 ALL_FIELDS = TEXT_FIELDS + NUMERIC_FIELDS
 
 # [추가] 2026-10-27: 최적화 기능 도입에 따른 챗봇 의도 분류.
-# predict는 기존 결함률 예측(동작 유지), 나머지 4개는 docs/agent-v2/pre-version/
+# predict는 기존 결함률 예측(동작 유지), 나머지는 docs/agent-v2/bak/
 # chatbot_optimization_feature_spec.md 5.3에서 정의한 신규 최적화 의도다.
 # enum에 없는 값이나 누락된 값은 파이프라인에서 "clarify"로 처리한다(5.4 참고).
+# [수정] 2026-10-29: predict_and_optimize는 "예측 + 불량 감소(개선) 조건"만 표현할 수 있어,
+# "예측 + 불량 위험(악화) 조건"을 함께 요청하는 발화를 표현할 enum 값이 없었다. 그런 발화가
+# predict_and_optimize로 분류되면 target이 "1"(불량 최소화)로 고정 호출돼 사용자가 원한 방향과
+# 반대 결과가 나가는 문제가 있어 predict_and_find_risk를 추가했다(optimization.INTENT_TO_TARGET,
+# pipeline._run_predict_and_optimize, llm.py [의도 분류] 절도 함께 수정).
 INTENTS: list[str] = [
     "predict",
     "optimize_reduce_defect",
     "optimize_find_defect_risk",
     "predict_and_optimize",
+    "predict_and_find_risk",
     "clarify",
 ]
 
@@ -59,11 +65,13 @@ FIELD_LABELS: dict[str, str] = {
 
 # [추가] 2026-10-27: 현장에서 즉시 바꾸기 어려운 변수. 최적화 결과 표에서 "참고값"으로 표기해
 # 사용자가 바꿀 수 없는 값을 조정 대상으로 오해하지 않게 한다.
+# [수정] 2026-10-27: 비활성화 요청에 따라 기본 5개(shift, supplier_code, planned_quantity,
+# ambient_humidity_pct, production_line)를 제거해 빈 집합으로 변경했다(로직 변경).
+# 이 상수를 import하는 코드가 깨지지 않도록 이름은 유지한다. 빈 집합이면 모든 변수가 조정 대상으로 취급된다.
+# 다시 활성화하려면 아래 집합에 필드명을 추가한다.
 # [확인 필요] 명세(4.5/6.4)가 예시로 든 5개를 기본값으로 썼다. 실제 현장에서 바꿀 수 있는 변수
 # 목록은 담당자 확인 후 조정해야 한다.
-UNCONTROLLABLE_FIELDS: frozenset[str] = frozenset(
-    {"shift", "supplier_code", "planned_quantity", "ambient_humidity_pct", "production_line"}
-)
+UNCONTROLLABLE_FIELDS: frozenset[str] = frozenset()
 
 # LLM 추출 프롬프트, JSON Schema, 추가 질문에서 함께 사용하는 필드 명세.
 # 설명에 적힌 수치 범위의 실제 검증은 아래 DefectRateInput에서 수행한다.

@@ -50,6 +50,9 @@
       intent === "optimize_reduce_defect" || intent === "optimize_find_defect_risk";
     if (body.status === "ok") {
       if (intent === "predict_and_optimize") return "✅ 예측 및 개선 조건 추천 완료";
+      // [추가] 2026-10-29: predict_and_find_risk(예측+위험 조건 탐색) 전용 문구. predict_and_optimize와
+      // 같은 "ok" 상태를 쓰지만 방향이 반대(불량 최소화 X, 불량 위험 탐색 O)이므로 구분해서 보여준다.
+      if (intent === "predict_and_find_risk") return "⚠️ 예측 및 위험 조건 탐색 완료";
       if (intent === "optimize_reduce_defect") return "✅ 불량 최소화 조건 추천 완료";
       if (intent === "optimize_find_defect_risk") return "⚠️ 불량 위험 조건 탐색 완료";
     }
@@ -71,10 +74,9 @@
   // [의도 분류] 절에 실제로 쓰인 예시와 맞췄다(추측 금지 원칙 - LLM이 그 표현을 해당 의도로
   // 분류하도록 프롬프트에 명시돼 있음).
   const welcomeMessage = [
-    "이 챗봇은 두 가지를 도와드립니다.",
+    "저는 두 가지를 도와드립니다.",
     "",
     "① 결함률 예측 — 아래 12개 값이 필요합니다. 한 번에 입력하거나 나눠서 입력해도 됩니다.",
-    "",
     "• 생산 라인: LINE-BPR-01, LINE-BPR-02",
     "• 교대조: 주간(DAY) / 야간(NIGHT)",
     "• 공급사 코드: SIM-SUP-A, SIM-SUP-B, SIM-SUP-C",
@@ -88,13 +90,16 @@
     "• 공구 마모도(%)",
     "• 마지막 정비 후 경과 일수",
     "",
-    "② 최적 조건 추천 — 조건 값을 몰라도 아래처럼 요청하면 됩니다(ML 예측 호출 없이 최적화 API만 사용).",
+    "② 최적 조건 추천 — 조건 값을 몰라도 아래처럼 요청하면 됩니다.",
     '• "불량 최소화 조건 알려줘" / "불량률을 낮추려면 어떻게 해야 해" → 불량 확률을 최소화하는 조건 추천',
     '• "불량이 잘 나는 조건이 뭐야" / "위험한 공정 조건 알려줘" → 불량 위험이 높은 조건 탐색',
     '• "이 조건 결함률 예측하고 줄이는 방법도 알려줘" → 위 12개 값 입력 시 예측과 개선 조건을 함께 안내',
+    // [추가] 2026-10-29: predict_and_find_risk 예시. llm.py EXTRACTION_SYSTEM_PROMPT의 해당 의도
+    // 예시 문구와 동일하게 맞췄다(추측 금지 원칙 - LLM이 이 표현을 그 의도로 분류하도록 프롬프트에 명시돼 있음).
+    '• "이 조건 결함률 예측하고, 불량이 더 심해지는 위험 조건도 알려줘" → 위 12개 값 입력 시 예측과 위험 조건을 함께 안내',
     "",
-    '라인 등 일부 값만 바꿔 여러 조건을 비교할 수도 있습니다. 예: "LINE-BPR-01과 02 비교"',
-    "부족한 값이나 최적화 요청 방향이 불분명하면 추가 질문으로 안내합니다. 예제 버튼으로 입력 형식을 확인할 수 있습니다.",
+    '※ 생산 라인 등 일부 값만 바꿔 여러 조건을 비교할 수도 있습니다. 예: "LINE-BPR-01과 02 비교"',
+    "※ 부족한 값이나 최적화 요청 방향이 불분명하면 추가 질문으로 안내합니다. 예제 버튼으로 입력 형식을 확인할 수 있습니다.",
   ].join("\n");
   // 세션 ID와 대화는 탭 메모리에만 보관한다. 새로고침하면 복원하지 않는다.
   let sessionId = null;
@@ -359,11 +364,11 @@
         missing.push("ML 엔드포인트");
       ui.health.className = `notice ${missing.length || health.mock_ml ? "warning" : "ready"}`;
       const mode = health.mock_ml
-        ? "모의 ML: 더미 예측값 (실제 ML 미호출)"
-        : "실제 ML API 모드";
+        ? "AI Hub Endpoint API 모드"
+        : "모의 ML: 더미 예측값 (API 미호출)";
       ui.health.textContent =
-        `${mode} · ${missing.length ? `설정 누락: ${missing.join(", ")}` : "필수 설정 있음"}` +
-        " · LLM은 실제 호출 · 외부 서비스 연결은 검사하지 않았습니다.";
+        `${mode} · ${missing.length ? `설정 누락: ${missing.join(", ")}` : "필수 설정 확인"}` +
+        " · LLM(GPT-5) 실제 호출";
     } catch (error) {
       ui.health.className = "notice warning";
       ui.health.textContent = `${error.message} 설정 상태를 확인하지 못했습니다. 새로고침해 다시 확인하세요.`;
@@ -391,6 +396,6 @@
     fillExample("불량 최소화 조건 알려줘"),
   );
   // [수정] 2026-10-22: 최초 메시지에도 필요 입력 항목 안내를 표시한다.
-  addMessage("assistant", `🤖 생산 조건을 알려주세요.\n${welcomeMessage}`);
+  addMessage("assistant", `안녕하세요, 저는 Prediction Assistant입니다.\n${welcomeMessage}`);
   checkHealth();
 })();

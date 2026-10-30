@@ -1,0 +1,224 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1640" width="1600" height="1640" font-family="Pretendard, 'Noto Sans KR', 'Malgun Gothic', sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="ar-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/>
+    </marker>
+    <marker id="ar-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#16a34a"/>
+    </marker>
+    <marker id="ar-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#ca8a04"/>
+    </marker>
+    <style>
+      .t    { font-size:13.5px; font-weight:700; fill:#0f172a; }
+      .b    { font-size:12px;   fill:#334155; }
+      .bs   { font-size:11px;   fill:#475569; }
+      .pill { font-size:12.5px; font-weight:700; fill:#1e3a8a; }
+      .stk  { font-size:13px;   font-weight:700; }
+      .edge { stroke:#475569; stroke-width:1.6; fill:none; marker-end:url(#ar); }
+      .edge-red   { stroke:#dc2626; stroke-width:1.6; fill:none; marker-end:url(#ar-red); stroke-dasharray:5 3; }
+      .edge-green { stroke:#16a34a; stroke-width:1.6; fill:none; marker-end:url(#ar-green); }
+      .edge-amber { stroke:#ca8a04; stroke-width:1.6; fill:none; marker-end:url(#ar-amber); stroke-dasharray:5 3; }
+      .elbl { font-size:11px; font-weight:700; fill:#64748b; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1640" fill="#f8fafc"/>
+  <text x="40" y="46" font-size="22" font-weight="800" fill="#0f172a">불량률 예측 · 최적화 챗봇 아키텍처 (intent 기반 4경로 분기)</text>
+  <line x1="40" y1="58" x2="1000" y2="58" stroke="#cbd5e1" stroke-width="2"/>
+
+  <!-- 1. 사용자 질의 -->
+  <rect x="700" y="70" width="200" height="48" rx="24" fill="#1e293b"/>
+  <text x="800" y="100" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">사용자 질의</text>
+  <path class="edge" d="M800,118 V146"/>
+
+  <!-- 2. QueryExtractor -->
+  <rect x="420" y="150" width="760" height="190" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="800" y="180" text-anchor="middle" font-size="15" font-weight="800" fill="#4c1d95">[QueryExtractor] · SDC LLM 구조화 출력</text>
+  <text x="800" y="208" text-anchor="middle" class="b">폴백 체인 : json_schema → json_object → prompt</text>
+  <text x="800" y="232" text-anchor="middle" class="b">12개 필드 추출 (추측 금지 · 모호값 처리 · 다중 레코드 분리)</text>
+  <text x="800" y="262" text-anchor="middle" class="b">[신규] intent 동시 추출 — predict / optimize_reduce_defect /</text>
+  <text x="800" y="283" text-anchor="middle" class="b">optimize_find_defect_risk / predict_and_optimize / clarify</text>
+  <text x="800" y="312" text-anchor="middle" class="bs">enum 밖 · 누락 값은 코드가 "clarify"로 대체</text>
+
+  <path class="edge-red" d="M1180,246 H1214"/>
+  <rect x="1220" y="210" width="260" height="72" rx="8" fill="#fee2e2" stroke="#dc2626" stroke-width="1.8"/>
+  <text x="1350" y="233" text-anchor="middle" class="b">LLM 호출 · 파싱 실패</text>
+  <text x="1350" y="253" text-anchor="middle" class="stk" fill="#7f1d1d">status = llm_error</text>
+  <text x="1350" y="271" text-anchor="middle" class="bs">(intent 문제도 동일 처리)</text>
+
+  <path class="edge" d="M800,340 V376"/>
+
+  <!-- 3. Router -->
+  <rect x="560" y="380" width="480" height="52" rx="10" fill="#312e81"/>
+  <text x="800" y="402" text-anchor="middle" font-size="14" font-weight="800" fill="#ffffff">[DefectRatePipeline.run()]</text>
+  <text x="800" y="422" text-anchor="middle" font-size="12" fill="#c7d2fe">intent 기준으로 아래 4개 경로 중 하나로 분기</text>
+
+  <!-- 분기 라인 -->
+  <path d="M800,432 V462" stroke="#475569" stroke-width="1.6" fill="none"/>
+  <path d="M120,462 H1080" stroke="#475569" stroke-width="1.6" fill="none"/>
+  <path class="edge" d="M120,462 V486"/>
+  <path class="edge" d="M490,462 V486"/>
+  <path class="edge" d="M1080,462 V486"/>
+
+  <!-- ===== 경로 1 : clarify ===== -->
+  <rect x="25" y="490" width="190" height="42" rx="21" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.8"/>
+  <text x="120" y="516" text-anchor="middle" class="pill" fill="#075985">intent = clarify</text>
+  <path class="edge" d="M120,532 V563"/>
+  <rect x="25" y="567" width="190" height="90" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-width="1.6"/>
+  <text x="120" y="597" text-anchor="middle" class="b">어떤 API도 호출하지 않고</text>
+  <text x="120" y="619" text-anchor="middle" class="b">방향을 되묻는</text>
+  <text x="120" y="641" text-anchor="middle" class="b">고정 문구 반환</text>
+  <path class="edge" d="M120,657 V688"/>
+  <rect x="30" y="692" width="180" height="42" rx="8" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.8"/>
+  <text x="120" y="719" text-anchor="middle" class="stk" fill="#075985">status = clarify</text>
+
+  <!-- ===== 경로 2 : optimize only ===== -->
+  <rect x="255" y="490" width="470" height="50" rx="12" fill="#dbeafe" stroke="#2563eb" stroke-width="1.8"/>
+  <text x="490" y="512" text-anchor="middle" class="pill">intent = optimize_reduce_defect | optimize_find_defect_risk</text>
+  <text x="490" y="531" text-anchor="middle" class="bs" fill="#1e40af">조건 입력 불필요 · ML / LLM 미호출</text>
+  <path class="edge" d="M490,540 V571"/>
+
+  <rect x="330" y="575" width="320" height="75" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-width="1.6"/>
+  <text x="490" y="600" text-anchor="middle" class="t">target = build_target(intent)</text>
+  <text x="490" y="622" text-anchor="middle" class="b">고정 사전 · 불량 최소화 → "1"</text>
+  <text x="490" y="642" text-anchor="middle" class="b">위험 탐색 → "0"</text>
+  <path class="edge" d="M490,650 V681"/>
+
+  <rect x="330" y="685" width="320" height="80" rx="8" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+  <text x="490" y="710" text-anchor="middle" class="t" fill="#7c2d12">[OptimizationClient.optimize]</text>
+  <text x="490" y="732" text-anchor="middle" class="b">GET $OPTIMIZATION_API_URL?target=…</text>
+  <text x="490" y="752" text-anchor="middle" class="bs">재시도 + 타임아웃</text>
+
+  <path d="M490,765 V793" stroke="#475569" stroke-width="1.6" fill="none"/>
+  <path d="M362,793 H620" stroke="#475569" stroke-width="1.6" fill="none"/>
+  <path class="edge-red" d="M362,793 V816"/>
+  <path class="edge-green" d="M620,793 V816"/>
+  <text x="330" y="810" text-anchor="end" class="elbl" fill="#dc2626">실패</text>
+  <text x="652" y="810" class="elbl" fill="#16a34a">성공</text>
+
+  <rect x="255" y="820" width="215" height="70" rx="8" fill="#fee2e2" stroke="#dc2626" stroke-width="1.8"/>
+  <text x="362" y="848" text-anchor="middle" class="b">호출 · 파싱 실패</text>
+  <text x="362" y="870" text-anchor="middle" class="stk" fill="#7f1d1d">status = endpoint_error</text>
+
+  <rect x="510" y="820" width="220" height="70" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.8"/>
+  <text x="620" y="845" text-anchor="middle" class="b">최적 조건 표 + 예상 확률</text>
+  <text x="620" y="867" text-anchor="middle" class="stk" fill="#14532d">status = ok</text>
+
+  <!-- ===== 경로 3·4 : predict 계열 ===== -->
+  <rect x="820" y="490" width="520" height="50" rx="12" fill="#dbeafe" stroke="#2563eb" stroke-width="1.8"/>
+  <text x="1080" y="512" text-anchor="middle" class="pill">intent = predict | predict_and_optimize</text>
+  <text x="1080" y="531" text-anchor="middle" class="bs" fill="#1e40af">조건 입력 필요 — 기존 AIHUB와 동일한 결</text>
+  <path class="edge" d="M1080,540 V571"/>
+
+  <rect x="850" y="575" width="460" height="115" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-width="1.6"/>
+  <text x="1080" y="601" text-anchor="middle" class="t">[_gather_and_predict] 공통 단계</text>
+  <text x="1080" y="627" text-anchor="middle" class="b">SlotFillingSession.merge — 이전 턴 확인값과 병합</text>
+  <text x="1080" y="649" text-anchor="middle" class="b">validate_provided_fields — 값이 있는 필드만 개별 검증</text>
+  <text x="1080" y="671" text-anchor="middle" class="b">DefectRateInput — 12개 모두 찼을 때 최종 타입 · 범위 검증</text>
+
+  <path class="edge-amber" d="M1310,608 H1356"/>
+  <rect x="1360" y="575" width="220" height="68" rx="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.8"/>
+  <text x="1470" y="598" text-anchor="middle" class="b">누락 · 모호 필드 있음</text>
+  <text x="1470" y="618" text-anchor="middle" class="stk" fill="#713f12">status = need_more_info</text>
+  <text x="1470" y="635" text-anchor="middle" class="bs">API 미호출</text>
+
+  <path class="edge-amber" d="M1325,690 V694 H1356"/>
+  <rect x="1360" y="660" width="220" height="68" rx="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.8"/>
+  <text x="1470" y="683" text-anchor="middle" class="b">허용값 · 범위 위반</text>
+  <text x="1470" y="703" text-anchor="middle" class="stk" fill="#713f12">status = invalid_input</text>
+  <text x="1470" y="720" text-anchor="middle" class="bs">API 미호출</text>
+
+  <path class="edge" d="M1080,690 V721"/>
+  <rect x="900" y="725" width="360" height="50" rx="6" fill="#ecfdf5" stroke="#059669" stroke-width="1.8" stroke-dasharray="6 4"/>
+  <text x="1080" y="755" text-anchor="middle" font-size="13" font-weight="700" fill="#065f46">{"data": [ { 12개 컬럼 }, … ] }</text>
+  <path class="edge" d="M1080,775 V806"/>
+
+  <rect x="840" y="810" width="480" height="80" rx="8" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+  <text x="1080" y="836" text-anchor="middle" class="t" fill="#7c2d12">[DefectRateMLClient.predict]</text>
+  <text x="1080" y="858" text-anchor="middle" class="b">POST $AI_HUB_ENDPOINT_URL</text>
+  <text x="1080" y="878" text-anchor="middle" class="bs">재시도 · 타임아웃 · 에코 검증</text>
+
+  <path class="edge-red" d="M1320,850 H1356"/>
+  <rect x="1360" y="815" width="220" height="70" rx="8" fill="#fee2e2" stroke="#dc2626" stroke-width="1.8"/>
+  <text x="1470" y="843" text-anchor="middle" class="b">호출 · 응답 검증 실패</text>
+  <text x="1470" y="865" text-anchor="middle" class="stk" fill="#7f1d1d">status = endpoint_error</text>
+
+  <path class="edge" d="M1080,890 V921"/>
+  <rect x="905" y="925" width="350" height="50" rx="6" fill="#ecfdf5" stroke="#059669" stroke-width="1.8" stroke-dasharray="6 4"/>
+  <text x="1080" y="955" text-anchor="middle" font-size="13" font-weight="700" fill="#065f46">predictions : [1.6498…, …]  (단위 %)</text>
+
+  <path d="M1080,975 V1005" stroke="#475569" stroke-width="1.6" fill="none"/>
+  <path d="M680,1005 H1150" stroke="#475569" stroke-width="1.6" fill="none"/>
+  <path class="edge" d="M680,1005 V1031"/>
+  <path class="edge" d="M1150,1005 V1031"/>
+
+  <!-- 3) predict -->
+  <rect x="560" y="1035" width="240" height="42" rx="21" fill="#dbeafe" stroke="#2563eb" stroke-width="1.8"/>
+  <text x="680" y="1061" text-anchor="middle" class="pill">intent = predict</text>
+  <path class="edge" d="M680,1077 V1108"/>
+  <rect x="540" y="1112" width="280" height="70" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.8"/>
+  <text x="680" y="1140" text-anchor="middle" class="t" fill="#4c1d95">LLM 해설 (선택)</text>
+  <text x="680" y="1162" text-anchor="middle" class="b">explain = false 면 생략</text>
+  <path class="edge-green" d="M680,1182 V1213"/>
+  <rect x="600" y="1217" width="160" height="42" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.8"/>
+  <text x="680" y="1244" text-anchor="middle" class="stk" fill="#14532d">status = ok</text>
+
+  <!-- 4) predict_and_optimize -->
+  <rect x="960" y="1035" width="380" height="42" rx="21" fill="#dbeafe" stroke="#2563eb" stroke-width="1.8"/>
+  <text x="1150" y="1061" text-anchor="middle" class="pill">intent = predict_and_optimize  [신규]</text>
+  <path class="edge" d="M1150,1077 V1108"/>
+
+  <rect x="950" y="1112" width="400" height="70" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-width="1.6"/>
+  <text x="1150" y="1140" text-anchor="middle" class="t">target = build_target("predict_and_optimize")</text>
+  <text x="1150" y="1162" text-anchor="middle" class="b">항상 "1" — 불량 최소화</text>
+  <path class="edge" d="M1150,1182 V1213"/>
+
+  <rect x="1000" y="1217" width="300" height="62" rx="8" fill="#ffedd5" stroke="#ea580c" stroke-width="2"/>
+  <text x="1150" y="1243" text-anchor="middle" class="t" fill="#7c2d12">[OptimizationClient.optimize]</text>
+  <text x="1150" y="1264" text-anchor="middle" class="bs">위 경로와 동일 (재시도 + 타임아웃)</text>
+
+  <path d="M1150,1279 V1307" stroke="#475569" stroke-width="1.6" fill="none"/>
+  <path d="M1030,1307 H1330" stroke="#475569" stroke-width="1.6" fill="none"/>
+  <path class="edge-amber" d="M1030,1307 V1333"/>
+  <path class="edge-green" d="M1330,1307 V1333"/>
+  <text x="1000" y="1326" text-anchor="end" class="elbl" fill="#ca8a04">실패</text>
+  <text x="1362" y="1326" class="elbl" fill="#16a34a">성공</text>
+
+  <rect x="890" y="1337" width="280" height="92" rx="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.8"/>
+  <text x="1030" y="1363" text-anchor="middle" class="b">예측 결과는 그대로 반환 (부분 성공)</text>
+  <text x="1030" y="1385" text-anchor="middle" class="bs">optimization = null · errors 에 사유 기록</text>
+  <text x="1030" y="1411" text-anchor="middle" class="stk" fill="#14532d">status = ok</text>
+
+  <rect x="1200" y="1337" width="260" height="92" rx="8" fill="#dcfce7" stroke="#16a34a" stroke-width="1.8"/>
+  <text x="1330" y="1372" text-anchor="middle" class="b">예측치 + 개선 조건 표</text>
+  <text x="1330" y="1400" text-anchor="middle" class="stk" fill="#14532d">status = ok</text>
+
+  <!-- 범례 -->
+  <rect x="40" y="1480" width="1520" height="110" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="64" y="1510" font-size="13.5" font-weight="800" fill="#0f172a">범례</text>
+
+  <rect x="64" y="1528" width="26" height="18" rx="4" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="98" y="1542" class="b">LLM 호출</text>
+  <rect x="200" y="1528" width="26" height="18" rx="4" fill="#f1f5f9" stroke="#64748b" stroke-width="1.6"/>
+  <text x="234" y="1542" class="b">내부 처리 로직</text>
+  <rect x="360" y="1528" width="26" height="18" rx="4" fill="#ffedd5" stroke="#ea580c" stroke-width="1.6"/>
+  <text x="394" y="1542" class="b">외부 API 호출</text>
+  <rect x="520" y="1528" width="26" height="18" rx="4" fill="#ecfdf5" stroke="#059669" stroke-width="1.6" stroke-dasharray="4 3"/>
+  <text x="554" y="1542" class="b">데이터 (요청 / 응답)</text>
+  <rect x="700" y="1528" width="26" height="18" rx="21" fill="#dbeafe" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="734" y="1542" class="b">intent 분기</text>
+
+  <rect x="64" y="1558" width="26" height="18" rx="4" fill="#dcfce7" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="98" y="1572" class="b">status = ok</text>
+  <rect x="200" y="1558" width="26" height="18" rx="4" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.6"/>
+  <text x="234" y="1572" class="b">need_more_info / invalid_input / 부분 성공</text>
+  <rect x="520" y="1558" width="26" height="18" rx="4" fill="#fee2e2" stroke="#dc2626" stroke-width="1.6"/>
+  <text x="554" y="1572" class="b">llm_error / endpoint_error</text>
+  <rect x="700" y="1558" width="26" height="18" rx="4" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.6"/>
+  <text x="734" y="1572" class="b">status = clarify</text>
+  <text x="900" y="1572" class="bs">※ 점선 화살표 = 조기 종료(에러 · 추가 입력 요청) 경로</text>
+</svg>

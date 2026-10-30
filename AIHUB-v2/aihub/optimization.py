@@ -33,10 +33,13 @@ logger = logging.getLogger(__name__)
 # 정상(=0) 확률이 가장 낮아지는(=불량 유발) 조건을 찾을 때 target="0".
 # [확인 필요] 이 매핑은 스펙 4.4의 서술("특정 클래스가 나올 확률을 최소화")을 근거로 한 것으로,
 # 실제 API 동작으로 검증되지 않았다. 운영 API로 한 번은 교차 검증을 권장한다.
+# [수정] 2026-10-29: predict_and_find_risk 추가 - 기존에는 "예측 + 개선 조건"(predict_and_optimize,
+# target="1")만 있어 "예측 + 위험 조건" 요청을 표현할 수 없었다(schema.INTENTS 참고).
 INTENT_TO_TARGET: dict[str, str] = {
     "optimize_reduce_defect": "1",
     "predict_and_optimize": "1",
     "optimize_find_defect_risk": "0",
+    "predict_and_find_risk": "0",
 }
 
 
@@ -81,9 +84,13 @@ def parse_optimization_response(payload: Any) -> dict[str, Any]:
     row = rows[0]
     if not isinstance(row, dict):
         raise OptimizationEndpointError(f"data[0]이 객체가 아닙니다: {row!r}")
+    # [수정] 2026-10-27: 각 필드의 의미를 설명하는 주석 추가 (로직 변경 없음, 주석만 추가)
     try:
+        # confidence(1): 모델이 이 조건을 불량(high_defect_flag=1)으로 예측할 확률.
         defect_probability = float(row["confidence(1)"])
+        # confidence(0): 모델이 이 조건을 정상(high_defect_flag=0)으로 예측할 확률.
         normal_probability = float(row["confidence(0)"])
+        # prediction(high_defect_flag): 모델의 최종 예측 라벨("0" 또는 "1").
         predicted_label = str(row["prediction(high_defect_flag)"])
     except KeyError as e:
         raise OptimizationEndpointError(f"응답에 필수 키가 없습니다: {e}") from e
@@ -132,6 +139,17 @@ class OptimizationClient:
             started = time.perf_counter()
             try:
                 with httpx.Client(timeout=self._settings.optimization_timeout_seconds) as client:
+                    # [수정] 2026-10-27: 요청 형식을 이해하기 쉽도록 예시 주석 추가 (로직 변경 없음, 주석만 추가)
+                    # 요청 예시 (이 코드가 보내는 형식, 실제 URL/토큰은 .env의 값 사용):
+                    #   GET {OPTIMIZATION_API_URL}?target=1
+                    #   Accept: application/json
+                    #   Authorization: Bearer <OPTIMIZATION_API_TOKEN>   <- 토큰이 설정된 경우에만 포함
+                    # curl로 환산하면:
+                    #   curl -G "$OPTIMIZATION_API_URL" \
+                    #        --data-urlencode "target=1" \
+                    #        -H "Accept: application/json" \
+                    #        -H "Authorization: Bearer $OPTIMIZATION_API_TOKEN"
+                    # [확인 필요] 서버의 실제 인증 방식과 쿼리 파라미터 처리는 운영 API로 검증되지 않았다.
                     response = client.get(self._url, params={"target": target}, headers=self._headers())
                 latency_ms = int((time.perf_counter() - started) * 1000)
                 if response.status_code >= 500:
