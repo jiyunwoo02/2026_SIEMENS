@@ -131,7 +131,7 @@ return self._run_predict(query, extraction, session, explain)
 
 ### 4.3 예측 공통 경로 — `_gather_and_predict`
 
-`predict`와 `predict_and_optimize` 두 의도가 공유하는 단계로, AIHUB의 예측 파이프라인을 그대로 옮긴 것입니다(로직 변경 없음, 함수로만 추출).
+`predict`, `predict_and_optimize`, `predict_and_find_risk` 세 의도가 공유하는 단계로, AIHUB의 예측 파이프라인을 그대로 옮긴 것입니다(로직 변경 없음, 함수로만 추출).
 
 1. **빈 입력 처리**: `records`가 비어 있고 세션에도 확인값이 없으면 ML을 호출하지 않고 12개 필드 전체를 되묻습니다(`no_conditions=True`).
 2. **모호 필드 초기화**: 이미 세션에 확인된 필드를 이번 발화가 모호하게 재언급하면(`ambiguous_fields`), 해당 슬롯을 세션에서 먼저 비워 기존 값으로 조용히 예측되는 것을 막습니다.
@@ -202,7 +202,7 @@ AIHUB에는 없던 신규 모듈(`aihub/optimization.py`)입니다. 기존 `ml.p
 
 ### 4.6 해설 생성 — `_explain` (predict 전용)
 
-예측 경로(`_run_predict`)에서만 사용하며 AIHUB와 동일합니다. `predict_and_optimize`와 `optimize_*` 경로는 `_explain`을 호출하지 않고 4.5절의 결정적 포맷팅만 사용합니다. 즉 **최적화 결과에는 LLM이 전혀 관여하지 않습니다**(수치를 지어낼 가능성을 원천 차단).
+예측 경로(`_run_predict`)에서만 사용하며 AIHUB와 동일합니다. `predict_and_optimize`, `predict_and_find_risk`, `optimize_*` 경로는 `_explain`을 호출하지 않고 4.5절의 결정적 포맷팅만 사용합니다. 즉 **최적화 결과에는 LLM이 전혀 관여하지 않습니다**(수치를 지어낼 가능성을 원천 차단).
 
 ## 5. 상태(Status) 정의
 
@@ -237,23 +237,26 @@ AIHUB에는 없던 신규 모듈(`aihub/optimization.py`)입니다. 기존 `ml.p
 - 실제 영향: 사용자가 조건을 한참 입력하다가(`predict`) 중간에 "불량 줄이는 조건 알려줘"(`optimize_reduce_defect`)를 물어도 기존에 확인된 슬롯은 그대로 남고, 다음 발화에서 다시 `predict`로 돌아오면 이전 슬롯이 그대로 효력을 가집니다. 이 동작은 코드로는 확인했으나 실행으로 재확인하지는 않았습니다.
 - 모호 필드 재설정(기존 확인값을 다시 모호하게 바꾸려는 발화), 허용값 밖 코드 처리 등 `predict` 경로의 세부 규칙은 AIHUB와 동일하게 유지됩니다.
 
-## 8. 미결 사항 / 확인 필요
+## 8. 유의사항
 
-소스를 읽다 발견한 사실을 수정 없이 기록합니다(`AIHUB-v2/README.md` "알려진 문제"와 겹치는 항목은 요약만 담음). <!-- [수정] 문서 길이 축소를 위해 각 항목을 요약함(서술 압축만 했고 사실 관계는 변경 없음) -->
-1. **`INTENT_TO_TARGET` 매핑은 부분 검증만 됨** (4.4절): `aistudio_optimization_troubleshooting.md`의 `curl` 기록이 해석을 뒷받침하지만 개발 단계 테스트일 뿐 자동 테스트로 고정되지 않았습니다. 매핑이 틀리면 "불량 줄이기"와 "위험 조건 찾기" 응답이 뒤바뀔 수 있습니다.
-2. **자동(단위) 테스트 부재**: 팀이 pytest 사용을 중단해(`requirements.txt`, `pyproject.toml`에서 제거) `INTENT_TO_TARGET`을 고정하는 자동 안전망이 없습니다. 수동 스모크 테스트(`test/cli_smoke_test.sh`, `test/web_smoke_test.sh`)로 일부만 확인합니다.
-3. **웹 UI 최적화 조건 렌더링 부재**: 2026-10-28 수정으로 `app.js`가 `clarify`와 intent별 상태 문구, `optimization.latency_ms`를 처리합니다. 그러나 `optimization`의 최적 조건 12개를 전용 영역·표로 보여주는 기능은 없고, `answer`(Markdown)와 `raw` JSON에서만 확인할 수 있습니다(`code_inventory.md` 참고).
-4. **`/health`가 최적화 설정 여부를 노출하지 않음**: `optimization_api_url` 설정 상태를 웹 UI에서 확인할 수 없습니다.
-5. **`UNCONTROLLABLE_FIELDS`는 현재 비활성화됨**: `aistudio_optimization_troubleshooting.md` 6절의 "검토 필요" 항목에서 가져온 제안 단계 가정이었습니다. 담당자가 2026-10-29에 비활성화를 직접 확인했으며, "참고값" 표시가 제거된 것(4.5절)과 일관됩니다.
-6. **최적화 API 설정 값 미검증**: `optimization_timeout_seconds`(180초)와 `optimization_max_retries`(1회)는 `curl_test_classification.sh`의 `--max-time`에서 추정한 값입니다. 실제 응답 시간과 인증 필요 여부는 `optimization.py` docstring이 "검증되지 않았다"고 명시합니다.
-7. **`docs/input_schema.md` 참조 깨짐**: `schema.py` 주석이 이 파일을 근거로 들지만 저장소에 없습니다(4.3절). AIHUB 복사 시 주석만 옮겨진 것으로 추정됩니다.
-8. **`predict_and_optimize`의 부분 성공 노출**: 최적화가 실패해도 `status`는 `ok`이고 사유는 `errors`에만 남습니다. 클라이언트가 `errors`를 강조하지 않으면 사용자가 부분 실패를 놓칠 수 있습니다.
-9. **`predict_and_find_risk` 관련 확인 완료 (2026-10-29)**: 이 의도는 `chatbot_optimization_feature_spec.md`에 없는 추가 의도입니다. 사용자가 제공한 `pipeline.py` 조각(전체 파일을 도구로 열람한 것은 아님)과 `schema.py`·`optimization.py`·`llm.py`·`cli.py`·`web/app.js`를 대조해 확인했습니다.
-   - (a) `_run_predict_and_optimize(self, extraction, session, intent)`가 `build_target(intent)`로 target을 정하고 `_format_predict_and_optimize(..., intent)`를 호출합니다.
-   - (b) `_format_predict_and_optimize`는 `is_risk`에 따라 제목·확률 라벨·실패 문구를 실제로 다르게 렌더링합니다(4.5절).
-   - (c) `_format_conditions_table`은 2026-10-27 수정으로 "참고값" 표시가 제거된 2열 표입니다. 따라서 "UNCONTROLLABLE_FIELDS에 참고값 안내를 덧붙인다"는 이전 서술은 틀렸습니다.
-   - (d) `_format_optimize_only`의 "※ 참고값으로 표시된 항목은..." 문구는 (c) 때문에 표와 맞지 않습니다(코드 docstring의 "함께 검토 필요" TODO).
-   - `_SHIFT_DISPLAY` 매핑과 `UNCONTROLLABLE_FIELDS` 비활성화도 확인해, `pipeline.py` 포맷 로직에 남은 미확인 사항은 없습니다(4.5절 참고).
+### 8.1 `INTENT_TO_TARGET` 매핑 변경 시 주의
+
+`optimization.py`의 `INTENT_TO_TARGET`은 `docs/agent-v2/aistudio_optimization_troubleshooting.md`의 `curl` 검증 기록을 근거로 설정된 값입니다(4.4절). 이 매핑을 고정하는 자동 테스트가 없으므로, **값을 수정할 경우 반드시 실제 API로 교차 검증**해야 합니다. 매핑이 틀리면 "불량 최소화"(`optimize_reduce_defect`)와 "위험 조건 탐색"(`optimize_find_defect_risk`) 결과가 반대로 나갑니다.
+
+### 8.2 `predict_and_optimize` / `predict_and_find_risk`의 부분 성공
+
+최적화 API 호출이 실패해도 `status`는 `"ok"`로 반환됩니다(5절). 최적화 실패 여부는 응답의 두 필드로 구분해야 합니다.
+
+- `optimization`: `null`이면 최적화 실패
+- `errors`: 실패 사유 문자열 포함
+
+### 8.3 웹 UI 최적화 결과 표시
+
+웹 UI에는 최적화 결과의 최적 조건 12개를 전용 영역으로 렌더링하는 기능이 없습니다. 결과는 `answer` 필드의 Markdown 텍스트와 `/chat/predict` 응답의 `optimization` 객체(JSON)에서만 확인할 수 있습니다.
+
+### 8.4 최적화 API 타임아웃·재시도 기본값
+
+`config.py`의 `optimization_timeout_seconds`(기본 **180초**)와 `optimization_max_retries`(기본 **1회**)는 `test/curl_test_classification.sh`의 `--max-time` 값을 근거로 설정된 추정치입니다. 실제 운영 API의 응답 특성에 따라 `.env`에서 조정이 필요할 수 있습니다.
 
 ## 9. 관련 문서
 
@@ -276,4 +279,5 @@ AIHUB에는 없던 신규 모듈(`aihub/optimization.py`)입니다. 기존 `ml.p
 - **[수정] 2026-10-29 (추가 확인, 2차)**: 사용자가 제공한 포맷 함수 소스로 4.5절, 5절 5번, 8절 9번을 정정했다. (1) `_format_conditions_table`이 `UNCONTROLLABLE_FIELDS`에 "참고값" 안내를 덧붙인다는 이전 서술은 **틀렸다**. 2026-10-27 수정으로 "비고" 열이 제거되어 2열 표만 출력한다. (2) `_format_optimize_only`의 "참고값으로 표시된 항목…" 문구가 (1) 때문에 표와 맞지 않는 불일치를 기록했다. (3) `_format_predict_and_optimize`가 `intent`별로 제목·라벨·문구를 다르게 렌더링함을 확인했다.
 - **[수정] 2026-10-29 (담당자 확인)**: 담당자가 `UNCONTROLLABLE_FIELDS` 비활성화를 직접 확인해, 5절 5번과 8절 9번의 "추가 확인 필요" 문구를 비활성화 사실로 교체했다.
 - **[수정] 2026-10-29 (소스 확인, 마무리)**: 사용자가 제공한 `_SHIFT_DISPLAY = {"DAY": "주간 (DAY)", "NIGHT": "야간 (NIGHT)"}`가 이전 추정과 일치해, `pipeline.py` 포맷 관련 미확인 사항이 모두 해소되었다. CLI·HTTP·실제 LLM 호출로는 재확인하지 않았다.
+- **2026-11-02**: 소스 대조 후 2건 수정 및 8절 구조 개편. (1) 4.3절: `_gather_and_predict` 공유 의도를 "두 의도"에서 "세 의도"로 수정(`predict_and_find_risk` 누락 정정). (2) 4.6절: `_explain` 미호출 경로에 `predict_and_find_risk` 추가. (3) 8절 "미결 사항/확인 필요"를 "유의사항"으로 재편 — 이미 반영된 항목(5·9번)과 아키텍처 문서 범위를 벗어난 항목(2·4·7번)을 제거하고, 사용자가 유념해야 할 4가지(INTENT_TO_TARGET 매핑, 부분 성공, 웹 UI 렌더링 제약, 최적화 API 설정 추정치)를 유의사항으로 정리했다.
 

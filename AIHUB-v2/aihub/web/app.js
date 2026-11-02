@@ -12,6 +12,7 @@
       "example-full",
       "example-partial",
       "example-optimize",
+      "example-full-optimize",
       "messages",
       "health",
       "progress",
@@ -49,9 +50,6 @@
     const isOptimizeOnly =
       intent === "optimize_reduce_defect" || intent === "optimize_find_defect_risk";
     if (body.status === "ok") {
-      if (intent === "predict_and_optimize") return "✅ 예측 및 개선 조건 추천 완료";
-      // [추가] 2026-10-29: predict_and_find_risk(예측+위험 조건 탐색) 전용 문구. predict_and_optimize와
-      // 같은 "ok" 상태를 쓰지만 방향이 반대(불량 최소화 X, 불량 위험 탐색 O)이므로 구분해서 보여준다.
       if (intent === "predict_and_find_risk") return "⚠️ 예측 및 위험 조건 탐색 완료";
       if (intent === "optimize_reduce_defect") return "✅ 불량 최소화 조건 추천 완료";
       if (intent === "optimize_find_defect_risk") return "⚠️ 불량 위험 조건 탐색 완료";
@@ -394,6 +392,12 @@
   // optimize_reduce_defect 예시 문구를 그대로 사용해 의도 분류가 어긋나지 않게 한다.
   ui["example-optimize"].addEventListener("click", () =>
     fillExample("불량 최소화 조건 알려줘"),
+  );
+  // [수정] 2026-10-29: fullExample 끝에 공백이 없어 "예측해주세요.불량 최소화..."처럼 붙던 문제를 수정했다.
+  // fullExample 뒤에 공백 한 칸과 "불량 최소화 조건 알려줘"만 이어 붙인다. (로직 변경: 입력 문자열 구성)
+  // 전제: ui 목록(상단 id 배열)과 setBusy의 비활성화 대상 목록에 "example-full-optimize"를 추가
+    ui["example-full-optimize"].addEventListener("click", () =>
+    fillExample(`${fullExample} 그리고 불량 최소화 조건도 함께 알려주세요!`),
   );
   // [수정] 2026-10-22: 최초 메시지에도 필요 입력 항목 안내를 표시한다.
   addMessage("assistant", `안녕하세요, 저는 Prediction Assistant입니다.\n${welcomeMessage}`);

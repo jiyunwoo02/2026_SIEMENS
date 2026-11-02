@@ -75,12 +75,14 @@ AIHUB-v2/
 │   │                    (llm.py가 import하지 않는 미사용 파일. [수정] 소스 재확인 결과 두 파일
 │   │                    모두 intent 분류 절을 포함하며, intent 도입 이전 버전이 아니다 -
 │   │                    자세한 비교는 docs/code_inventory.md 참고)
-│   └── web/             로컬 웹 UI (index.html, app.js, style.css, ui.sh) -
+│   └── web/             로컬 웹 UI (index.html, app.js, style.css, ui.sh, favicon.ico) -
 │                        안내 문구에 최적화 사용법을 반영했으나, 최적화 결과 전용 렌더링은
 │                        여전히 없음 (아래 "알려진 문제" 참고)
 ├── docs/
+│   ├── architecture.md  전체 아키텍처 문서
+│   ├── logic.md         처리 흐름·intent 분기·슬롯 필링 등 동작 로직 요약
+│   ├── code_inventory.md  파일별 역할 목록
 │   └── agent-v2/        최적화 기능 기획 명세서 2종 + AI Studio 트러블슈팅 기록
-├── docs/code_inventory.md  파일별 역할 목록
 └── test/                [수정] pytest 미사용 결정으로 자동화된 단위 테스트는 없음(아래 "테스트" 절 참고).
     ├── curl_test_classification.sh  최적화 API를 curl로 직접 호출
     ├── web_smoke_test.sh            [신규] 실행 중인 서버에 curl로 /health, /chat/predict,
@@ -171,9 +173,10 @@ bash test/cli_smoke_test.sh           # CLI: python -m aihub 단일 실행 7가�
 | 문서 | 내용 |
 |---|---|
 | [`docs/architecture.md`](docs/architecture.md) | 전체 아키텍처: intent 분기, 상태 정의, 컴포넌트별 상세 동작 |
+| [`docs/logic.md`](docs/logic.md) | 처리 흐름·intent 분기·슬롯 필링 등 동작 로직 요약 |
 | [`docs/code_inventory.md`](docs/code_inventory.md) | 파일별 역할 목록 |
 | [`docs/agent-v2/optimization_chatbot_spec.md`](docs/agent-v2/optimization_chatbot_spec.md) | (채택되지 않은 초기 구상안) 독립 최적화 챗봇 설계 |
-| [`docs/agent-v2/pre-version/chatbot_optimization_feature_spec.md`](docs/agent-v2/pre-version/chatbot_optimization_feature_spec.md) | (채택된 설계, 실제 코드와 일치) 기존 파이프라인 통합형 최적화 기능 명세 |
+| [`docs/agent-v2/bak/chatbot_optimization_feature_spec.md`](docs/agent-v2/bak/chatbot_optimization_feature_spec.md) | (채택된 설계, 실제 코드와 일치) 기존 파이프라인 통합형 최적화 기능 명세 |
 | [`docs/agent-v2/aistudio_optimization_troubleshooting.md`](docs/agent-v2/aistudio_optimization_troubleshooting.md) | Altair AI Studio 측 최적화 프로세스 구축 트러블슈팅 기록 (이 저장소 코드와는 무관, 서버 측 참고 자료) |
 
 ## 알려진 문제 / 확인 필요 사항
@@ -186,7 +189,7 @@ bash test/cli_smoke_test.sh           # CLI: python -m aihub 단일 실행 7가�
 - **[추가] `predict_and_find_risk` 의도 추가 (2026-10-29)**: 명세서에 없던 "예측 + 위험 조건" 의도입니다(배경은 위 "배경" 절 참고). 영향 파일은 `schema.py`, `optimization.py`, `pipeline.py`, `llm.py`, `app.js`, `cli.py`입니다. 기존 `predict_and_optimize` 동작은 바뀌지 않았고, 분류 정확도는 검증하지 않았습니다.
 - **`/health` 미반영**: `optimization_api_url` 설정 여부가 `/health`에 없어 웹 UI 배너에서 최적화 설정 상태를 알 수 없습니다(미수정).
 - **`INTENT_TO_TARGET` 부분 검증**: `aistudio_optimization_troubleshooting.md` 4절의 `curl` 테스트가 "target=1 → confidence(1) 최소화" 해석을 뒷받침하지만, 자동 테스트로 고정되어 있지 않습니다(`test/test_optimization.py` 부재). 매핑이 틀리면 기능 의미가 반대로 뒤집힙니다([`docs/architecture.md`](docs/architecture.md) 4.4절 참고).
-- **`UNCONTROLLABLE_FIELDS` 임의 지정**: `shift`, `supplier_code`, `planned_quantity`, `ambient_humidity_pct`, `production_line` 5개는 명세서 예시를 그대로 가져온 것입니다. 실제 조정 가능 변수는 담당자 확인이 필요합니다.
+- **`UNCONTROLLABLE_FIELDS` 비활성화됨**: 명세서 예시 5개(`shift`, `supplier_code`, `planned_quantity`, `ambient_humidity_pct`, `production_line`)를 초기값으로 지정했으나, 비활성화 요청에 따라 현재는 빈 집합(`frozenset()`)입니다. 모든 변수가 조정 대상으로 취급됩니다. 단, `_format_optimize_only()`의 "참고값으로 표시된 항목은…" 안내 문구는 표에서 참고값 열이 제거된 상태에서도 그대로 남아 있어 내용이 맞지 않습니다(미수정). 실제로 조정 불가 변수를 제한하려면 `schema.UNCONTROLLABLE_FIELDS`에 필드명을 추가하고 해당 안내 문구도 함께 검토해야 합니다.
 - **자동화된 테스트 부재**: pytest를 제거해 단위/회귀 테스트가 없습니다. 수동 스모크 테스트 2개(`test/web_smoke_test.sh`, `test/cli_smoke_test.sh`)만 있습니다.
 
 ## 주의
@@ -197,4 +200,8 @@ bash test/cli_smoke_test.sh           # CLI: python -m aihub 단일 실행 7가�
 - 최적화 결과는 모델 기반 추정이며 호출마다 달라질 수 있고 실제 공정 결과를 보장하지 않습니다(응답 문구에도 포함됨, `pipeline._format_optimize_only`/`_format_predict_and_optimize` 참고).
 
 > 이 문서는 소스(`aihub/`, `docs/agent-v2/`)를 읽고 작성했으며, CLI·HTTP·실제 외부 API 호출로 실행 검증하지 않았습니다.
+
+## 변경 이력
+
+- **2026-11-02**: 소스 대조 후 4건 수정. (1) 문서 테이블의 명세서 경로 `pre-version/` → `bak/`로 정정(본문에 이미 반영됐으나 테이블에 누락). (2) 알려진 문제의 `UNCONTROLLABLE_FIELDS` 항목을 실제 코드(`frozenset()`) 기준으로 갱신하고 `_format_optimize_only` 참고값 문구 불일치를 함께 기술. (3) `web/` 폴더 파일 목록에 `favicon.ico` 추가. (4) 폴더 구조 및 문서 테이블에 `docs/logic.md` 추가.
 
