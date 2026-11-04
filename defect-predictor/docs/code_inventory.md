@@ -52,9 +52,12 @@
 | `docs/input_schema.md` | 12개 입력 필드 |
 | `docs/run.md` | pytest 설명, CLI/HTTP/curl 실행 가이드 |
 | `docs/web_ui.md` | 로컬 웹 UI 구현, API 계약, 제약 |
+| `docs/결함예측_에이전트_가이드.html` | AI Hub ML 배포 및 LLM 자연어 연동 에이전트 가이드 (HTML). AI Studio 학습·AI Hub 배포·에이전트 설계·12개 입력 스키마·파이프라인 흐름·골든셋 평가·프롬프트 엔지니어링·용어사전을 포함한다. `defect-dashboard/docs/현대자동차_대시보드_가이드.html` 디자인 시스템 적용 |
 | `architecture.svg`, `example.svg` | 예제 기반 파이프라인 도식화 |
 
 ## 변경 이력
+
+- **2026-11-04**: `docs/결함예측_에이전트_가이드.html` 항목 추가. 레퍼런스 UI 디자인 시스템을 적용해 신규 작성한 HTML 가이드 문서이다.
 
 <!-- [추가] 2026-10-27 (문서 변경, 로직 변경 없음): 실제 날짜를 확인할 방법이 없어 기존 변경 이력의 날짜 표기 관례를 이어서 썼다 -->
 - 2026-10-27 (문서 변경, 로직 변경 없음): `aihub/__init__.py`, `aihub/__main__.py`, `aihub/prompt/`(미사용 프롬프트 스냅샷), `aihub/web/`(로컬 UI 정적 파일)을 목록에서 누락해 추가했다. `api.py`가 `/`, `/ui-assets/*`로 정적 UI를 제공한다는 점과 `schema.py`의 라인·공급사 화이트리스트, `llm.py`의 해설 프롬프트(`ANSWER_SYSTEM_PROMPT`)를 표에 반영했다. 소스를 다시 읽어 대조했으며 `prompt/`가 어디서도 import되지 않는 것을 `llm.py`·`pipeline.py`·`cli.py`·`api.py`·`__init__.py` 전체를 읽어 확인했다(원격 터미널의 `grep` 출력은 이 환경에서 캡처되지 않아 사용하지 못했다).

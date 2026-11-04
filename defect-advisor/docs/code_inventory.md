@@ -48,11 +48,14 @@ pytest를 사용하지 않으며 자동화된 단위/회귀 테스트가 없다.
 | `docs/architecture.md` | 전체 아키텍처 문서(intent 분기, 상태 정의, 컴포넌트별 동작) |
 | `docs/logic.md` | 처리 흐름·intent 분기·슬롯 필링 등 동작 로직 요약 |
 | `docs/code_inventory.md` | 이 문서 |
+| `docs/현대자동차_결함예측_최적화_에이전트_가이드.html` | Altair AI Studio 공정 최적화 및 LLM 에이전트 연동 가이드 (HTML). AI Studio 최적화 프로세스·AI Hub API 2종(예측 POST / 최적화 GET)·6-intent 라우팅·`INTENT_TO_TARGET` 매핑·구현 패턴·검증·챗봇 UI 시나리오를 포함한다. `defect-dashboard/docs/현대자동차_대시보드_가이드.html` 디자인 시스템 적용 |
 | `docs/agent-v2/optimization_chatbot_spec.md` | 최적화 전용 독립 챗봇 초기 명세서. `intent` 4종(`optimize_reduce_defect`/`optimize_find_defect_risk`/`clarify`/`out_of_scope`)이며 `out_of_scope`는 `schema.INTENTS`에 없다. **실제 코드에 채택되지 않았다** |
 | `docs/agent-v2/bak/chatbot_optimization_feature_spec.md` | 채택된 설계 명세서(통합형). 기존 예측 파이프라인에 최적화 의도 3종(`optimize_reduce_defect`/`optimize_find_defect_risk`/`predict_and_optimize`)과 `clarify`를 통합하며, 실제 코드와 대체로 일치한다. `predict_and_find_risk`는 이 명세서에 없는 추가 의도이다 |
 | `docs/agent-v2/aistudio_optimization_troubleshooting.md` | Altair AI Studio 최적화(Prescriptive Analytics) 구성 트러블슈팅 기록. Python 코드와 직접 관련 없는 서버(모델) 측 참고 자료 |
 
 ## 변경 이력
+
+- **2026-11-04**: `docs/현대자동차_결함예측_최적화_에이전트_가이드.html` 항목 추가. 레퍼런스 UI 디자인 시스템을 적용해 신규 작성한 HTML 가이드 문서이다.
 
 - (작성일 미상) 이 문서 최초 작성: `defect-predictor`의 `docs/code_inventory.md` 형식을 기준으로 `defect-advisor`용으로 작성했다. 소스(`aihub/` 전체, `docs/agent-v2/` 3개 문서)를 열람해 대조했으며, 실행 검증은 하지 않았다.
 - (작성일 미상) `docs/architecture.md` 신규 작성 후 문서 표에 항목을 추가했다. 이전에는 README가 defect-predictor 쪽 문서를 대신 가리키고 있었다.
