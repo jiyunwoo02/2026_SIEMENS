@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Altair AI Studio 공정 최적화 및 LLM 챗봇 AI Agent 연동 가이드</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* === DESIGN TOKENS === */
+:root {
+  --bg:            #F5F7FA;
+  --surface:       #FFFFFF;
+  --border:        #E2E8F0;
+  --fg:            #0F172A;
+  --fg-muted:      #475569;
+  --fg-light:      #94A3B8;
+  --primary:       #1D4ED8;
+  --primary-light: #EFF6FF;
+  --accent:        #0EA5E9;
+  --success:       #16A34A;
+  --success-bg:    #F0FDF4;
+  --warning:       #D97706;
+  --warning-bg:    #FFFBEB;
+  --danger:        #DC2626;
+  --danger-bg:     #FEF2F2;
+  --chip-bg:       #F1F5F9;
+  --code-bg:       #F8FAFC;
+  --shadow:        0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:     0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+  --r:             8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:            #0D1117;
+    --surface:       #161B22;
+    --border:        #30363D;
+    --fg:            #E6EDF3;
+    --fg-muted:      #8B949E;
+    --fg-light:      #484F58;
+    --primary:       #58A6FF;
+    --primary-light: #121D2F;
+    --accent:        #56D364;
+    --success:       #3FB950;
+    --success-bg:    #0F2A13;
+    --warning:       #D29922;
+    --warning-bg:    #1C1500;
+    --danger:        #F85149;
+    --danger-bg:     #1C0A0A;
+    --chip-bg:       #21262D;
+    --code-bg:       #1C2128;
+    --shadow:        0 1px 3px rgba(0,0,0,.3);
+    --shadow-md:     0 4px 6px rgba(0,0,0,.3);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:            #0D1117;
+  --surface:       #161B22;
+  --border:        #30363D;
+  --fg:            #E6EDF3;
+  --fg-muted:      #8B949E;
+  --fg-light:      #484F58;
+  --primary:       #58A6FF;
+  --primary-light: #121D2F;
+  --accent:        #56D364;
+  --success:       #3FB950;
+  --success-bg:    #0F2A13;
+  --warning:       #D29922;
+  --warning-bg:    #1C1500;
+  --danger:        #F85149;
+  --danger-bg:     #1C0A0A;
+  --chip-bg:       #21262D;
+  --code-bg:       #1C2128;
+  --shadow:        0 1px 3px rgba(0,0,0,.3);
+  --shadow-md:     0 4px 6px rgba(0,0,0,.3);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Noto Sans KR', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.7;
+  font-size: 15px;
+  padding-left:  max(16px, env(safe-area-inset-left,  0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+}
+img { max-width: 100%; display: block; }
+
+/* NAV */
+.nav {
+  position: sticky; top: env(safe-area-inset-top, 0px);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+  padding: 0 max(24px, env(safe-area-inset-left, 0px));
+}
+.nav-inner {
+  max-width: 900px; margin: 0 auto;
+  display: flex; align-items: center; gap: 24px;
+  height: 52px;
+}
+.nav-brand { font-weight: 700; font-size: 14px; color: var(--primary); letter-spacing: -.01em; }
+.nav-links { display: flex; gap: 20px; }
+.nav-links a {
+  font-size: 13px; font-weight: 500; color: var(--fg-muted);
+  text-decoration: none; transition: color .15s;
+}
+.nav-links a:hover { color: var(--primary); }
+
+/* PAGE */
+.page { max-width: 900px; margin: 0 auto; padding-block: 48px 80px; }
+
+/* HERO */
+.hero { margin-bottom: 56px; }
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--primary);
+  background: var(--primary-light);
+  border-radius: 100px; padding: 4px 12px; margin-bottom: 16px;
+}
+.hero h1 {
+  font-size: clamp(24px, 4vw, 34px); font-weight: 700; line-height: 1.25;
+  letter-spacing: -.02em; text-wrap: balance; margin-bottom: 14px;
+}
+.hero-sub {
+  font-size: 15px; color: var(--fg-muted); line-height: 1.65;
+  max-width: 660px; margin-bottom: 24px;
+}
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px; font-weight: 500;
+  background: var(--chip-bg); color: var(--fg-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px; padding: 3px 10px;
+}
+
+/* META BOX */
+.meta-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px 20px;
+  margin-bottom: 32px;
+  font-size: 13.5px;
+  box-shadow: var(--shadow);
+}
+.meta-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px; }
+.meta-row:last-child { margin-bottom: 0; }
+.meta-key {
+  font-size: 11px; font-weight: 600; color: var(--fg-light);
+  text-transform: uppercase; letter-spacing: .07em;
+  min-width: 72px; padding-top: 2px; flex-shrink: 0;
+}
+.meta-val { font-size: 13px; color: var(--fg-muted); }
+
+/* SECTION */
+section { margin-bottom: 56px; }
+.section-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--fg-light);
+  margin-bottom: 8px;
+}
+.section-title {
+  font-size: 20px; font-weight: 700; letter-spacing: -.01em;
+  margin-bottom: 20px; text-wrap: balance;
+}
+
+/* CARD */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 14px; font-weight: 700; color: var(--fg);
+  margin-bottom: 14px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.sub-label {
+  font-size: 12px; font-weight: 600; color: var(--fg-light);
+  text-transform: uppercase; letter-spacing: .06em;
+  margin-bottom: 10px; margin-top: 20px;
+}
+.sub-label:first-child { margin-top: 0; }
+
+/* ARCH FLOW */
+.arch-flow {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden;
+  margin-bottom: 16px;
+}
+.arch-node {
+  background: var(--surface);
+  padding: 20px; text-align: center;
+}
+.arch-node-icon { font-size: 26px; margin-bottom: 10px; display: block; }
+.arch-node-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.arch-node-desc { font-size: 11.5px; color: var(--fg-muted); line-height: 1.5; }
+
+/* PARAMS TABLE */
+.table-wrap { overflow-x: auto; margin-bottom: 16px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 480px; }
+th {
+  text-align: left; padding: 8px 12px;
+  font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--fg-light); background: var(--chip-bg);
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 9px 12px; border-bottom: 1px solid var(--border);
+  vertical-align: top; color: var(--fg-muted);
+}
+td:first-child { color: var(--fg); font-weight: 500; }
+tr:last-child td { border-bottom: none; }
+td code, th code {
+  font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 3px; padding: 1px 5px; color: var(--primary);
+}
+
+/* CODE BLOCK */
+.code-block {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px; line-height: 1.65;
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 16px 20px;
+  overflow-x: auto; white-space: pre; color: var(--fg);
+  margin-top: 12px; margin-bottom: 16px;
+}
+
+/* API ENDPOINT CARD */
+.endpoint-card {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 16px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r);
+  margin-bottom: 10px;
+}
+.method-badge {
+  flex-shrink: 0; font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700;
+  padding: 3px 8px; border-radius: 4px; margin-top: 2px;
+}
+.method-post { background: #FEF3C7; color: #92400E; }
+.method-get  { background: #D1FAE5; color: #065F46; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .method-post { background: #2D1B00; color: #FCD34D; }
+  :root:not([data-theme="light"]) .method-get  { background: #022C22; color: #6EE7B7; }
+}
+:root[data-theme="dark"] .method-post { background: #2D1B00; color: #FCD34D; }
+:root[data-theme="dark"] .method-get  { background: #022C22; color: #6EE7B7; }
+.endpoint-url {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--fg); font-weight: 500;
+  word-break: break-all; margin-bottom: 4px;
+}
+.endpoint-desc { font-size: 12px; color: var(--fg-muted); }
+
+/* NOTICE ITEMS */
+.notice-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.notice-item {
+  padding: 14px 16px; background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 var(--r) var(--r) 0;
+}
+.notice-item.warn { border-left-color: var(--warning); background: var(--warning-bg); }
+.notice-item.danger { border-left-color: var(--danger); background: var(--danger-bg); }
+.notice-item.success { border-left-color: var(--success); background: var(--success-bg); }
+.notice-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.notice-title.warn { color: var(--warning); }
+.notice-title.danger { color: var(--danger); }
+.notice-title.info { color: var(--primary); }
+.notice-title.success { color: var(--success); }
+.notice-body { font-size: 13px; color: var(--fg-muted); line-height: 1.6; }
+.notice-body ul { padding-left: 18px; margin-top: 6px; }
+.notice-body li { margin-bottom: 4px; }
+
+/* ACHIEVEMENT */
+.ach-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.ach-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px; background: var(--success-bg);
+  border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
+  border-radius: var(--r);
+}
+.ach-dot {
+  flex-shrink: 0; width: 8px; height: 8px;
+  background: var(--success); border-radius: 50%; margin-top: 7px;
+}
+.ach-text { font-size: 13px; color: var(--fg); line-height: 1.6; }
+
+/* DIAGRAM WRAPPER */
+.diagram-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 20px 16px;
+  margin-bottom: 16px; overflow-x: auto; text-align: center;
+}
+.diagram-caption {
+  font-size: 12px; color: var(--fg-muted);
+  text-align: center; margin-top: 10px;
+}
+
+/* SVG text color in dark mode */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) svg text { fill: var(--fg) !important; }
+}
+:root[data-theme="dark"] svg text { fill: var(--fg) !important; }
+
+/* CHAT CARDS */
+.case-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 16px; margin-bottom: 24px;
+}
+.chat-card {
+  background: #1e2430; border: 1px solid #334155;
+  border-radius: var(--r); padding: 14px;
+  color: #f8fafc; font-size: 13px;
+  box-shadow: var(--shadow-md);
+}
+.chat-header {
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #334155; padding-bottom: 8px;
+  margin-bottom: 10px; font-weight: 700; font-size: 12px;
+}
+.chat-badge {
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 600;
+}
+.badge-ok     { background: #16a34a; color: #fff; }
+.badge-warn   { background: #d97706; color: #fff; }
+.badge-purple { background: #7c3aed; color: #fff; }
+.badge-blue   { background: #2563eb; color: #fff; }
+.msg-user {
+  background: #1d4ed8; color: #fff;
+  padding: 8px 12px; border-radius: 8px;
+  margin-bottom: 8px; font-size: 12px; line-height: 1.45;
+}
+.msg-bot {
+  background: #fff; color: #1e293b;
+  padding: 8px 12px; border-radius: 8px;
+  margin-bottom: 8px; font-size: 12px; line-height: 1.45;
+}
+.msg-bot-warn {
+  background: #fffbeb; color: #b45309;
+  border: 1px solid #fde68a;
+  padding: 8px 12px; border-radius: 8px;
+  margin-bottom: 8px; font-size: 12px; line-height: 1.45;
+}
+.table-mini {
+  width: 100%; margin: 6px 0 8px; border-collapse: collapse; font-size: 11px;
+}
+.table-mini th, .table-mini td {
+  border: 1px solid #e2e8f0; padding: 4px 6px; color: #1e293b;
+}
+.table-mini th { background: #f1f5f9; font-weight: 600; }
+.table-mini tr:nth-child(even) { background: #f8fafc; }
+
+/* INLINE CODE */
+p code, li code {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 3px; padding: 1px 5px; color: var(--primary);
+}
+p, li { color: var(--fg-muted); line-height: 1.7; }
+li { margin-bottom: 6px; }
+ul, ol { padding-left: 22px; margin-bottom: 14px; }
+
+/* SPEC GRID */
+.spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.spec-item { display: flex; flex-direction: column; gap: 2px; }
+.spec-label { font-size: 11px; font-weight: 600; color: var(--fg-light); text-transform: uppercase; letter-spacing: .07em; }
+.spec-value { font-size: 13px; color: var(--fg); font-weight: 500; }
+
+/* FOOTER */
+.footer {
+  border-top: 1px solid var(--border); padding-top: 24px;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 8px;
+}
+.footer-left  { font-size: 12px; color: var(--fg-light); }
+.footer-right { font-size: 11px; color: var(--fg-light); font-family: 'JetBrains Mono', monospace; }
+
+@media (max-width: 640px) {
+  .arch-flow  { grid-template-columns: 1fr 1fr; }
+  .case-grid  { grid-template-columns: 1fr; }
+  .spec-grid  { grid-template-columns: 1fr; }
+  .nav-links  { display: none; }
+  .page       { padding-block: 32px 60px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <span class="nav-brand">defect-advisor</span>
+    <div class="nav-links">
+      <a href="#overview">개요</a>
+      <a href="#aistudio">AI Studio</a>
+      <a href="#aihub">AI Hub API</a>
+      <a href="#agent">LLM 에이전트</a>
+      <a href="#impl">구현 패턴</a>
+      <a href="#test">검증</a>
+      <a href="#ui">챗봇 UI</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero" id="overview">
+    <div class="hero-eyebrow">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M6 3.5v3l1.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Defect Advisor · 2026-11
+    </div>
+    <h1>Altair AI Studio 공정 최적화부터<br>LLM 챗봇 AI Agent 연동까지</h1>
+    <p class="hero-sub">
+      제조 공정 결함 예측(GBT 분류 모델) 데이터를 기반으로, Altair AI Studio의 진화적 최적화(Prescriptive Analytics)를 활용해 최적 공정 조건을 도출하고, AI Hub REST API로 배포한 뒤 LLM 챗봇 AI Agent와 결합해 자연어로 서비스하는 전 과정 기술 구현 가이드.
+    </p>
+    <div class="chip-row">
+      <span class="chip">Altair AI Studio</span>
+      <span class="chip">AI Hub</span>
+      <span class="chip">LLM AI Agent</span>
+      <span class="chip">Python / FastAPI</span>
+      <span class="chip">GBT Classification</span>
+      <span class="chip">Prescriptive Analytics</span>
+      <span class="chip">Intent Routing</span>
+      <span class="chip">Pydantic / httpx</span>
+    </div>
+  </div>
+
+  <!-- META -->
+  <div class="meta-box">
+    <div class="meta-row"><span class="meta-key">작업</span><span class="meta-val">Task 3 — AI Hub ML 배포 및 LLM 에이전트 연동</span></div>
+    <div class="meta-row"><span class="meta-key">기간</span><span class="meta-val">2026.10.21 – 2026.10.28</span></div>
+    <div class="meta-row"><span class="meta-key">키워드</span><span class="meta-val">AI Hub · Altair AI Studio · GBT Classifier · Prescriptive Analytics · LLM Intent Routing · Slot-Filling · Pydantic</span></div>
+    <div class="meta-row"><span class="meta-key">코드</span><span class="meta-val">defect-advisor/ — pipeline.py · optimization.py · schema.py · llm.py</span></div>
+  </div>
+
+  <!-- SECTION 1: ARCHITECTURE -->
+  <section id="overview-arch">
+    <div class="section-label">Architecture</div>
+    <div class="section-title">시스템 개요 및 E2E 아키텍처</div>
+
+    <p style="margin-bottom:20px; color:var(--fg-muted);">
+      제조 현장에서 품질 불량을 방지하기 위해 숙련자의 직관이나 반복 실험에 의존하는 경우가 많습니다. 본 시스템은 <strong style="color:var(--fg);">머신러닝 분류 모델</strong>과 <strong style="color:var(--fg);">유전 알고리즘 기반 Prescriptive Analytics</strong>를 결합하여 불량률을 최소화(또는 불량 유발 위험 요인 탐색)하는 최적 입력 변수 조합을 도출하고, 이를 현장 작업자가 LLM 챗봇을 통해 자연어로 즉시 조회할 수 있도록 구성되었습니다.
+    </p>
+
+    <div class="arch-flow">
+      <div class="arch-node">
+        <span class="arch-node-icon">👤</span>
+        <div class="arch-node-title">사용자</div>
+        <div class="arch-node-desc">자연어 질의<br>(한국어)</div>
+      </div>
+      <div class="arch-node" style="border-left:1px solid var(--border);">
+        <span class="arch-node-icon">🤖</span>
+        <div class="arch-node-title">LLM AI Agent</div>
+        <div class="arch-node-desc">① 의도 분류 (Intent)<br>② Target 매핑 (0/1)<br>③ 결과 서식화</div>
+      </div>
+      <div class="arch-node" style="border-left:1px solid var(--border);">
+        <span class="arch-node-icon">⚙️</span>
+        <div class="arch-node-title">API 클라이언트</div>
+        <div class="arch-node-desc">POST 예측 / GET 최적화<br>타임아웃 제어(180s)</div>
+      </div>
+      <div class="arch-node" style="border-left:1px solid var(--border);">
+        <span class="arch-node-icon">☁️</span>
+        <div class="arch-node-title">Altair AI Hub</div>
+        <div class="arch-node-desc">Context Macro: %{target}<br>Prescriptive Analytics (GA)<br>GBT Classifier</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">주요 구성 요소 및 기술 스택</div>
+      <ul>
+        <li><strong style="color:var(--fg);">Altair AI Studio (2026.1.1):</strong> 공정 데이터 전처리, GBT 분류 모델 학습 및 진화적 최적화(Prescriptive Analytics) 파이프라인 설계</li>
+        <li><strong style="color:var(--fg);">Altair AI Hub:</strong> 최적화 프로세스를 실시간 HTTP Web API 엔드포인트로 게시 및 서비스</li>
+        <li><strong style="color:var(--fg);">LLM Engine (Siemens SDC Gateway):</strong> 자연어 질의 분석, Structured Output(JSON Schema)을 통한 정확한 의도(Intent) 추출</li>
+        <li><strong style="color:var(--fg);">Chatbot AI Agent (Python / FastAPI):</strong> Intent-to-Target 변환, Web API 클라이언트 통신, 비즈니스 검증, 공정 변수 레이블링 및 템플릿 서식화</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- SECTION 2: AI STUDIO -->
+  <section id="aistudio">
+    <div class="section-label">AI Studio</div>
+    <div class="section-title">Altair AI Studio 최적화 프로세스 구축</div>
+
+    <div class="card">
+      <div class="card-title">2.1 프로세스 연결 구조</div>
+      <p style="margin-bottom:12px;">최적화 프로세스는 훈련된 분류 모델(GBT Model)과 학습 데이터(Training Data)를 입력받아, 주어진 목표(<code>target</code>) 클래스의 발생 확률을 최소화하는 입력 변수 조합을 탐색합니다.</p>
+      <div class="code-block">Retrieve data ──► Map (2) ──► Set Label ──► Sample (2) ──► Prescriptive Analytics (tra)
+GBT 분류 (Retrieve model) ──────────────────────────────► Prescriptive Analytics (mod)
+                                                          Prescriptive Analytics (opt) ──► result 1</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">2.2 핵심 오퍼레이터 설정 파라미터</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>구분</th>
+              <th>설정 항목</th>
+              <th>설정값</th>
+              <th>실무적 의미 및 주의사항</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Context 매크로</strong></td>
+              <td><code>target</code></td>
+              <td><code>1</code> (기본값)</td>
+              <td><code>View → Show Panel → Context</code>에서 정의. 외부 API 호출 시 쿼리 파라미터로 동적 주입됨</td>
+            </tr>
+            <tr>
+              <td rowspan="5"><strong>Prescriptive Analytics</strong></td>
+              <td><code>class name</code></td>
+              <td><code>%{target}</code></td>
+              <td>매크로를 참조하여 <code>0</code> 또는 <code>1</code>로 치환됨</td>
+            </tr>
+            <tr>
+              <td><code>classification</code></td>
+              <td>체크 (True)</td>
+              <td>분류 모델의 클래스 확률(Confidence)을 목적함수로 사용</td>
+            </tr>
+            <tr>
+              <td><code>optimization direction</code></td>
+              <td><code>minimize</code></td>
+              <td>선택한 <code>class name</code>의 예측 확률을 <strong>최소화</strong>하도록 탐색</td>
+            </tr>
+            <tr>
+              <td><code>limit type</code></td>
+              <td>generations &amp; population</td>
+              <td>population: 10, max generations: 5 (또는 Time limit 30s 설정)</td>
+            </tr>
+            <tr>
+              <td><code>입력 범위 제한</code></td>
+              <td>stay above/below global min/max</td>
+              <td>탐색 공간이 실제 데이터 범위를 벗어나지 않도록 방지</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="notice-list">
+      <div class="notice-item warn">
+        <div class="notice-title warn">⚠️ Context 매크로 vs Set Macro 오퍼레이터 (덮어쓰기 방지)</div>
+        <div class="notice-body">
+          프로세스 내에 <code>Set Macro</code> 오퍼레이터가 있으면 외부 API 쿼리 파라미터(<code>?target=0</code>)를 실행 중에 기본값으로 덮어써 버립니다. 외부 입력을 동적으로 수신하려면 반드시 <strong>Context 패널(View → Show Panel → Context)</strong>에 매크로를 선언해야 합니다.
+        </div>
+      </div>
+      <div class="notice-item danger">
+        <div class="notice-title danger">🚨 무한 대기 방지 및 스키마 일치 원칙</div>
+        <div class="notice-body">
+          <ul>
+            <li><strong>종료 조건 설정:</strong> 진화 알고리즘의 무한 루프를 방지하기 위해 <code>limit type</code>(세대수/개체수 또는 Time limit)을 반드시 설정합니다.</li>
+            <li><strong>피처 구조 일치:</strong> 분류 모델 학습 데이터(<code>mod</code>)와 최적화 탐색 대상 데이터(<code>tra</code>)의 컬럼 구조가 정확히 일치해야 합니다. (원-핫 인코딩 등 임의 변경 지양)</li>
+            <li><strong>동작 불능 시 점진적 디버깅:</strong> 프로세스 멈춤 발생 시 동작이 확인된 기준 프로세스에서 <em>한 번에 하나씩만</em> 변경하며 검증합니다.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: AI HUB API -->
+  <section id="aihub">
+    <div class="section-label">AI Hub REST API</div>
+    <div class="section-title">AI Hub 배포 및 연동 명세</div>
+
+    <div class="card">
+      <div class="card-title">3.1 엔드포인트</div>
+      <div class="endpoint-card">
+        <span class="method-badge method-post">POST</span>
+        <div>
+          <div class="endpoint-url">https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/defect_rate_pred/deploy</div>
+          <div class="endpoint-desc">공정 조건 12개 → 결함률(%) 예측. <code>defect-predictor</code> 경로와 공유</div>
+        </div>
+      </div>
+      <div class="endpoint-card">
+        <span class="method-badge method-get">GET</span>
+        <div>
+          <div class="endpoint-url">https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/defect_flag_classification/deploy-optimization?target=0|1</div>
+          <div class="endpoint-desc">최적 공정 조건 1세트 반환. 쿼리 파라미터 <code>target</code> 필수 (0 또는 1). Timeout 최소 <strong>180초</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">3.2 <code>target</code> 파라미터의 핵심 메커니즘</div>
+      <p style="margin-bottom:14px;">AI Studio 내부 설정이 <code>optimization direction = minimize</code>, <code>class name = %{target}</code>이므로, <strong style="color:var(--fg);">target은 "발생 확률을 최소화하고자 하는 대상 클래스"</strong>를 뜻합니다.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th><code>target</code></th>
+              <th>엔진 내부 연산</th>
+              <th>비즈니스 목적</th>
+              <th>응답 특징</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>"1"</code></td>
+              <td>불량(1) 확률 <strong>최소화</strong></td>
+              <td>불량을 줄이고 양품률 극대화하는 최적 공정 조건 탐색</td>
+              <td>예측 라벨 <code>"0"</code>(정상), <code>confidence(1)</code> ≈ 1.7%</td>
+            </tr>
+            <tr>
+              <td><code>"0"</code></td>
+              <td>정상(0) 확률 <strong>최소화</strong></td>
+              <td>불량이 유발되기 쉬운 위험 공정 조건 탐색</td>
+              <td>예측 라벨 <code>"1"</code>(불량), <code>confidence(0)</code> ≈ 1.7%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="notice-item danger">
+        <div class="notice-title danger">🚨 매핑 오류 주의</div>
+        <div class="notice-body">사용자가 "정상 조건을 찾아줘"라고 질의했을 때 <code>target=0</code>(정상)을 전달하면 <strong>정상 확률을 최소화하여 불량을 유발하는 조건이 반환</strong>됩니다. 사용자 자연어 단어가 아닌 <strong>최적화 방향(의도)</strong>을 기준으로 매핑해야 합니다.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">3.3 응답(Response) JSON 구조</div>
+      <p style="margin-bottom:14px;">엔드포인트는 단일 배열(<code>data[0]</code>) 내에 12개의 공정 최적화 추천 변수와 머신러닝 예측 메타 필드를 함께 반환합니다. <code>parse_optimization_response()</code>가 아래 형태로 분리합니다.</p>
+      <div class="spec-grid" style="margin-bottom:16px;">
+        <div class="spec-item">
+          <span class="spec-label">공정 조건 (12개)</span>
+          <span class="spec-value" style="font-size:12px; color:var(--fg-muted);">confidence·prediction 제외한 순수 피처 키-값</span>
+        </div>
+        <div class="spec-item">
+          <span class="spec-label">예측 메타 (3개)</span>
+          <span class="spec-value" style="font-size:12px; color:var(--fg-muted);"><code>confidence(1)</code> · <code>confidence(0)</code> · <code>prediction(high_defect_flag)</code></span>
+        </div>
+      </div>
+      <div class="code-block">// target="1" 응답 예시 (불량 최소화 조건)
+{
+  "data": [{
+    "incoming_material_quality_score": 96.199,
+    "tool_wear_pct": 11.981,
+    "planned_quantity": 482.0,
+    "shift": "DAY",
+    "production_line": "LINE-BPR-02",
+    "process_setting_deviation_pct": 2.059,
+    "ambient_humidity_pct": 45.434,
+    "fixture_alignment_offset_mm": 0.875,
+    "supplier_code": "SIM-SUP-A",
+    "weld_energy_setting_pct": 111.446,
+    "coating_target_thickness_um": 97.660,
+    "days_since_maintenance": 57.0,
+    "confidence(1)": 0.0183,          // ← 불량 확률: 1.83%
+    "confidence(0)": 0.9817,          // ← 정상 확률: 98.17%
+    "prediction(high_defect_flag)": "0"  // ← 최종 판별 (문자열)
+  }]
+}</div>
+      <p style="font-size:12.5px; color:var(--fg-muted); margin-top:8px;">파싱 결과: <code>conditions</code>(12개 공정 조건) + <code>defect_probability</code> + <code>normal_probability</code> + <code>predicted_label</code> + <code>latency_ms</code> + <code>target</code></p>
+    </div>
+  </section>
+
+  <!-- SECTION 4: LLM AGENT -->
+  <section id="agent">
+    <div class="section-label">LLM AI Agent</div>
+    <div class="section-title">챗봇 AI Agent 아키텍처 설계</div>
+
+    <div class="card">
+      <div class="card-title">4.1 Intent 정의 — 6종 의도 분류 체계</div>
+      <p style="margin-bottom:14px;">LLM에게 직접 <code>0</code> 또는 <code>1</code> 같은 숫자를 결정하게 하면 환각(Hallucination) 위험이 큽니다. <strong style="color:var(--fg);">LLM은 비즈니스 Intent Enum만을 반환</strong>하고, 백엔드 코드의 불변 사전(Frozen Dict)을 통해 <code>target</code>으로 결정론적 변환을 수행합니다.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Intent</th>
+              <th>의미</th>
+              <th>호출 대상</th>
+              <th><code>target</code></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>predict</code></td>
+              <td>주어진 조건의 결함률 예측</td>
+              <td>예측 API (<code>ml.py</code>)</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><code>optimize_reduce_defect</code></td>
+              <td>불량을 줄이는 최적 조건 탐색</td>
+              <td>최적화 API (<code>optimization.py</code>)</td>
+              <td><code>"1"</code></td>
+            </tr>
+            <tr>
+              <td><code>optimize_find_defect_risk</code></td>
+              <td>불량이 잘 나는 위험 조건 탐색</td>
+              <td>최적화 API (<code>optimization.py</code>)</td>
+              <td><code>"0"</code></td>
+            </tr>
+            <tr>
+              <td><code>predict_and_optimize</code></td>
+              <td>결함률 예측 + 불량 최소화 조건 탐색</td>
+              <td>두 API 모두</td>
+              <td><code>"1"</code></td>
+            </tr>
+            <tr>
+              <td><code>predict_and_find_risk</code></td>
+              <td>결함률 예측 + 불량 유발 위험 조건 탐색</td>
+              <td>두 API 모두</td>
+              <td><code>"0"</code></td>
+            </tr>
+            <tr>
+              <td><code>clarify</code></td>
+              <td>의도가 불분명해 되묻는 경우</td>
+              <td>호출 없음 (고정 문구)</td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">4.2 아키텍처 비교 — 단독 최적화 챗봇 vs 통합형</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>구분</th>
+              <th>A. 독립형 최적화 챗봇 (신규 구축)</th>
+              <th>B. 통합형 결함 예측 &amp; 최적화 챗봇 (기존 확장)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>연동 엔드포인트</strong></td>
+              <td>최적화 API 단독</td>
+              <td>예측 API + 최적화 API 동시 지원</td>
+            </tr>
+            <tr>
+              <td><strong>주요 Intent</strong></td>
+              <td><code>optimize_reduce_defect</code>, <code>optimize_find_defect_risk</code>, <code>clarify</code></td>
+              <td>위 3개 + <code>predict</code>, <code>predict_and_optimize</code>, <code>predict_and_find_risk</code></td>
+            </tr>
+            <tr>
+              <td><strong>데이터 추출 요구</strong></td>
+              <td>공정 조건 추출 불필요 (방향 의도만 판별)</td>
+              <td>예측 요청 시 공정 피처 12종 추출 및 누락값 질의 로직 유지</td>
+            </tr>
+            <tr>
+              <td><strong>선택 근거</strong></td>
+              <td>빠른 MVP, 단순한 구조</td>
+              <td><strong>실제 코드 선택.</strong> defect-predictor의 슬롯 필링 로직을 재사용</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="notice-item" style="border-left-color:var(--primary);">
+        <div class="notice-title info">ℹ️ 실제 구현 선택: B. 통합형</div>
+        <div class="notice-body">실제 코드(<code>pipeline.py</code>)는 통합형 설계를 따릅니다. <code>_gather_and_predict()</code>가 슬롯 병합 → 검증 → ML 호출의 공통 단계를 담당하며, <code>predict_and_*</code> 경로는 최적화 실패 시에도 <code>status="ok"</code>를 반환하는 부분 성공 패턴을 사용합니다.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">4.3 Intent → Target 고정 변환 코드</div>
+      <div class="code-block"># aihub/optimization.py — INTENT_TO_TARGET 고정 매핑
+# LLM이 직접 target 값을 고르지 않음 (환각 방지)
+INTENT_TO_TARGET: dict[str, str] = {
+    "optimize_reduce_defect":    "1",   # 불량(1) 확률 최소화 → 양품 조건 탐색
+    "predict_and_optimize":      "1",   # 예측 후 불량 최소화 개선 조건 탐색
+    "optimize_find_defect_risk": "0",   # 정상(0) 확률 최소화 → 위험 조건 탐색
+    "predict_and_find_risk":     "0",   # 예측 후 불량 유발 위험 조건 탐색
+}</div>
+      <div class="notice-item warn" style="margin-top:0;">
+        <div class="notice-title warn">⚠️ 자동 테스트 없음 — 변경 시 반드시 교차 검증</div>
+        <div class="notice-body">이 매핑이 틀리면 최적화 방향이 반대로 뒤집힌다. 변경 시 운영 API로 <code>target=0</code>/<code>target=1</code> 응답을 비교해 교차 검증한다.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5: IMPLEMENTATION PATTERNS -->
+  <section id="impl">
+    <div class="section-label">Implementation</div>
+    <div class="section-title">핵심 구현 패턴</div>
+
+    <div class="card">
+      <div class="card-title">5.1 처리 흐름 — Intent별 API 분기 (<code>pipeline.py</code>)</div>
+      <div class="code-block">사용자 질의
+  → QueryExtractor.extract()          LLM 동기 호출, intent + 12개 필드 JSON 추출
+  → DefectRatePipeline.run()          intent 분기
+      predict                   →     _gather_and_predict() + LLM 해설(선택)
+      predict_and_optimize      →     _gather_and_predict() → OptimizationClient(target="1")
+      predict_and_find_risk     →     _gather_and_predict() → OptimizationClient(target="0")
+      optimize_reduce_defect    →     OptimizationClient(target="1") 만
+      optimize_find_defect_risk →     OptimizationClient(target="0") 만
+      clarify                   →     고정 문구 반환, API 호출 없음
+  → PipelineResult 반환</div>
+      <div class="notice-item" style="border-left-color:var(--primary);">
+        <div class="notice-title info">ℹ️ predict_and_* 경로: LLM 해설 없음</div>
+        <div class="notice-body"><code>predict</code> 경로는 ML 예측 후 <code>_explain()</code>으로 LLM을 추가 호출한다. 반면 <code>predict_and_optimize</code>/<code>predict_and_find_risk</code>는 <code>_format_predict_and_optimize()</code>(코드 포매터)가 직접 answer를 구성한다. 최적화 실패 시에도 <code>status="ok"</code> 반환 — <code>optimization=null</code>과 <code>errors</code> 필드로 확인.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">5.2 Intent → Target 결정론적 변환 파이프라인</div>
+      <div class="diagram-wrap">
+        <svg width="100%" height="250" viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+            </marker>
+          </defs>
+          <!-- User queries -->
+          <rect x="10" y="20" width="170" height="210" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="95" y="42" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#0f172a">사용자 자연어 질의</text>
+          <rect x="20" y="52" width="150" height="40" rx="4" fill="#fff" stroke="#e2e8f0"/>
+          <text x="26" y="68" font-size="10.5" font-weight="bold" fill="#1e293b">"불량 줄이는 조건?"</text>
+          <text x="26" y="82" font-size="9.5" fill="#64748b">최적화 단독 (불량 최소화)</text>
+          <rect x="20" y="96" width="150" height="40" rx="4" fill="#fff" stroke="#e2e8f0"/>
+          <text x="26" y="112" font-size="10.5" font-weight="bold" fill="#1e293b">"예측 + 불량 최소화"</text>
+          <text x="26" y="126" font-size="9.5" fill="#64748b">조건예측 후 개선안 요청</text>
+          <rect x="20" y="140" width="150" height="40" rx="4" fill="#fff" stroke="#e2e8f0"/>
+          <text x="26" y="156" font-size="10.5" font-weight="bold" fill="#1e293b">"불량 잘 나는 조건?"</text>
+          <text x="26" y="170" font-size="9.5" fill="#64748b">최적화 단독 (위험 탐색)</text>
+          <rect x="20" y="184" width="150" height="40" rx="4" fill="#fff" stroke="#e2e8f0"/>
+          <text x="26" y="200" font-size="10.5" font-weight="bold" fill="#1e293b">"예측 + 위험조건 탐색"</text>
+          <text x="26" y="214" font-size="9.5" fill="#64748b">조건예측 후 위험조건 요청</text>
+          <!-- Arrow -->
+          <line x1="180" y1="125" x2="220" y2="125" stroke="#64748b" stroke-width="2" marker-end="url(#arr)"/>
+          <!-- LLM -->
+          <rect x="220" y="20" width="220" height="210" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="330" y="42" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#1d4ed8">LLM 의도 분류</text>
+          <rect x="235" y="52" width="190" height="40" rx="4" fill="#fff" stroke="#bfdbfe"/>
+          <text x="242" y="76" font-size="10.5" font-weight="bold" fill="#1e40af">optimize_reduce_defect</text>
+          <rect x="235" y="96" width="190" height="40" rx="4" fill="#fff" stroke="#bfdbfe"/>
+          <text x="242" y="120" font-size="10.5" font-weight="bold" fill="#1e40af">predict_and_optimize</text>
+          <rect x="235" y="140" width="190" height="40" rx="4" fill="#fff" stroke="#bfdbfe"/>
+          <text x="242" y="164" font-size="10.5" font-weight="bold" fill="#1e40af">optimize_find_defect_risk</text>
+          <rect x="235" y="184" width="190" height="40" rx="4" fill="#fff" stroke="#bfdbfe"/>
+          <text x="242" y="208" font-size="10.5" font-weight="bold" fill="#1e40af">predict_and_find_risk</text>
+          <!-- Arrow -->
+          <line x1="440" y1="125" x2="480" y2="125" stroke="#64748b" stroke-width="2" marker-end="url(#arr)"/>
+          <!-- Mapping -->
+          <rect x="480" y="20" width="270" height="210" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+          <text x="615" y="42" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#15803d">고정 매핑 (INTENT_TO_TARGET)</text>
+          <rect x="495" y="52" width="240" height="84" rx="4" fill="#fff" stroke="#bbf7d0"/>
+          <text x="505" y="74" font-size="12" font-weight="bold" fill="#166534">target = "1"</text>
+          <text x="505" y="92" font-size="10.5" fill="#15803d">• 불량(1) 확률 최소화</text>
+          <text x="505" y="108" font-size="10.5" fill="#15803d">• 양품 조건 탐색 및 개선안 도출</text>
+          <text x="505" y="124" font-size="9.5" fill="#16a34a">➔ optimize_reduce_defect / predict_and_optimize</text>
+          <rect x="495" y="140" width="240" height="84" rx="4" fill="#fff" stroke="#fecaca"/>
+          <text x="505" y="162" font-size="12" font-weight="bold" fill="#991b1b">target = "0"</text>
+          <text x="505" y="180" font-size="10.5" fill="#b91c1c">• 정상(0) 확률 최소화</text>
+          <text x="505" y="196" font-size="10.5" fill="#b91c1c">• 불량 유발 위험 조건 탐색</text>
+          <text x="505" y="212" font-size="9.5" fill="#dc2626">➔ optimize_find_defect_risk / predict_and_find_risk</text>
+        </svg>
+        <div class="diagram-caption">▲ 사용자 자연어 → LLM Intent 분류 → 고정 사전 Target 변환 파이프라인</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">5.3 API 호출 및 메타 키 분리 파싱 (<code>optimization.py</code>)</div>
+      <div class="diagram-wrap">
+        <svg width="100%" height="220" viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+            </marker>
+          </defs>
+          <rect x="10" y="30" width="190" height="160" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="105" y="55" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">1. GET API 호출</text>
+          <rect x="20" y="70" width="170" height="110" rx="4" fill="#fff" stroke="#e2e8f0"/>
+          <text x="28" y="90" font-size="11" font-weight="bold" fill="#0369a1">requests.get(url, params)</text>
+          <text x="28" y="110" font-size="10.5" fill="#475569">• params = {"target": "1"}</text>
+          <text x="28" y="130" font-size="10.5" fill="#475569">• URL 인코딩 자동 처리</text>
+          <text x="28" y="150" font-size="10.5" fill="#dc2626">• timeout = 180s 설정</text>
+          <text x="28" y="168" font-size="10.5" fill="#475569">• Bearer 토큰 (선택 지원)</text>
+          <line x1="200" y1="110" x2="240" y2="110" stroke="#64748b" stroke-width="2" marker-end="url(#arr2)"/>
+          <rect x="240" y="30" width="220" height="160" rx="8" fill="#fefce8" stroke="#eab308" stroke-width="1.5"/>
+          <text x="350" y="55" text-anchor="middle" font-size="13" font-weight="bold" fill="#854d0e">2. Raw JSON 수신 (1행)</text>
+          <rect x="250" y="70" width="200" height="110" rx="4" fill="#fff" stroke="#fde047"/>
+          <text x="258" y="90" font-size="10" fill="#475569">"tool_wear_pct": 11.98,</text>
+          <text x="258" y="106" font-size="10" fill="#475569">"weld_energy_setting_pct": 111.45,</text>
+          <text x="258" y="122" font-size="10" fill="#475569">"shift": "DAY", ... (12개 변수)</text>
+          <text x="258" y="142" font-size="10" font-weight="bold" fill="#db2777">"confidence(1)": 0.0182,</text>
+          <text x="258" y="158" font-size="10" font-weight="bold" fill="#16a34a">"confidence(0)": 0.9817,</text>
+          <text x="258" y="174" font-size="10" font-weight="bold" fill="#2563eb">"prediction(high_defect_flag)": "0"</text>
+          <line x1="460" y1="110" x2="500" y2="110" stroke="#64748b" stroke-width="2" marker-end="url(#arr2)"/>
+          <rect x="500" y="30" width="250" height="160" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+          <text x="625" y="55" text-anchor="middle" font-size="13" font-weight="bold" fill="#15803d">3. 파싱 및 정형화 반환</text>
+          <rect x="510" y="70" width="230" height="48" rx="4" fill="#fff" stroke="#bbf7d0"/>
+          <text x="518" y="88" font-size="11" font-weight="bold" fill="#0f172a">conditions: Dict[str, Any]</text>
+          <text x="518" y="104" font-size="10" fill="#166534">※ 순수 12개 공정 조건 추출</text>
+          <rect x="510" y="126" width="230" height="54" rx="4" fill="#fff" stroke="#bbf7d0"/>
+          <text x="518" y="144" font-size="10.5" fill="#0f172a">defect_prob: float (confidence(1))</text>
+          <text x="518" y="162" font-size="10.5" fill="#0f172a">predicted_label: str ("0" / "1")</text>
+        </svg>
+        <div class="diagram-caption">▲ GET 요청 → Raw JSON 수신 → 공정 조건 / 예측 메타 분리</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">5.4 신뢰성 제고 — 면책 조항 포맷팅</div>
+      <p style="margin-bottom:14px;">진화적 알고리즘의 비결정론적 특성(호출 시마다 미세한 결과 차이 발생 가능)과 모델 추정치임을 사용자에게 명확히 고지합니다.</p>
+      <div class="notice-item warn">
+        <div class="notice-title warn">⚠️ 응답 하단 필수 고지 문구</div>
+        <div class="notice-body"><em>"※ 본 결과는 AI 모델 기반 진화적 최적화 추정치이며 실제 공정 결과를 보장하지 않습니다. 알고리즘 특성상 호출마다 조건이 미세하게 상이할 수 있습니다."</em></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 6: TESTING -->
+  <section id="test">
+    <div class="section-label">Testing</div>
+    <div class="section-title">통합 테스트 및 배포 검증</div>
+
+    <div class="card">
+      <div class="card-title">6.1 배포 직후 파라미터 주입 검증</div>
+      <p style="margin-bottom:12px;">배포 직후 서버 기본값 캐싱 여부 및 파라미터 주입 유효성을 검증하기 위해 <code>target=1</code>과 <code>target=0</code>을 각각 호출하여 응답이 서로 다른지 확인합니다.</p>
+      <div class="code-block"># bash test/curl_test_classification.sh
+# target=1: 불량 최소화 조건 탐색
+curl -G -s --max-time 180 "$OPTIMIZATION_API_URL" \
+     --data-urlencode "target=1" > out_1.json
+
+# target=0: 불량 유발 위험 조건 탐색
+curl -G -s --max-time 180 "$OPTIMIZATION_API_URL" \
+     --data-urlencode "target=0" > out_0.json
+
+# 두 결과가 상이해야 Context 매크로가 정상 주입된 것
+diff out_1.json out_0.json</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">6.2 스모크 테스트 — CLI / HTTP API</div>
+      <div class="code-block"># HTTP API 스모크 테스트 (서버 먼저 실행 필요)
+bash test/web_smoke_test.sh
+
+# CLI 스모크 테스트
+bash test/cli_smoke_test.sh
+
+# HTTP API 서버 기동 (별도 터미널)
+bash aihub/web/ui.sh       # → http://127.0.0.1:8000</div>
+      <div class="notice-item" style="border-left-color:var(--primary);">
+        <div class="notice-title info">ℹ️ pytest 미사용</div>
+        <div class="notice-body">현재 pytest 구성 없음. <code>test/</code> 디렉터리에 bash 스모크 테스트와 curl 검증 스크립트만 존재. 자동화 테스트 없으므로 INTENT_TO_TARGET 변경 시 운영 API 교차 검증 필수.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">6.3 주요 이슈 및 해결 이력</div>
+      <div class="notice-list" style="margin-bottom:0;">
+        <div class="notice-item">
+          <div class="notice-title" style="color:var(--primary);">Set Macro 오퍼레이터가 외부 target 덮어씀</div>
+          <div class="notice-body">해결: Set Macro 제거 후 Context 패널(View → Show Panel → Context)에 매크로 선언. <code>?target=0</code> 쿼리 파라미터가 정상 주입됨을 diff로 확인.</div>
+        </div>
+        <div class="notice-item">
+          <div class="notice-title" style="color:var(--primary);">Prescriptive Analytics 무한 대기</div>
+          <div class="notice-body">해결: <code>limit type = generations &amp; population</code> 설정. population: 10, max generations: 5. Time limit 대안도 동작 확인.</div>
+        </div>
+        <div class="notice-item">
+          <div class="notice-title" style="color:var(--primary);">target 매핑 역전 (정반대 조건 반환)</div>
+          <div class="notice-body">해결: "정상 조건"이라는 사용자 단어를 target=0으로 매핑하면 정상 확률을 최소화해 위험 조건이 반환됨. INTENT_TO_TARGET 사전 기준으로 매핑 방향을 재정립.</div>
+        </div>
+        <div class="notice-item">
+          <div class="notice-title" style="color:var(--primary);">SSL 인증서 오류 (사내망 환경)</div>
+          <div class="notice-body">해결: <code>.env</code>에 <code>AI_HUB_VERIFY_SSL=false</code> / <code>OPTIMIZATION_VERIFY_SSL=false</code> 설정. httpx/requests 클라이언트 모두 적용.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 7: CHATBOT UI -->
+  <section id="ui">
+    <div class="section-label">Chatbot UI</div>
+    <div class="section-title">실제 챗봇 UI 렌더링 및 프롬프트 최적화</div>
+
+    <div class="card">
+      <div class="card-title">7.1 핵심 대화 시나리오 — 6종 케이스</div>
+      <p style="margin-bottom:16px;">현장 작업자가 직관적으로 예측 및 최적화를 수행할 수 있도록 웹 기반 챗봇 인터페이스를 구성하였으며, 주요 사용자 시나리오에 맞춰 실시간 마크다운 테이블과 카드 UI를 제공합니다.</p>
+
+      <div class="case-grid">
+        <!-- Case 1 -->
+        <div class="chat-card">
+          <div class="chat-header">
+            <span>💬 Case 1: 완전한 결함 예측 (Single-Turn)</span>
+            <span class="chat-badge badge-ok">status: ok</span>
+          </div>
+          <div class="msg-user">LINE-BPR-01 주간조에서 SIM-SUP-B 자재로 533개 생산 예정입니다. 습도 54.49%, 품질점수 83.95, 코팅두께 79.22μm, 용접에너지 92.67%, 지그 오프셋 0.112mm, 설정편차 13.06%, 마모도 14.41%, 정비 후 30일 지났습니다. 결함률 예측해주세요.</div>
+          <div class="msg-bot">
+            <strong style="color:#db2777;">🎯 예측 결함률: 1.65%</strong><br>
+            공구 마모도(14.41%)와 정비 후 경과일(30일), 설정 편차(13.06%)에 민감하며, 자재 품질점수(83.95)가 양호하여 결함률 상승을 일부 상쇄하고 있습니다.
+            <div style="font-size:10.5px; color:#94a3b8; margin-top:4px;">⏱ Latency: 112ms · Slots Filled: 12/12</div>
+          </div>
+        </div>
+
+        <!-- Case 2 -->
+        <div class="chat-card">
+          <div class="chat-header">
+            <span>💬 Case 2: 조건 누락 슬롯 채우기 (Multi-Turn)</span>
+            <span class="chat-badge badge-warn">need_more_info → ok</span>
+          </div>
+          <div class="msg-user">LINE-BPR-01 주간에 SIM-SUP-B로 500개 생산할 때 결함률 얼마야?</div>
+          <div class="msg-bot-warn">⚠️ <strong>추가 공정 조건이 필요합니다 (8개 누락)</strong><br>작업장 습도, 자재 품질 점수, 코팅 두께, 용접 에너지, 지그 오프셋, 설정 편차, 마모도, 정비 경과일을 알려주세요.</div>
+          <div class="msg-user">습도 50%, 품질 90, 코팅 80μm, 용접 90%, 오프셋 0.1mm, 편차 10%, 마모도 15%, 정비 20일이야.</div>
+          <div class="msg-bot"><strong style="color:#db2777;">🎯 예측 결함률: 1.52%</strong><br>이전 턴의 조건(라인, 교대조, 공급사, 수량)과 새로 입력된 조건을 병합하여 분석했습니다.</div>
+        </div>
+
+        <!-- Case 3 -->
+        <div class="chat-card" style="border-color:#0284c7;">
+          <div class="chat-header">
+            <span>⚡ Case 3: 최적화 단독 (불량 최소화 · target=1)</span>
+            <span class="chat-badge badge-ok">optimize: min_defect</span>
+          </div>
+          <div class="msg-user">불량 최소화 조건 알려줘</div>
+          <div class="msg-bot">
+            <strong style="color:#0369a1;">✅ 불량 확률을 최소화하는 최적 조건입니다.</strong>
+            <table class="table-mini">
+              <thead><tr><th>항목</th><th>값</th><th>구분</th></tr></thead>
+              <tbody>
+                <tr><td>생산 라인 / 교대조</td><td>LINE-BPR-02 / 주간</td><td>참고</td></tr>
+                <tr><td>입고 자재 품질점수</td><td><strong>96.20점</strong></td><td>제어</td></tr>
+                <tr><td>용접 에너지 설정</td><td><strong>111.45%</strong></td><td>제어</td></tr>
+                <tr><td>공정 설정 편차</td><td><strong>2.06%</strong></td><td>제어</td></tr>
+                <tr><td>공구 마모도 / 정비일</td><td><strong>11.98% / 57일</strong></td><td>제어</td></tr>
+              </tbody>
+            </table>
+            <strong style="color:#15803d; font-size:11.5px;">🎯 이 조건에서의 예상 확률 — 불량: 1.83%, 정상: 98.17%</strong>
+            <div style="font-size:10px; color:#64748b; margin-top:4px;">※ 이 결과는 모델 기반 추정이며 실제 공정 결과를 보장하지 않습니다.</div>
+          </div>
+        </div>
+
+        <!-- Case 4 -->
+        <div class="chat-card" style="border-color:#10b981;">
+          <div class="chat-header">
+            <span>🔄 Case 4: 예측 + 최적화 복합 (predict_and_optimize)</span>
+            <span class="chat-badge badge-purple">predict &amp; optimize</span>
+          </div>
+          <div class="msg-user">LINE-BPR-01 주간조에서 SIM-SUP-B로 533개 생산(습도 54.49%, 품질 83.95, 코팅 79.22, 용접 92.67%, 오프셋 0.112mm, 편차 13.06%, 마모 14.41%, 정비 30일) 시 결함률 예측하고 불량 최소화 조건도 알려줘.</div>
+          <div class="msg-bot">
+            <strong style="color:#db2777;">📊 현재 조건의 예측 결함률: 1.65%</strong><br>
+            <div style="margin-top:4px; font-weight:600; color:#0f172a;">불량 확률을 최소화하는 개선 조건:</div>
+            <table class="table-mini">
+              <thead><tr><th>주요 공정 항목</th><th>현재값</th><th>최적 추천값</th></tr></thead>
+              <tbody>
+                <tr><td>입고 자재 품질</td><td>83.95점</td><td><strong>96.20점 (▲)</strong></td></tr>
+                <tr><td>용접 에너지 설정</td><td>92.67%</td><td><strong>111.45% (▲)</strong></td></tr>
+                <tr><td>공정 설정 편차</td><td>13.06%</td><td><strong>2.06% (▼)</strong></td></tr>
+                <tr><td>공구 마모도</td><td>14.41%</td><td><strong>11.98% (▼)</strong></td></tr>
+              </tbody>
+            </table>
+            <strong style="color:#15803d; font-size:11.5px;">✨ 개선 조건 적용 시 예상 불량 확률: 1.83%</strong>
+          </div>
+        </div>
+
+        <!-- Case 5 -->
+        <div class="chat-card">
+          <div class="chat-header">
+            <span>💬 Case 5: 가상 시뮬레이션 (What-if · Multi-Turn)</span>
+            <span class="chat-badge badge-purple">what-if update</span>
+          </div>
+          <div class="msg-user">(예측 완료 후) 다른 조건은 동일하게 두고 공구 마모도만 90%로 오르면 어떻게 돼?</div>
+          <div class="msg-bot">
+            <strong style="color:#ea580c;">📈 예측 결함률: 3.17% (▲ 1.52%p 상승)</strong><br>
+            공구 마모도가 14.41%에서 90%로 극단적으로 증가함에 따라 결함 발생 확률이 약 2배 급증했습니다. 즉각적인 공구 교체 및 셋업 점검을 권장합니다.
+          </div>
+        </div>
+
+        <!-- Case 6 -->
+        <div class="chat-card">
+          <div class="chat-header">
+            <span>🔍 Case 6: 위험 조건 탐색 (optimize_find_defect_risk)</span>
+            <span class="chat-badge badge-blue">optimize: risk</span>
+          </div>
+          <div class="msg-user">불량이 가장 잘 나는 위험 조건이 뭐야?</div>
+          <div class="msg-bot">
+            <strong style="color:#dc2626;">⚠️ 불량 발생 위험이 높은 조건입니다. (target=0)</strong>
+            <table class="table-mini">
+              <thead><tr><th>항목</th><th>위험 조건값</th></tr></thead>
+              <tbody>
+                <tr><td>공급사 / 교대조</td><td>SIM-SUP-C / 야간(NIGHT)</td></tr>
+                <tr><td>입고 자재 품질점수</td><td><strong>78.68점 (낮음)</strong></td></tr>
+                <tr><td>공구 마모도</td><td><strong>68.94% (높음)</strong></td></tr>
+                <tr><td>공정 설정 편차</td><td><strong>11.11% (높음)</strong></td></tr>
+              </tbody>
+            </table>
+            <strong style="color:#dc2626; font-size:11.5px;">🎯 이 조건에서의 예상 불량 확률: 98.95%</strong>
+            <div style="font-size:10px; color:#64748b; margin-top:4px;">※ 이 결과는 경계 조건 탐색용이며 현장 적용 목적이 아닙니다.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">7.2 LLM 프롬프트 경량화 및 토큰 최적화</div>
+      <div class="ach-list">
+        <div class="ach-item">
+          <div class="ach-dot"></div>
+          <div class="ach-text"><strong>중복 규칙 통합:</strong> 시스템 프롬프트와 사용자 템플릿에 분산된 <em>"신규 언급 값만 추출"</em>, <em>"무관 발화 빈 배열 처리"</em> 지시를 시스템 단 1곳으로 단일화. 추출 프롬프트 약 17% 감축 (8,300자 → 6,850자)</div>
+        </div>
+        <div class="ach-item">
+          <div class="ach-dot"></div>
+          <div class="ach-text"><strong>해설 프롬프트 군더더기 제거:</strong> UI 마크다운 가정, 모델 알고리즘 상세 설명 등 LLM 추론에 불필요한 개발자성 문구를 제거하고 마크다운 표 렌더링 규칙으로 집약. 해설 프롬프트 약 27% 감축 (1,830자 → 1,330자)</div>
+        </div>
+        <div class="ach-item">
+          <div class="ach-dot"></div>
+          <div class="ach-text"><strong>단위 및 포맷팅의 코드 이관:</strong> <em>"1.65는 0.0165%가 아닌 1.65%로 표기하라"</em> 같은 단위/소수점 환산 규칙을 프롬프트 대신 <code>formatter.py</code> 백엔드 코드로 이전하여 환각 원천 차단</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">7.3 초기 안내 및 Quick Chips</div>
+      <p style="margin-bottom:12px;">챗봇 진입 시 12개 공정 조건 입력 가이드를 안내하며, 하단에 빠른 예시 질의 버튼(Quick Chips)을 제공해 접근성을 극대화합니다.</p>
+      <div class="chip-row" style="margin-bottom:0;">
+        <span class="chip">결함률 예측 전체 조건 예제</span>
+        <span class="chip">결함률 예측 추가 질문 예제</span>
+        <span class="chip">최적화 불량 최소화 예제</span>
+        <span class="chip">최적화 위험 조건 탐색 예제</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <span class="footer-left">defect-advisor — Altair AI Studio 공정 최적화 및 LLM 챗봇 AI Agent 연동 가이드</span>
+    <span class="footer-right">2026-11 · defect-advisor/docs/</span>
+  </footer>
+
+</div>
+</body>
+</html>
