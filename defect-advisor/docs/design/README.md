@@ -42,7 +42,7 @@
    - 실패(빨강): "호출 · 파싱 실패" → `endpoint_error`
    - 성공(초록): "최적 조건 Markdown 표 + 예상 확률", "ML · LLM 미호출" → `status=ok`
 
-#### 경로 C — predict (x 840–1340, "조건 입력 필요 (기존 AIHUB와 동일한 결)")
+#### 경로 C — predict (x 840–1340, "조건 입력 필요 (기존 defect-predictor와 동일한 결)")
 1. Intent 헤더: `predict | predict_and_optimize`
 2. `_gather_and_predict` 박스(500×200, "공통 단계 · §4.3") — 번호 원 3단계:
    1. `SlotFillingSession.merge` — 이전 턴의 확인값과 병합

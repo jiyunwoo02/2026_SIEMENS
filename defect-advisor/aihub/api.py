@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 
 # 불량률 예측 대화를 제공하는 FastAPI 애플리케이션.
-app = FastAPI(title="AIHUB Defect Rate Assistant", version="1.0.0")
+app = FastAPI(title="Defect Advisor", version="1.0.0")
 
 # [수정] 로컬 UI와 API를 같은 출처에서 제공해 별도 프런트 서버/CORS 설정을 없앤다.
 _WEB_DIR = Path(__file__).resolve().parent / "web"

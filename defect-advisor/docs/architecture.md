@@ -1,8 +1,8 @@
 # 아키텍처 (Architecture)
 
-사용자의 자연어 질의에서 의도(intent)와 공정 입력값을 추출해, 의도에 따라 **결함률 예측 API**(기존 AIHUB 파이프라인) 또는 **공정 최적화 API**(신규)를 호출하고, 결과를 LLM 해설 또는 결정적 서식으로 응답하는 파이프라인입니다.
+사용자의 자연어 질의에서 의도(intent)와 공정 입력값을 추출해, 의도에 따라 **결함률 예측 API**(기존 defect-predictor 파이프라인) 또는 **공정 최적화 API**(신규)를 호출하고, 결과를 LLM 해설 또는 결정적 서식으로 응답하는 파이프라인입니다.
 
-> 이 문서는 `aihub/` 소스(`llm.py`, `schema.py`, `pipeline.py`, `optimization.py`, `ml.py`, `config.py`)를 읽고 작성했으며, **실제 LLM/예측 API/최적화 API를 호출해 검증한 결과는 아닙니다.** 서로 다른 설계를 제안한 명세서 2종(`docs/agent-v2/`) 중 실제 코드와 일치하는 쪽은 [`bak/chatbot_optimization_feature_spec.md`](agent-v2/bak/chatbot_optimization_feature_spec.md)입니다(**[수정] 경로 정정**: 이 문서의 이전 버전은 `agent-v2/pre-version/...` 경로를 가리켰으나 `pre-version/` 디렉터리는 존재하지 않고 실제 경로는 `bak/`입니다 — `AIHUB-v2/docs/code_inventory.md`·`README.md`가 먼저 바로잡은 내용과 동일). 단 `predict_and_find_risk` 의도는 이 명세서에 **없는**, 이후 추가된 의도입니다(4.1·4.4·8절 참고).
+> 이 문서는 `aihub/` 소스(`llm.py`, `schema.py`, `pipeline.py`, `optimization.py`, `ml.py`, `config.py`)를 읽고 작성했으며, **실제 LLM/예측 API/최적화 API를 호출해 검증한 결과는 아닙니다.** 서로 다른 설계를 제안한 명세서 2종(`docs/agent-v2/`) 중 실제 코드와 일치하는 쪽은 [`bak/chatbot_optimization_feature_spec.md`](agent-v2/bak/chatbot_optimization_feature_spec.md)입니다(**[수정] 경로 정정**: 이 문서의 이전 버전은 `agent-v2/pre-version/...` 경로를 가리켰으나 `pre-version/` 디렉터리는 존재하지 않고 실제 경로는 `bak/`입니다 — `defect-advisor/docs/code_inventory.md`·`README.md`가 먼저 바로잡은 내용과 동일). 단 `predict_and_find_risk` 의도는 이 명세서에 **없는**, 이후 추가된 의도입니다(4.1·4.4·8절 참고).
 
 
 ## 1. 개요
@@ -39,7 +39,7 @@
    │     ├─ 호출·파싱 실패 → status=endpoint_error
    │     └─ 성공 → 최적 조건 Markdown 표 + 예상 확률 → status=ok (ML/LLM 미호출)
    │
-   └─ intent = predict | predict_and_optimize | predict_and_find_risk  (조건 입력 필요, 기존 AIHUB와 동일한 결로)
+   └─ intent = predict | predict_and_optimize | predict_and_find_risk  (조건 입력 필요, 기존 defect-predictor와 동일한 결로)
          ▼
       [_gather_and_predict] 공통 단계 (아래 4.3절)
          │  · SlotFillingSession.merge: 이전 턴의 확인값과 병합
@@ -96,10 +96,10 @@ flowchart TD
 
 ### 4.1 QueryExtractor — 조건 추출과 의도(intent) 분류
 
-조건 추출 로직(추측 금지, 모호값 null 처리, 단위 환산, 항목명 없는 값 매칭, 다중 레코드 분리 등)은 AIHUB와 동일합니다. 자세한 규칙은 `llm.py`의 `EXTRACTION_SYSTEM_PROMPT`를 참고하세요. 이 절은 v2에서 **추가된 의도 분류**만 다룹니다.
+조건 추출 로직(추측 금지, 모호값 null 처리, 단위 환산, 항목명 없는 값 매칭, 다중 레코드 분리 등)은 defect-predictor와 동일합니다. 자세한 규칙은 `llm.py`의 `EXTRACTION_SYSTEM_PROMPT`를 참고하세요. 이 절은 v2에서 **추가된 의도 분류**만 다룹니다.
 
 - 추출 요청 한 번(`QueryExtractor.extract()`)으로 12개 필드와 `intent`를 **동시에** 받습니다. 별도의 LLM 호출이 추가되지 않습니다.
-- 프롬프트의 `[의도 분류 — intent]` 절이 6개 의도의 정의와 예시를 제공합니다(`predict`, `optimize_reduce_defect`, `optimize_find_defect_risk`, `predict_and_optimize`, `predict_and_find_risk`, `clarify`). **[추가] 2026-10-29 (소스 확인)**: `predict_and_find_risk`(예: "이 조건 결함률 예측하고, 불량이 더 심해지는 위험 조건도 알려줘")는 `docs/agent-v2/bak/chatbot_optimization_feature_spec.md`에는 없는, 이후 추가된 의도입니다(`AIHUB-v2/README.md` "배경" 절 참고).
+- 프롬프트의 `[의도 분류 — intent]` 절이 6개 의도의 정의와 예시를 제공합니다(`predict`, `optimize_reduce_defect`, `optimize_find_defect_risk`, `predict_and_optimize`, `predict_and_find_risk`, `clarify`). **[추가] 2026-10-29 (소스 확인)**: `predict_and_find_risk`(예: "이 조건 결함률 예측하고, 불량이 더 심해지는 위험 조건도 알려줘")는 `docs/agent-v2/bak/chatbot_optimization_feature_spec.md`에는 없는, 이후 추가된 의도입니다(`defect-advisor/README.md` "배경" 절 참고).
 - 프롬프트는 LLM에게 **target 숫자(0/1)를 직접 고르지 말라고 명시**합니다("intent만 고르면 시스템이 변환한다"). 실제 변환은 4.4절의 `build_target()`이 코드로 수행합니다.
 - **안전장치**: `json_object`/`prompt` 폴백 모드에서는 서버가 스키마를 강제하지 않으므로 `intent` 키가 없거나 `INTENTS` 밖의 문자열이 올 수 있습니다. `QueryExtractor.extract()`는 이 경우를 `"clarify"`로 대체합니다(`intent = raw_intent if raw_intent in INTENTS else "clarify"`). 즉 **의도 분류가 실패해도 최적화 API가 잘못된 target으로 호출되는 일은 없고**, 사용자에게 방향을 되묻는 쪽으로 안전하게 수렴합니다.
 - `optimize_reduce_defect`/`optimize_find_defect_risk` 의도에서는 `records`가 비어 있어도 됩니다(프롬프트에 명시). 이 두 의도는 최적화 API가 조건 자체를 찾아 주므로 사용자 입력이 필요 없기 때문입니다.
@@ -131,7 +131,7 @@ return self._run_predict(query, extraction, session, explain)
 
 ### 4.3 예측 공통 경로 — `_gather_and_predict`
 
-`predict`, `predict_and_optimize`, `predict_and_find_risk` 세 의도가 공유하는 단계로, AIHUB의 예측 파이프라인을 그대로 옮긴 것입니다(로직 변경 없음, 함수로만 추출).
+`predict`, `predict_and_optimize`, `predict_and_find_risk` 세 의도가 공유하는 단계로, defect-predictor의 예측 파이프라인을 그대로 옮긴 것입니다(로직 변경 없음, 함수로만 추출).
 
 1. **빈 입력 처리**: `records`가 비어 있고 세션에도 확인값이 없으면 ML을 호출하지 않고 12개 필드 전체를 되묻습니다(`no_conditions=True`).
 2. **모호 필드 초기화**: 이미 세션에 확인된 필드를 이번 발화가 모호하게 재언급하면(`ambiguous_fields`), 해당 슬롯을 세션에서 먼저 비워 기존 값으로 조용히 예측되는 것을 막습니다.
@@ -141,7 +141,7 @@ return self._run_predict(query, extraction, session, explain)
 6. **최종 검증**(`DefectRateInput`): 12개가 모두 찬 레코드에 대해 Pydantic으로 최종 타입·범위·허용값을 검사합니다(3번 사전 검증을 통과한 뒤의 안전망).
 7. **ML 호출**(`DefectRateMLClient.predict`): 검증을 통과한 레코드만 예측 API로 전송합니다.
 
-**입력 필드 제약** (`schema.py` 기준, AIHUB와 동일):
+**입력 필드 제약** (`schema.py` 기준, defect-predictor와 동일):
 
 | 필드 | 제약 |
 |---|---|
@@ -158,11 +158,11 @@ return self._run_predict(query, extraction, session, explain)
 | `tool_wear_pct` | 0~100 |
 | `days_since_maintenance` | 0 이상 (정수) |
 
-> ⚠️ **확인 필요**: `schema.py` 주석은 이 중 화이트리스트 3종과 `fixture_alignment_offset_mm>=0`, `tool_wear_pct` 0~100만 "사양 확정" 하드 제약이라 하고, 나머지(수량·습도·품질점수·용접·두께·경과일 범위)는 "사양에 없는 물리적 타당성 검사"라고 적어 두었습니다. 이 구분의 근거 문서로 `docs/input_schema.md`를 언급하지만 **이 저장소(`AIHUB-v2/docs/`)에는 해당 파일이 없습니다**(AIHUB 쪽에도 같은 경로에는 없고 `AIHUB/docs/agent-v1/`과 `AIHUB/docs/bak/`에 과거 버전만 있습니다). 어떤 제약이 실제 사양인지는 담당자 확인이 필요합니다.
+> ⚠️ **확인 필요**: `schema.py` 주석은 이 중 화이트리스트 3종과 `fixture_alignment_offset_mm>=0`, `tool_wear_pct` 0~100만 "사양 확정" 하드 제약이라 하고, 나머지(수량·습도·품질점수·용접·두께·경과일 범위)는 "사양에 없는 물리적 타당성 검사"라고 적어 두었습니다. 이 구분의 근거 문서로 `docs/input_schema.md`를 언급하지만 **이 저장소(`defect-advisor/docs/`)에는 해당 파일이 없습니다**(defect-predictor 쪽에도 같은 경로에는 없고 `defect-predictor/docs/agent-v1/`과 `defect-predictor/docs/bak/`에 과거 버전만 있습니다). 어떤 제약이 실제 사양인지는 담당자 확인이 필요합니다.
 
 ### 4.4 최적화 API 연동 — `OptimizationClient`
 
-AIHUB에는 없던 신규 모듈(`aihub/optimization.py`)입니다. 기존 `ml.py`(POST, 조건→결함률 예측)와는 호출 방식과 의미가 다릅니다.
+defect-predictor에는 없던 신규 모듈(`aihub/optimization.py`)입니다. 기존 `ml.py`(POST, 조건→결함률 예측)와는 호출 방식과 의미가 다릅니다.
 
 | 구분 | `DefectRateMLClient` (ml.py) | `OptimizationClient` (optimization.py) |
 |---|---|---|
@@ -202,7 +202,7 @@ AIHUB에는 없던 신규 모듈(`aihub/optimization.py`)입니다. 기존 `ml.p
 
 ### 4.6 해설 생성 — `_explain` (predict 전용)
 
-예측 경로(`_run_predict`)에서만 사용하며 AIHUB와 동일합니다. `predict_and_optimize`, `predict_and_find_risk`, `optimize_*` 경로는 `_explain`을 호출하지 않고 4.5절의 결정적 포맷팅만 사용합니다. 즉 **최적화 결과에는 LLM이 전혀 관여하지 않습니다**(수치를 지어낼 가능성을 원천 차단).
+예측 경로(`_run_predict`)에서만 사용하며 defect-predictor와 동일합니다. `predict_and_optimize`, `predict_and_find_risk`, `optimize_*` 경로는 `_explain`을 호출하지 않고 4.5절의 결정적 포맷팅만 사용합니다. 즉 **최적화 결과에는 LLM이 전혀 관여하지 않습니다**(수치를 지어낼 가능성을 원천 차단).
 
 ## 5. 상태(Status) 정의
 
@@ -230,12 +230,12 @@ AIHUB에는 없던 신규 모듈(`aihub/optimization.py`)입니다. 기존 `ml.p
 
 ## 7. 세션과 멀티턴
 
-`SlotFillingSession`은 AIHUB와 동일한 구조(`slots`, `turn`, `last_missing`, `repeated_asks`)이며 서버 프로세스 메모리에만 저장되고 재시작하면 사라집니다(만료·영속 저장·워커 간 공유 없음).
+`SlotFillingSession`은 defect-predictor와 동일한 구조(`slots`, `turn`, `last_missing`, `repeated_asks`)이며 서버 프로세스 메모리에만 저장되고 재시작하면 사라집니다(만료·영속 저장·워커 간 공유 없음).
 
 - `DefectRatePipeline.run()`은 intent와 무관하게 **매번 `session.known()`을 추출 맥락으로 LLM에 전달**합니다. 즉 이전 턴에서 `predict`로 확인된 값은 이번 턴이 `optimize_*`여도 추출 단계에 맥락으로 전달됩니다.
 - 하지만 **세션 쓰기(merge, track_missing, turn 증가)는 `_gather_and_predict` 경로(`predict`, `predict_and_optimize`, `predict_and_find_risk`)에서만 일어납니다**. `optimize_reduce_defect`/`optimize_find_defect_risk`/`clarify`는 세션을 읽기만 하고 쓰지는 않습니다(`session.merge()`가 호출되지 않아 `turn`도 증가하지 않음).
 - 실제 영향: 사용자가 조건을 한참 입력하다가(`predict`) 중간에 "불량 줄이는 조건 알려줘"(`optimize_reduce_defect`)를 물어도 기존에 확인된 슬롯은 그대로 남고, 다음 발화에서 다시 `predict`로 돌아오면 이전 슬롯이 그대로 효력을 가집니다. 이 동작은 코드로는 확인했으나 실행으로 재확인하지는 않았습니다.
-- 모호 필드 재설정(기존 확인값을 다시 모호하게 바꾸려는 발화), 허용값 밖 코드 처리 등 `predict` 경로의 세부 규칙은 AIHUB와 동일하게 유지됩니다.
+- 모호 필드 재설정(기존 확인값을 다시 모호하게 바꾸려는 발화), 허용값 밖 코드 처리 등 `predict` 경로의 세부 규칙은 defect-predictor와 동일하게 유지됩니다.
 
 ## 8. 유의사항
 
@@ -267,11 +267,11 @@ AIHUB에는 없던 신규 모듈(`aihub/optimization.py`)입니다. 기존 `ml.p
 | [`agent-v2/bak/chatbot_optimization_feature_spec.md`](agent-v2/bak/chatbot_optimization_feature_spec.md) | 실제 코드와 대체로 일치하는 최적화 기능 명세서(통합형). **[수정] 경로 정정**: 이전 버전은 `pre-version/` 경로로 적었으나 실제로는 `bak/`임(파일시스템 확인). `predict_and_find_risk`는 이 명세서에 없는 추가 의도 |
 | [`agent-v2/optimization_chatbot_spec.md`](agent-v2/optimization_chatbot_spec.md) | 채택되지 않은 초기 구상안(독립 챗봇형) |
 | [`agent-v2/aistudio_optimization_troubleshooting.md`](agent-v2/aistudio_optimization_troubleshooting.md) | 최적화 API(Altair AI Studio) 구축·트러블슈팅 기록. `target` 의미를 `curl`로 실제 확인한 유일한 자료 |
-| [`../../AIHUB/README.md`](../../AIHUB/README.md) | `predict` 계열의 원본 구현체(AIHUB) 문서 |
+| [`../../defect-predictor/README.md`](../../defect-predictor/README.md) | `predict` 계열의 원본 구현체(defect-predictor) 문서 |
 
 ## 변경 이력
 
-- (작성일 미상, 최초 작성): AIHUB-v2에 없던 이 문서를 `pipeline.py`, `schema.py`, `optimization.py`, `ml.py`, `llm.py`, `config.py`를 읽고 새로 작성했다. 루트 README와 `AIHUB-v2/README.md`가 존재하지 않는 `docs/architecture.md`를 가리키던 문제를 해소했다. CLI·HTTP·외부 API 호출로 실행 검증하지는 않았다.
+- (작성일 미상, 최초 작성): defect-advisor에 없던 이 문서를 `pipeline.py`, `schema.py`, `optimization.py`, `ml.py`, `llm.py`, `config.py`를 읽고 새로 작성했다. 루트 README와 `defect-advisor/README.md`가 존재하지 않는 `docs/architecture.md`를 가리키던 문제를 해소했다. CLI·HTTP·외부 API 호출로 실행 검증하지는 않았다.
 - (추가 수정): pytest 미사용 결정에 따라 8절 2번을 갱신하고, 수동 스모크 테스트(`test/cli_smoke_test.sh`, `test/web_smoke_test.sh`) 추가를 반영했다.
 - **[수정] 소스 재확인**: 소스와 명세서를 대조해 4건을 정정했다. (1) 서문: 코드 주석의 장 번호는 이 문서가 아니라 외부 명세서의 장 번호를 가리킨다. (2) 5절 `endpoint_error`: `predict_and_optimize`는 최적화 실패 시에도 `status=ok`(부분 성공)이며, ML 예측 호출 실패 시에만 `endpoint_error`가 된다. (3) 8절 3번: `app.js`가 2026-10-28에 수정되어 `clarify` 처리 불가 서술은 더 이상 사실이 아니다. (4) `docs/input_schema.md` 미존재(4.3/8.7절)는 재확인 결과 기존 서술이 정확했다.
 - **[수정] 2026-10-29, `predict_and_find_risk` 의도 추가 반영**: 1~9절, 서문, 변경 이력을 `schema.py`·`optimization.py`·`llm.py`·`cli.py`·`web/app.js`와 README "배경" 절 기준으로 갱신했다. `pre-version/` 경로를 실제 경로 `bak/`로 정정했다(서문·9절). `pipeline.py`는 전체를 읽지 못해, `intent` 인자 전달과 방향별 문구 차이는 README 서술에 의존한 추정으로 남겼다.

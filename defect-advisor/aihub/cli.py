@@ -18,7 +18,7 @@ def main() -> int:
     # [수정] 2026-10-29: predict_and_find_risk(예측+위험 조건 탐색 동시 요청) 예시를 추가했다
     # (schema.INTENTS, optimization.INTENT_TO_TARGET 참고).
     parser = argparse.ArgumentParser(
-        description="AIHUB 결함률 예측 · 공정 최적화 어시스턴트",
+        description="결함률 예측 · 공정 최적화 어시스턴트 (Defect Advisor)",
         epilog=(
             "질의 예시:\n"
             '  predict                  : "LINE-BPR-01 결함률 예측해줘"\n'

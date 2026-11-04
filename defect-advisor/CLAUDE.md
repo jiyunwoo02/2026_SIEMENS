@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 환경 준비
 
 ```bash
-# AIHUB-v2/ 디렉터리에서 실행해야 함 (.env 로딩 기준이 cwd)
-cd AIHUB-v2
+# defect-advisor/ 디렉터리에서 실행해야 함 (.env 로딩 기준이 cwd)
+cd defect-advisor
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -141,7 +141,7 @@ pytest는 미사용. `test/__pycache__/`에 과거 `.pyc`만 남아 있고 `.py`
 **모호한 값은 null로만 처리한다.**
 LLM 추출 단계에서 값을 하나로 확정할 수 없으면 `null` + `ambiguous_fields` 기록. 코드 레벨에서 추정·보완하지 않는다. `ambiguous_fields`에 포함된 필드는 `_gather_and_predict()`에서 세션 슬롯을 비워 기존 확인값도 리셋한다.
 
-**`.env`는 반드시 `AIHUB-v2/` 디렉터리에서 실행해야 로드된다.**
+**`.env`는 반드시 `defect-advisor/` 디렉터리에서 실행해야 로드된다.**
 `config.py:Settings`가 `env_file=".env"`(상대경로)로 설정됨. `get_settings()`는 `lru_cache`로 프로세스 내 고정되므로 변경 후 재시작 필요.
 
 **최적화 API 주소가 없어도 서버는 기동된다.**

@@ -14,10 +14,10 @@
 
 전제 조건:
     - 패키지 설치: pip install -r requirements.txt
-    - AIHUB/.env 에 api_key(또는 llm_api_key), LLM_MODEL 설정. ML 관련 설정은 필요 없다.
+    - defect-predictor/.env 에 api_key(또는 llm_api_key), LLM_MODEL 설정. ML 관련 설정은 필요 없다.
     - 실제 LLM 게이트웨이로 네트워크 호출이 발생한다(케이스 수만큼). 비용·쿼터에 유의한다.
 
-실행 (어느 디렉터리에서든 가능. 스크립트가 AIHUB/ 로 이동해 .env 를 읽는다):
+실행 (어느 디렉터리에서든 가능. 스크립트가 defect-predictor/ 로 이동해 .env 를 읽는다):
     python test/golden_llm_extract.py                  # 전체 단일 턴 케이스
     python test/golden_llm_extract.py --only C01,P03   # 케이스 ID 접두어로 선택
     python test/golden_llm_extract.py --out-dir /tmp/r # 결과 폴더 지정
@@ -45,7 +45,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-# AIHUB 루트. 스크립트를 어느 위치에서 실행해도 aihub 패키지를 import 하고 .env 를 찾도록 한다.
+# defect-predictor 루트. 스크립트를 어느 위치에서 실행해도 aihub 패키지를 import 하고 .env 를 찾도록 한다.
 # (Settings 는 "현재 작업 디렉터리의 .env" 를 읽는다.)
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -269,7 +269,7 @@ def main(argv: list[str] | None = None) -> int:
         name for name, ok in (("api_key", settings.api_key), ("LLM_MODEL", settings.llm_model)) if not ok
     ]
     if missing_cfg:
-        print(f"설정 누락: {', '.join(missing_cfg)} (AIHUB/.env 확인)", file=sys.stderr)
+        print(f"설정 누락: {', '.join(missing_cfg)} (defect-predictor/.env 확인)", file=sys.stderr)
         return 2
 
     golden = json.loads(args.golden.read_text(encoding="utf-8"))

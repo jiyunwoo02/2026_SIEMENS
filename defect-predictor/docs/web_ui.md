@@ -34,8 +34,8 @@
 
 워크스페이스 루트에서 시작하는 PowerShell 예시입니다. 이미 준비된 가상환경이 있으면 해당 Python을 사용하고 생성 단계는 생략하세요.
 
-```powershell AIHUB/docs/web_ui.md
-cd AIHUB
+```powershell defect-predictor/docs/web_ui.md
+cd defect-predictor
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m uvicorn aihub.api:app --reload --host 127.0.0.1 --port 8000
@@ -45,15 +45,15 @@ python -m venv .venv
 
 ### `ui.sh`의 의미와 작업 디렉터리
 
-가상환경의 `python`을 사용하는 상태에서 **`AIHUB` 디렉터리 기준**으로 실행합니다. Bash 환경에서는 다음과 같이 실행할 수 있습니다.
+가상환경의 `python`을 사용하는 상태에서 **`defect-predictor` 디렉터리 기준**으로 실행합니다. Bash 환경에서는 다음과 같이 실행할 수 있습니다.
 
-```bash AIHUB/aihub/web/ui.sh
+```bash defect-predictor/aihub/web/ui.sh
 bash aihub/web/ui.sh
 ```
 
 PowerShell에서는 `.sh` 실행 대신 동일한 명령을 직접 사용합니다.
 
-```powershell AIHUB/aihub/web/ui.sh
+```powershell defect-predictor/aihub/web/ui.sh
 python -m uvicorn aihub.api:app --reload --host 127.0.0.1 --port 8000
 ```
 
@@ -69,7 +69,7 @@ python -m uvicorn aihub.api:app --reload --host 127.0.0.1 --port 8000
 
 ### 서버 설정
 
-`Settings`는 **현재 작업 디렉터리의 `.env`**를 읽습니다. 위 실행 방식에서는 `AIHUB/.env`가 대상이며 환경 변수가 파일 값보다 우선합니다. 실제 비밀값을 문서·소스·브라우저 입력에 넣지 말고 로컬 환경 변수 또는 보호된 설정 파일로 관리하세요.
+`Settings`는 **현재 작업 디렉터리의 `.env`**를 읽습니다. 위 실행 방식에서는 `defect-predictor/.env`가 대상이며 환경 변수가 파일 값보다 우선합니다. 실제 비밀값을 문서·소스·브라우저 입력에 넣지 말고 로컬 환경 변수 또는 보호된 설정 파일로 관리하세요.
 
 | 설정 | 용도 |
 | --- | --- |
@@ -91,7 +91,7 @@ CSS는 `/ui-assets/style.css`, JavaScript는 `/ui-assets/app.js`에서 불러옵
 | --- | --- |
 | `reset` | 현재 대화를 삭제하고 새 대화 화면으로 초기화 |
 | `health` | 실제/모의 ML 모드, 필수 설정 존재 여부 |
-| `messages` | 사용자와 AIHUB 메시지 로그 |
+| `messages` | 사용자와 defect-predictor 메시지 로그 |
 | `chat-form`, `query` | 자연어 질의 폼과 필수 입력란 |
 | `example-full`, `example-partial` | 전체 조건 예제 / 라인만 지정하는 추가 질문 예제 |
 | `explain`, `send` | LLM 해설 선택(기본 체크), 질의 전송 |
@@ -145,12 +145,12 @@ DOM 갱신 함수는 의미 있는 반환값 대신 화면·상태를 변경합�
 
 | 함수 | 입력 | 출력·부작용 / 예외 처리 |
 | --- | --- | --- |
-| `addMessage(kind, text)` | 메시지 종류·문자열 | `article`, `strong`, `p`를 생성해 로그에 추가하고 스크롤. 사용자 외 종류의 제목은 AIHUB |
+| `addMessage(kind, text)` | 메시지 종류·문자열 | `article`, `strong`, `p`를 생성해 로그에 추가하고 스크롤. 사용자 외 종류의 제목은 defect-predictor |
 | `setBusy(value, message = "")` | 처리 여부·안내문 | `busy`, 6개 컨트롤의 `disabled`, 폼 `aria-busy`, 진행문 갱신 |
 | `showError(message = "")` | 오류 문자열 | 오류 텍스트 설정. 빈 문자열이면 `hidden=true` |
 | `request(path, options = {})` | URL 경로·fetch 옵션 | 파싱된 JSON 반환. DELETE 404는 `null`. 연결·JSON·HTTP 오류는 `Error` 전달 |
 | `clearResult()` | 없음 | 예측·누락·확인값·상세 JSON·ML 시간 초기화. 세션·상태 문구·메시지는 호출자가 별도 처리 |
-| `renderResult(body)` | 대화 API 응답 | 원본 JSON 표시 후 기본 계약 검사, 세션·상태·결과 갱신, AIHUB 메시지 추가. 계약 불일치 시 `Error` |
+| `renderResult(body)` | 대화 API 응답 | 원본 JSON 표시 후 기본 계약 검사, 세션·상태·결과 갱신, defect-predictor 메시지 추가. 계약 불일치 시 `Error` |
 | `submit(event)` | 폼 제출 이벤트 | 검증·전송·렌더링 수행. 오류를 UI에 표시하고 `finally`에서 입력 잠금 해제 |
 | `reset()` | 없음 | 서버 세션 삭제 후 UI 초기화. 삭제 실패 시 기존 상태 보존 |
 | `checkHealth()` | 없음 | 설정 배너 갱신. 10초 타이머로 요청 중단 시도. 실패도 배너에 표시하고 타이머 해제 |
@@ -243,9 +243,9 @@ DOM 갱신 함수는 의미 있는 반환값 대신 화면·상태를 변경합�
 
 ### 기존 자동 테스트
 
-가상환경을 활성화한 상태로 `AIHUB`에서 실행합니다.
+가상환경을 활성화한 상태로 `defect-predictor`에서 실행합니다.
 
-```powershell AIHUB/docs/web_ui.md
+```powershell defect-predictor/docs/web_ui.md
 python -m pytest test/test_api.py
 python -m pytest
 ```

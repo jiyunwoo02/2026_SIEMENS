@@ -2,7 +2,7 @@
 
 패키지는 프로젝트 루트의 `aihub/` 입니다. import는 `from aihub.pipeline import DefectRatePipeline` 형태입니다.
 
-이 프로젝트는 [`AIHUB`](../../AIHUB/) 패키지와 거의 동일한 기반 구조(스키마 12개 필드, LLM 추출, 예측 파이프라인)에 **공정 최적화 API 연동**을 추가한 버전으로 보입니다(코드 비교 결과이며, 두 저장소 사이의 명시적 연결 선언이나 공통 이력은 확인하지 못했습니다).
+이 프로젝트는 [`defect-predictor`](../../defect-predictor/) 패키지와 거의 동일한 기반 구조(스키마 12개 필드, LLM 추출, 예측 파이프라인)에 **공정 최적화 API 연동**을 추가한 버전으로 보입니다(코드 비교 결과이며, 두 저장소 사이의 명시적 연결 선언이나 공통 이력은 확인하지 못했습니다).
 
 실행·설치 방법은 [`../README.md`](../README.md)를 참고합니다.
 
@@ -28,7 +28,7 @@
 | `prompt/prompt-v1.py` | 추출·해설 프롬프트 변경 이력 스냅샷. `llm.py`보다 `주의:` 절과 `ANSWER_SYSTEM_PROMPT`가 더 상세한 과거 버전이며, `llm.py`가 import하지 않는다 |
 | `prompt/prompt-v2.py` | 추출 프롬프트(`EXTRACTION_SYSTEM_PROMPT`)만 포함한 스냅샷. `llm.py` 현재 버전과 거의 동일하며, `llm.py`가 import하지 않는다 |
 | `web/index.html`, `web/app.js`, `web/style.css`, `web/favicon.ico` | 로컬 웹 UI 정적 파일. `api.py`가 `/`와 `/ui-assets/*`로 제공한다. `app.js`가 `status`·`intent`별 상태 문구와 `optimization.latency_ms` 표시를 처리한다. 최적화 조건 전용 렌더링 영역은 없고, 결과는 `answer` 텍스트와 `raw` JSON에서만 확인할 수 있다 |
-| `web/ui.sh` | `AIHUB-v2/` 디렉터리로 이동한 뒤 `uvicorn`을 실행하는 스크립트. 포트는 첫 번째 인자(기본 8000), 호스트는 `HOST` 환경변수(기본 `127.0.0.1`)로 지정하며, `.env`가 없으면 경고만 출력하고 계속한다 |
+| `web/ui.sh` | `defect-advisor/` 디렉터리로 이동한 뒤 `uvicorn`을 실행하는 스크립트. 포트는 첫 번째 인자(기본 8000), 호스트는 `HOST` 환경변수(기본 `127.0.0.1`)로 지정하며, `.env`가 없으면 경고만 출력하고 계속한다 |
 
 ## 테스트 (`test/`)
 
@@ -54,8 +54,8 @@ pytest를 사용하지 않으며 자동화된 단위/회귀 테스트가 없다.
 
 ## 변경 이력
 
-- (작성일 미상) 이 문서 최초 작성: `AIHUB`의 `docs/code_inventory.md` 형식을 기준으로 `AIHUB-v2`용으로 작성했다. 소스(`aihub/` 전체, `docs/agent-v2/` 3개 문서)를 열람해 대조했으며, 실행 검증은 하지 않았다.
-- (작성일 미상) `docs/architecture.md` 신규 작성 후 문서 표에 항목을 추가했다. 이전에는 README가 AIHUB 쪽 문서를 대신 가리키고 있었다.
+- (작성일 미상) 이 문서 최초 작성: `defect-predictor`의 `docs/code_inventory.md` 형식을 기준으로 `defect-advisor`용으로 작성했다. 소스(`aihub/` 전체, `docs/agent-v2/` 3개 문서)를 열람해 대조했으며, 실행 검증은 하지 않았다.
+- (작성일 미상) `docs/architecture.md` 신규 작성 후 문서 표에 항목을 추가했다. 이전에는 README가 defect-predictor 쪽 문서를 대신 가리키고 있었다.
 - (작성일 미상) pytest 미사용 결정에 따라 `requirements.txt`의 `pytest`와 `pyproject.toml`의 `[tool.pytest.ini_options]`를 제거하고, "테스트 (`test/`)" 절을 실제 파일(`curl_test_classification.sh`, `web_smoke_test.sh`, `cli_smoke_test.sh`, `results/`) 기준으로 다시 썼다.
 - (소스 재대조) `optimization.py`, `cli.py`, `web/*`, `prompt/*`를 다시 읽고 이전 서술의 오류 6건을 정정했다.
   1. `optimization.py` docstring의 `test/test_optimization.py` 언급은 제거되지 않고 남아 있다.

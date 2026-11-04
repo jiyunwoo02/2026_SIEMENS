@@ -1,10 +1,10 @@
-# AIHUB-v2
+# defect-advisor
 
-한국어 자연어 질의에서 공정 조건 12개를 추출해 외부 결함률 예측 API로 전달하고 결과를 해설하는 기존 [`AIHUB`](../AIHUB/README.md) 챗봇에, **공정 최적화(불량 최소화 / 위험 조건 탐색) 기능**을 추가한 버전입니다. CLI, HTTP API, 로컬 웹 UI로 사용할 수 있습니다.
+한국어 자연어 질의에서 공정 조건 12개를 추출해 외부 결함률 예측 API로 전달하고 결과를 해설하는 기존 [`defect-predictor`](../defect-predictor/README.md) 챗봇에, **공정 최적화(불량 최소화 / 위험 조건 탐색) 기능**을 추가한 버전입니다. CLI, HTTP API, 로컬 웹 UI로 사용할 수 있습니다.
 
 > 이 문서는 `aihub/` 소스와 `docs/agent-v2/`를 읽고 작성했습니다. **CLI·HTTP·실제 LLM/최적화 API 호출로 검증한 결과는 아님**을 먼저 밝힙니다(이 프로젝트는 pytest를 사용하지 않습니다 — 아래 "테스트" 절 참고). 실행 확인 방법은 [테스트](#테스트) 절을 참고하세요.
 
-## 핵심 원칙 (기존 AIHUB와 동일하게 유지)
+## 핵심 원칙 (기존 defect-predictor와 동일하게 유지)
 
 - **추측 금지**: 질의에 없거나 모호한 값은 `null`로 두고, 예측 API를 호출하지 않은 채 추가 입력을 되묻습니다.
 - **의도(intent) 숫자 변환은 LLM이 하지 않습니다**: LLM은 `predict` / `optimize_reduce_defect` / `optimize_find_defect_risk` / `predict_and_optimize` / `predict_and_find_risk` / `clarify` 중 하나만 고르고, 최적화 API의 `target`(`"0"`/`"1"`) 값으로의 변환은 코드(`optimization.build_target`)가 고정 사전으로 수행합니다(환각 방지).
@@ -48,14 +48,14 @@
        clarify                 -> 어떤 API도 호출하지 않고 방향을 되묻는 고정 문구 반환
 ```
 
-- `predict` 경로의 세부 동작(슬롯 필링, 모호값 재질문, 레코드 비교 등)은 기존 AIHUB와 동일합니다. intent 분기·최적화 연동을 포함한 전체 아키텍처는 [`docs/architecture.md`](docs/architecture.md)에 정리했습니다. `predict` 경로 자체의 더 상세한 배경은 [`AIHUB/docs/architecture.md`](../AIHUB/docs/architecture.md)(원본 구현체 문서)를 참고하세요.
+- `predict` 경로의 세부 동작(슬롯 필링, 모호값 재질문, 레코드 비교 등)은 기존 defect-predictor와 동일합니다. intent 분기·최적화 연동을 포함한 전체 아키텍처는 [`docs/architecture.md`](docs/architecture.md)에 정리했습니다. `predict` 경로 자체의 더 상세한 배경은 [`defect-predictor/docs/architecture.md`](../defect-predictor/docs/architecture.md)(원본 구현체 문서)를 참고하세요.
 - 최적화 두 의도(`optimize_reduce_defect`, `optimize_find_defect_risk`)는 **사용자가 공정 조건을 입력하지 않아도** 동작합니다. 최적화 API가 조건 자체를 찾아 돌려주기 때문입니다.
 - 세션은 서버 프로세스 메모리에만 저장되며 재시작하면 사라집니다(기존과 동일).
 
 ## 폴더 구조
 
 ```text
-AIHUB-v2/
+defect-advisor/
 ├── .env                 로컬 전용 설정 (Git 제외, 직접 작성 - 아래 "설정" 참고)
 ├── pyproject.toml       [수정] pytest 미사용 결정으로 설정을 비움(과거 [tool.pytest.ini_options]만 있었음) - 필요 없으면 직접 삭제 가능
 ├── requirements.txt     의존성
@@ -105,10 +105,10 @@ pip install -r requirements.txt
 
 ## 설정
 
-현재 작업 디렉터리의 `.env`를 읽으므로 **`AIHUB-v2/`에서 실행**해야 합니다. 환경 변수가 `.env`보다 우선하고, 설정은 프로세스에 캐시되므로(`config.get_settings` lru_cache) 변경 후 재시작해야 합니다.
+현재 작업 디렉터리의 `.env`를 읽으므로 **`defect-advisor/`에서 실행**해야 합니다. 환경 변수가 `.env`보다 우선하고, 설정은 프로세스에 캐시되므로(`config.get_settings` lru_cache) 변경 후 재시작해야 합니다.
 
 ```dotenv
-# AIHUB-v2/.env (예시: 값은 직접 채우고 절대 커밋하지 마세요)
+# defect-advisor/.env (예시: 값은 직접 채우고 절대 커밋하지 마세요)
 api_key=<SDC LLM 인증 키>
 LLM_MODEL=<사용할 모델 이름>
 AI_HUB_ENDPOINT_URL=<결함률 예측 API 주소 (POST)>
@@ -129,10 +129,10 @@ OPTIMIZATION_API_URL=<최적화 API 주소 (GET, target 쿼리 파라미터)>
 python -m aihub                          # 대화형 CLI (reset: 세션 초기화, exit: 종료)
 python -m aihub "질의 내용" --json       # 한 번 처리 후 JSON 출력
 python -m uvicorn aihub.api:app --reload --host 127.0.0.1 --port 8000   # HTTP API + 웹 UI
-bash aihub/web/ui.sh                                                     # 위와 동일 + 자동으로 AIHUB-v2/로 이동, 포트/호스트 인자 지원
+bash aihub/web/ui.sh                                                     # 위와 동일 + 자동으로 defect-advisor/로 이동, 포트/호스트 인자 지원
 ```
 
-`ui.sh`는 호출된 위치와 무관하게 먼저 `AIHUB-v2/`로 이동한 뒤 `uvicorn`을 실행하도록 만든 실행 스크립트입니다(`bash aihub/web/ui.sh [포트]`, `HOST=0.0.0.0 bash aihub/web/ui.sh 9000`처럼 사용). `.env`가 없으면 경고만 출력하고 계속 진행합니다.
+`ui.sh`는 호출된 위치와 무관하게 먼저 `defect-advisor/`로 이동한 뒤 `uvicorn`을 실행하도록 만든 실행 스크립트입니다(`bash aihub/web/ui.sh [포트]`, `HOST=0.0.0.0 bash aihub/web/ui.sh 9000`처럼 사용). `.env`가 없으면 경고만 출력하고 계속 진행합니다.
 
 웹 UI는 서버 실행 후 `http://127.0.0.1:8000/`로 접속합니다. 파일로 직접 열면 안 됩니다.
 

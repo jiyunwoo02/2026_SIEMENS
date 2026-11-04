@@ -6,13 +6,13 @@ Siemens AI Platform 관련 서비스 연동 및 로컬 머신러닝 데모 프�
 
 | 폴더 | 한 줄 설명 | 주요 기술 |
 |---|---|---|
-| `AIHUB/` | 자연어 질의에서 공정 조건 12개를 추출해 외부 결함률 예측 API로 보내고, 결과를 해설하는 대화형 서비스 (CLI, HTTP API, 로컬 웹 UI) | Python, FastAPI, Pydantic, httpx, Siemens SDC LLM Gateway |
-| `AIHUB-v2/` | `AIHUB`와 동일한 예측 기능에 **공정 최적화(불량 최소화 / 위험 조건 탐색) API 연동**을 추가한 버전 (CLI, HTTP API, 로컬 웹 UI — 웹 UI는 최적화 조건 전용 렌더링 영역 없음, 결과는 답변 텍스트와 raw JSON으로 확인) | Python, FastAPI, Pydantic, httpx, Siemens SDC LLM Gateway |
-| `ICX_DEMO/` | 같은 12개 공정 조건으로 결함률(%)을 예측하는 모델을 로컬에서 탐색·학습·예측해 보는 스크립트 모음 | Python, pandas, scikit-learn, joblib |
+| `defect-predictor/` | 자연어 질의에서 공정 조건 12개를 추출해 외부 결함률 예측 API로 보내고, 결과를 해설하는 대화형 서비스 (CLI, HTTP API, 로컬 웹 UI) | Python, FastAPI, Pydantic, httpx, Siemens SDC LLM Gateway |
+| `defect-advisor/` | `defect-predictor`와 동일한 예측 기능에 **공정 최적화(불량 최소화 / 위험 조건 탐색) API 연동**을 추가한 버전 (CLI, HTTP API, 로컬 웹 UI — 웹 UI는 최적화 조건 전용 렌더링 영역 없음, 결과는 답변 텍스트와 raw JSON으로 확인) | Python, FastAPI, Pydantic, httpx, Siemens SDC LLM Gateway |
+| `local-ml/` | 같은 12개 공정 조건으로 결함률(%)을 예측하는 모델을 로컬에서 탐색·학습·예측해 보는 스크립트 모음 | Python, pandas, scikit-learn, joblib |
 
-세 폴더는 서로 독립된 프로젝트이며 코드로 연결되어 있지 않습니다. `AIHUB`와 `AIHUB-v2`는 입력 스키마(12개 필드)와 패키지 구조가 거의 동일해 같은 계통의 코드베이스로 보이지만, 저장소 안에 둘 사이의 명시적인 연결(같은 import, 변경 이력 문서 등)은 확인되지 않았습니다. `ICX_DEMO`는 둘 다와 코드로 연결되어 있지 않으며 입력 컬럼 12개의 이름만 같습니다(아래 [두 프로젝트의 관계](#두-프로젝트의-관계) 참고).
+세 폴더는 서로 독립된 프로젝트이며 코드로 연결되어 있지 않습니다. `defect-predictor`와 `defect-advisor`는 입력 스키마(12개 필드)와 패키지 구조가 거의 동일해 같은 계통의 코드베이스로 보이지만, 저장소 안에 둘 사이의 명시적인 연결(같은 import, 변경 이력 문서 등)은 확인되지 않았습니다. `local-ml`는 둘 다와 코드로 연결되어 있지 않으며 입력 컬럼 12개의 이름만 같습니다(아래 [두 프로젝트의 관계](#두-프로젝트의-관계) 참고).
 
-## AIHUB
+## defect-predictor
 
 ### 목적
 
@@ -33,31 +33,31 @@ Siemens AI Platform 관련 서비스 연동 및 로컬 머신러닝 데모 프�
 
 - 조건을 비교하는 질의(예: 라인 01과 02 비교)는 LLM이 레코드 여러 건으로 분리하고, ML API는 **레코드 전체를 한 번의 요청**으로 받습니다. 레코드별 병렬 호출이 아닙니다. 레코드 분리 자체는 코드가 아니라 추출 프롬프트의 규칙에 의존합니다.
 - 세션은 서버 프로세스 메모리에만 저장되며 재시작하면 사라집니다. 만료·영속 저장·워커 간 공유는 없습니다.
-- 자세한 설계와 정책 결정 사항은 [`AIHUB/docs/architecture.md`](AIHUB/docs/architecture.md)를 보세요.
+- 자세한 설계와 정책 결정 사항은 [`defect-predictor/docs/architecture.md`](defect-predictor/docs/architecture.md)를 보세요.
 
-폴더 구조, 설치, 설정, 실행 방법은 [`AIHUB/README.md`](AIHUB/README.md)를 보세요.
+폴더 구조, 설치, 설정, 실행 방법은 [`defect-predictor/README.md`](defect-predictor/README.md)를 보세요.
 
 
 ---
 
-## AIHUB-v2
+## defect-advisor
 
 ### 목적
 
-`AIHUB`의 결함률 예측 기능(추출·슬롯 필링·검증·예측·해설)을 그대로 유지하면서, 자연어로 "불량을 줄이는 조건", "불량이 잘 나는 조건"을 물으면 별도의 **공정 최적화(Prescriptive Analytics) API**를 호출해 최적 조건과 예상 확률을 알려주는 기능을 추가한 버전입니다. 질의 의도(`intent`)는 LLM이 분류하고, 의도를 최적화 API의 `target`(`"0"`/`"1"`) 값으로 바꾸는 작업은 LLM이 아니라 코드가 고정된 사전으로 수행합니다(환각 방지).
+`defect-predictor`의 결함률 예측 기능(추출·슬롯 필링·검증·예측·해설)을 그대로 유지하면서, 자연어로 "불량을 줄이는 조건", "불량이 잘 나는 조건"을 물으면 별도의 **공정 최적화(Prescriptive Analytics) API**를 호출해 최적 조건과 예상 확률을 알려주는 기능을 추가한 버전입니다. 질의 의도(`intent`)는 LLM이 분류하고, 의도를 최적화 API의 `target`(`"0"`/`"1"`) 값으로 바꾸는 작업은 LLM이 아니라 코드가 고정된 사전으로 수행합니다(환각 방지).
 
-### AIHUB와의 주요 차이
+### defect-predictor와의 주요 차이
 
 - `aihub/optimization.py`(신규 모듈)가 최적화 API(GET, `target` 쿼리 파라미터)를 호출합니다. 기존 `aihub/ml.py`(POST, 결함률 예측)와는 별개입니다.
 - `aihub/schema.py`의 `INTENTS`에 `predict` 외에 `optimize_reduce_defect`, `optimize_find_defect_risk`, `predict_and_optimize`, `predict_and_find_risk`, `clarify` 5종이 추가되었습니다.
 - 로컬 웹 UI(`aihub/web/`)는 `clarify` 상태 처리와 intent별 상태 문구를 지원하며, 최적화 결과는 `answer` 텍스트(Markdown 표)와 `raw` JSON으로 확인할 수 있습니다. 최적화 조건 전용 렌더링 영역은 없습니다.
-- `AIHUB-v2/docs/agent-v2/`에 이 기능을 기획한 명세서가 2종 있으며, 서로 다른 설계(독립 챗봇 vs 기존 파이프라인 통합)를 제안합니다. 실제 코드는 통합형 설계를 따릅니다.
+- `defect-advisor/docs/agent-v2/`에 이 기능을 기획한 명세서가 2종 있으며, 서로 다른 설계(독립 챗봇 vs 기존 파이프라인 통합)를 제안합니다. 실제 코드는 통합형 설계를 따릅니다.
 
 ### 의도(intent) 구분
 
 | `intent` | 의미 | 호출 대상 | `target` |
 |---|---|---|---|
-| `predict` | 주어진 조건의 결함률 예측 (`AIHUB`와 동일) | 예측 API (`ml.py`) | — |
+| `predict` | 주어진 조건의 결함률 예측 (`defect-predictor`와 동일) | 예측 API (`ml.py`) | — |
 | `optimize_reduce_defect` | 불량을 줄이는 최적 조건 탐색 | 최적화 API (`optimization.py`) | `"1"` |
 | `optimize_find_defect_risk` | 불량이 잘 나는 위험 조건 탐색 | 최적화 API (`optimization.py`) | `"0"` |
 | `predict_and_optimize` | 결함률 예측 + 불량 최소화 조건 탐색 | 두 API 모두 | `"1"` |
@@ -67,37 +67,37 @@ Siemens AI Platform 관련 서비스 연동 및 로컬 머신러닝 데모 프�
 - `target` 변환은 `aihub/optimization.py`의 `INTENT_TO_TARGET` 고정 사전과 `build_target()`이 담당합니다. LLM이 직접 고르지 않습니다(환각 방지).
 - `predict_and_optimize`·`predict_and_find_risk`는 최적화가 실패해도 예측 결과를 포함해 `status="ok"`로 반환합니다(부분 성공). `optimization=null`과 `errors` 필드로 실패 여부를 확인하세요.
 
-폴더 구조, 설치, 설정, 실행 방법, 알려진 문제는 [`AIHUB-v2/README.md`](AIHUB-v2/README.md)를 보세요.
+폴더 구조, 설치, 설정, 실행 방법, 알려진 문제는 [`defect-advisor/README.md`](defect-advisor/README.md)를 보세요.
 
 
 ---
 
-## ICX_DEMO
+## local-ml
 
 ### 목적
 
 공정 조건 12개(범주형 3개 + 수치형 9개)로 결함률(`defect_rate_pct`, %)을 회귀 예측하는 모델을 로컬에서 학습하고 사용해 보는 스크립트 모음입니다. EDA → 학습·선정 → 예측 순서로 실행합니다. 데이터는 합성(`SYNTHETIC`) 데이터를 전제로 합니다(`eda.py`가 `data_origin` 분포를 확인).
 
-폴더 구조, 설치, 실행 방법, 알려진 불일치는 [`ICX_DEMO/README.md`](ICX_DEMO/README.md)를 보세요.
+폴더 구조, 설치, 실행 방법, 알려진 불일치는 [`local-ml/README.md`](local-ml/README.md)를 보세요.
 
 
 ---
 
 ## 두 프로젝트의 관계
 
-- **코드 연동 없음**: `AIHUB`/`AIHUB-v2`는 `ICX_DEMO`를 import하지 않고, `ICX_DEMO`도 이들을 호출하지 않습니다.
-- **입력 스키마가 같음**: 세 프로젝트의 입력 피처 12개(`production_line`, `shift`, `supplier_code` + 수치형 9개)는 이름이 동일합니다(`ICX_DEMO/src/config.py`, `AIHUB/aihub/schema.py`, `AIHUB-v2/aihub/schema.py`를 비교해 확인).
-- **외부 예측 API와의 관계는 미확인**: AIHUB(-v2)가 호출하는 외부 예측 API가 `ICX_DEMO`로 학습한 모델을 서빙하는지는 이 저장소의 코드만으로는 알 수 없습니다. (해설 프롬프트가 “GBT 모델”이라고 언급하고 ICX_DEMO 학습 후보에 GBT가 있지만, 이것만으로 같은 모델이라고 단정할 수 없습니다.)
-- 모델 출력 형태가 다릅니다. `ICX_DEMO/predict.py`는 소수 3자리로 반올림한 값과 위험 등급을, AIHUB(-v2)는 외부 API가 돌려준 예측값(%)을 그대로 사용합니다.
-- **`AIHUB`와 `AIHUB-v2`의 관계**: 두 패키지는 `config.py`/`schema.py`/`ml.py`/`cli.py`/`api.py` 등 상당 부분의 코드가 동일해 보입니다(문서화 과정에서 비교해 확인). `AIHUB-v2`가 `AIHUB`를 복사한 뒤 최적화 기능을 추가해 만든 것으로 추정되나, 두 폴더 사이의 git 이력이나 명시적 선언은 확인하지 못해 **추정**입니다. 두 패키지는 코드로 서로 import하지 않습니다.
+- **코드 연동 없음**: `defect-predictor`/`defect-advisor`는 `local-ml`를 import하지 않고, `local-ml`도 이들을 호출하지 않습니다.
+- **입력 스키마가 같음**: 세 프로젝트의 입력 피처 12개(`production_line`, `shift`, `supplier_code` + 수치형 9개)는 이름이 동일합니다(`local-ml/src/config.py`, `defect-predictor/aihub/schema.py`, `defect-advisor/aihub/schema.py`를 비교해 확인).
+- **외부 예측 API와의 관계는 미확인**: defect-predictor / defect-advisor가 호출하는 외부 예측 API가 `local-ml`로 학습한 모델을 서빙하는지는 이 저장소의 코드만으로는 알 수 없습니다. (해설 프롬프트가 “GBT 모델”이라고 언급하고 local-ml 학습 후보에 GBT가 있지만, 이것만으로 같은 모델이라고 단정할 수 없습니다.)
+- 모델 출력 형태가 다릅니다. `local-ml/predict.py`는 소수 3자리로 반올림한 값과 위험 등급을, defect-predictor / defect-advisor는 외부 API가 돌려준 예측값(%)을 그대로 사용합니다.
+- **`defect-predictor`와 `defect-advisor`의 관계**: 두 패키지는 `config.py`/`schema.py`/`ml.py`/`cli.py`/`api.py` 등 상당 부분의 코드가 동일해 보입니다(문서화 과정에서 비교해 확인). `defect-advisor`가 `defect-predictor`를 복사한 뒤 최적화 기능을 추가해 만든 것으로 추정되나, 두 폴더 사이의 git 이력이나 명시적 선언은 확인하지 못해 **추정**입니다. 두 패키지는 코드로 서로 import하지 않습니다.
 
 
 ## 이 문서의 검증 범위
 
-- 소스·설정·기존 문서를 읽고 작성했습니다. CLI, 웹 UI, ICX_DEMO 스크립트, 최적화 API를 **실행해 확인한 결과는 없습니다**.
-- `ICX_DEMO/data/ML_data.csv`와 `AIHUB/data/defect_pred_input.csv`의 내용·크기는 확인하지 못했습니다.
+- 소스·설정·기존 문서를 읽고 작성했습니다. CLI, 웹 UI, local-ml 스크립트, 최적화 API를 **실행해 확인한 결과는 없습니다**.
+- `local-ml/data/ML_data.csv`와 `defect-predictor/data/defect_pred_input.csv`의 내용·크기는 확인하지 못했습니다.
 
 ## 변경 이력
 
 - (작성일 미상) 루트 README 최초 작성: 폴더별 목적·구성·설치·실행 중심으로 작성.
-- **2026-11-02**: AIHUB-v2 섹션을 소스 대조 후 3건 수정. (1) intent 표에 `predict_and_find_risk` 추가, `target` 열 추가, "추정" 주석 제거. (2) 웹 UI 설명을 현재 상태(clarify 처리 완료, 최적화 결과 answer/raw JSON 표시)로 수정. (3) 검증 범위의 pytest/`.pyc` 관련 구 상태 기술 제거.
+- **2026-11-02**: defect-advisor 섹션을 소스 대조 후 3건 수정. (1) intent 표에 `predict_and_find_risk` 추가, `target` 열 추가, "추정" 주석 제거. (2) 웹 UI 설명을 현재 상태(clarify 처리 완료, 최적화 결과 answer/raw JSON 표시)로 수정. (3) 검증 범위의 pytest/`.pyc` 관련 구 상태 기술 제거.

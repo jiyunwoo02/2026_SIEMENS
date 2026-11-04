@@ -1,4 +1,4 @@
-# ICX_DEMO
+# local-ml
 
 공정 조건 12개(범주형 3개 + 수치형 9개)로 결함률(`defect_rate_pct`, %)을 예측하는 모델을 로컬에서 탐색·학습·예측해 보는 데모입니다. 데이터는 합성(`SYNTHETIC`) 데이터를 전제로 합니다.
 - 상세 ML 작업은 Altair AI Studio에서 수행합니다.
@@ -6,7 +6,7 @@
 ## 폴더 구조
 
 ```text
-ICX_DEMO/
+local-ml/
 ├── requirements.txt     현재 비어 있음 (아래 "설치" 참고)
 ├── data/
 │   └── ML_data.csv      eda.py가 읽는 데이터
@@ -31,7 +31,7 @@ pip install pandas numpy scikit-learn joblib
 스크립트가 `../data`, `../models` 상대 경로를 사용하므로 **반드시 `src/`에서 실행**합니다.
 
 ```bash
-cd ICX_DEMO/src
+cd local-ml/src
 python eda.py       # ../data/ML_data.csv 탐색
 python train.py     # 학습 → ../models/defect_rate_model_v1.0.0.pkl 저장
 python predict.py   # 코팅 두께 90 → 110µm 변경 전후 비교 예시

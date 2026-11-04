@@ -1,8 +1,8 @@
-# AIHUB-v2 챗봇 로직 문서
+# defect-advisor 챗봇 로직 문서
 
 ## 1. 개요
 
-AIHUB-v2는 한국어 자연어 질의로 제조 공정의 **결함률 예측** 및 **공정 최적화**를 수행하는 챗봇입니다.
+defect-advisor는 한국어 자연어 질의로 제조 공정의 **결함률 예측** 및 **공정 최적화**를 수행하는 챗봇입니다.
 사용자 발화에서 공정 조건 12개를 추출하고, 의도(intent)에 따라 외부 ML 예측 API 또는 최적화 API를 호출합니다.
 
 ---
@@ -281,5 +281,5 @@ Content-Type: application/json
 
 ## 변경 이력
 
-- (작성일 미상) 최초 작성: AIHUB-v2 처리 흐름·intent 분기·슬롯 필링 등 동작 로직 정리.
+- (작성일 미상) 최초 작성: defect-advisor 처리 흐름·intent 분기·슬롯 필링 등 동작 로직 정리.
 - **2026-11-02**: 소스 대조 후 `PipelineResult` 필드 표에 누락 항목 3개 추가 — `invalid_fields`(검증 실패 필드), `unit`(항상 "percent"), `model_input`(ML 페이로드). `optimization`·`latency_ms` 설명을 소스 기준으로 보완했다.
