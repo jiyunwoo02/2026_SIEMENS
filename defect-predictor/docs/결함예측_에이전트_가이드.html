@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>결함예측 에이전트 가이드</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* === DESIGN TOKENS === */
+:root {
+  --bg:          #F5F7FA;
+  --surface:     #FFFFFF;
+  --border:      #E2E8F0;
+  --fg:          #0F172A;
+  --fg-muted:    #475569;
+  --fg-light:    #94A3B8;
+  --primary:     #1D4ED8;
+  --primary-light:#EFF6FF;
+  --accent:      #0EA5E9;
+  --success:     #16A34A;
+  --success-bg:  #F0FDF4;
+  --warning:     #D97706;
+  --danger:      #DC2626;
+  --chip-bg:     #F1F5F9;
+  --code-bg:     #F8FAFC;
+  --shadow:      0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:   0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+  --r:           8px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:          #0D1117;
+    --surface:     #161B22;
+    --border:      #30363D;
+    --fg:          #E6EDF3;
+    --fg-muted:    #8B949E;
+    --fg-light:    #484F58;
+    --primary:     #58A6FF;
+    --primary-light:#121D2F;
+    --accent:      #56D364;
+    --success:     #3FB950;
+    --success-bg:  #0F2A13;
+    --warning:     #D29922;
+    --chip-bg:     #21262D;
+    --code-bg:     #1C2128;
+    --shadow:      0 1px 3px rgba(0,0,0,.3);
+    --shadow-md:   0 4px 6px rgba(0,0,0,.3);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:          #0D1117;
+  --surface:     #161B22;
+  --border:      #30363D;
+  --fg:          #E6EDF3;
+  --fg-muted:    #8B949E;
+  --fg-light:    #484F58;
+  --primary:     #58A6FF;
+  --primary-light:#121D2F;
+  --accent:      #56D364;
+  --success:     #3FB950;
+  --success-bg:  #0F2A13;
+  --warning:     #D29922;
+  --chip-bg:     #21262D;
+  --code-bg:     #1C2128;
+  --shadow:      0 1px 3px rgba(0,0,0,.3);
+  --shadow-md:   0 4px 6px rgba(0,0,0,.3);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Noto Sans KR', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.7;
+  font-size: 15px;
+  padding-left:  max(16px, env(safe-area-inset-left,  0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+}
+img { max-width: 100%; display: block; }
+
+/* NAV */
+.nav {
+  position: sticky; top: env(safe-area-inset-top, 0px);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+  padding: 0 max(24px, env(safe-area-inset-left, 0px));
+}
+.nav-inner {
+  max-width: 920px; margin: 0 auto;
+  display: flex; align-items: center; gap: 24px;
+  height: 52px;
+}
+.nav-brand { font-weight: 700; font-size: 14px; color: var(--primary); letter-spacing: -.01em; white-space: nowrap; }
+.nav-links { display: flex; gap: 18px; overflow-x: auto; }
+.nav-links a {
+  font-size: 13px; font-weight: 500; color: var(--fg-muted);
+  text-decoration: none; white-space: nowrap;
+  transition: color .15s;
+}
+.nav-links a:hover { color: var(--primary); }
+
+/* PAGE */
+.page { max-width: 920px; margin: 0 auto; padding-block: 48px 80px; }
+
+/* HERO */
+.hero { margin-bottom: 56px; }
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--primary); background: var(--primary-light);
+  border-radius: 100px; padding: 4px 12px; margin-bottom: 16px;
+}
+.hero h1 {
+  font-size: clamp(24px, 4vw, 34px); font-weight: 700; line-height: 1.25;
+  letter-spacing: -.02em; text-wrap: balance; margin-bottom: 14px;
+}
+.hero-sub { font-size: 15px; color: var(--fg-muted); line-height: 1.6; max-width: 640px; margin-bottom: 24px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px; font-weight: 500;
+  background: var(--chip-bg); color: var(--fg-muted);
+  border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px;
+}
+
+/* SECTION */
+section { margin-bottom: 56px; }
+.section-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--fg-light); margin-bottom: 8px;
+}
+.section-title { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 20px; text-wrap: balance; }
+.subsection-title { font-size: 15px; font-weight: 700; margin: 24px 0 12px; }
+
+/* CARD */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); box-shadow: var(--shadow); padding: 24px; margin-bottom: 16px;
+}
+.card p, .card li { font-size: 13.5px; color: var(--fg-muted); }
+.card ul { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+
+/* META BOX */
+.meta-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 20px 24px; margin-bottom: 48px;
+  display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 8px 24px; align-items: start;
+}
+.meta-label { font-size: 11px; font-weight: 700; color: var(--fg-light); text-transform: uppercase; letter-spacing: .07em; padding-top: 2px; }
+.meta-value { font-size: 13px; color: var(--fg-muted); }
+.meta-tags { display: flex; flex-wrap: wrap; gap: 6px; grid-column: 2 / -1; }
+.meta-tag {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500;
+  background: var(--primary-light); color: var(--primary);
+  border-radius: 100px; padding: 2px 10px;
+}
+
+/* ARCH FLOW */
+.arch-flow {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: var(--r);
+  overflow: hidden; margin-bottom: 16px;
+}
+.arch-node { background: var(--surface); padding: 20px; text-align: center; }
+.arch-node-icon { font-size: 26px; margin-bottom: 10px; display: block; }
+.arch-node-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.arch-node-desc { font-size: 11.5px; color: var(--fg-muted); line-height: 1.5; }
+
+/* ENDPOINT CARD */
+.endpoint-card {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 16px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 10px;
+}
+.method-badge {
+  flex-shrink: 0; font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; margin-top: 1px;
+}
+.method-post { background: #FEF3C7; color: #92400E; }
+.method-get  { background: #D1FAE5; color: #065F46; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .method-post { background: #2D1B00; color: #FCD34D; }
+  :root:not([data-theme="light"]) .method-get  { background: #022C22; color: #6EE7B7; }
+}
+:root[data-theme="dark"] .method-post { background: #2D1B00; color: #FCD34D; }
+:root[data-theme="dark"] .method-get  { background: #022C22; color: #6EE7B7; }
+.endpoint-url {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  color: var(--fg); font-weight: 500; word-break: break-all; margin-bottom: 4px;
+}
+.endpoint-desc { font-size: 12px; color: var(--fg-muted); }
+
+/* CODE BLOCK */
+.code-block {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.65;
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 16px 20px; overflow-x: auto; white-space: pre; color: var(--fg); margin: 12px 0;
+}
+
+/* NOTICE ITEM */
+.notice-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 14px 16px; border-radius: var(--r); margin-bottom: 10px;
+  font-size: 13px; line-height: 1.6;
+}
+.notice-item.info  { background: var(--primary-light); border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent); }
+.notice-item.warn  { background: #FFFBEB; border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent); }
+.notice-item.danger{ background: #FEF2F2; border: 1px solid color-mix(in srgb, var(--danger) 20%, transparent); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .notice-item.warn   { background: #1C1200; }
+  :root:not([data-theme="light"]) .notice-item.danger { background: #200505; }
+}
+:root[data-theme="dark"] .notice-item.warn   { background: #1C1200; }
+:root[data-theme="dark"] .notice-item.danger { background: #200505; }
+.notice-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.notice-title { font-weight: 700; margin-bottom: 4px; }
+.notice-body  { color: var(--fg-muted); }
+.notice-body code {
+  font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 3px; padding: 1px 5px;
+}
+
+/* TABLE */
+.table-wrap { overflow-x: auto; margin-bottom: 16px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 460px; }
+th {
+  text-align: left; padding: 8px 12px;
+  font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--fg-light); background: var(--chip-bg); border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 9px 12px; border-bottom: 1px solid var(--border);
+  vertical-align: top; color: var(--fg-muted);
+}
+td code {
+  font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 3px; padding: 1px 5px; color: var(--fg);
+}
+tr:last-child td { border-bottom: none; }
+
+/* ACHIEVEMENT LIST */
+.ach-list { display: flex; flex-direction: column; gap: 10px; }
+.ach-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px; background: var(--success-bg);
+  border: 1px solid color-mix(in srgb, var(--success) 25%, transparent); border-radius: var(--r);
+}
+.ach-dot { flex-shrink: 0; width: 8px; height: 8px; background: var(--success); border-radius: 50%; margin-top: 7px; }
+.ach-text { font-size: 13px; color: var(--fg); line-height: 1.6; }
+
+/* TROUBLE LIST */
+.trouble-list { display: flex; flex-direction: column; gap: 10px; }
+.trouble-item {
+  padding: 14px 16px; background: var(--surface);
+  border: 1px solid var(--border); border-left: 3px solid var(--primary);
+  border-radius: 0 var(--r) var(--r) 0;
+}
+.trouble-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.trouble-sol   { font-size: 12.5px; color: var(--fg-muted); line-height: 1.6; }
+.trouble-sol code {
+  font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 3px; padding: 1px 5px; color: var(--fg);
+}
+
+/* CASE GRID (chat scenario cards) */
+.case-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 16px; margin: 20px 0;
+}
+.chat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden; min-width: 0;
+  box-shadow: var(--shadow);
+}
+.chat-header {
+  background: #1A1F2E; color: #E6EDF3;
+  padding: 10px 14px; font-size: 12px; font-weight: 600;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  flex-wrap: wrap; gap: 6px;
+}
+.chat-badge {
+  font-size: 10px; font-weight: 600; border-radius: 4px; padding: 2px 7px;
+  flex-shrink: 0;
+}
+.badge-ok     { background: #16A34A; color: #fff; }
+.badge-info   { background: #D97706; color: #fff; }
+.badge-purple { background: #7C3AED; color: #fff; }
+.badge-blue   { background: #1D4ED8; color: #fff; }
+.chat-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.bubble-user {
+  align-self: flex-end; background: var(--primary); color: #fff;
+  padding: 8px 12px; border-radius: 12px 12px 2px 12px;
+  max-width: 90%; font-size: 12.5px; line-height: 1.5;
+}
+.bubble-bot {
+  align-self: flex-start; background: var(--surface); border: 1px solid var(--border);
+  color: var(--fg); padding: 10px 12px; border-radius: 12px 12px 12px 2px;
+  max-width: 92%; font-size: 12.5px; line-height: 1.6;
+}
+.bubble-bot .bot-title { font-weight: 700; margin-bottom: 4px; }
+.bubble-bot .bot-meta  { margin-top: 6px; font-size: 10.5px; color: var(--fg-muted); border-top: 1px dashed var(--border); padding-top: 4px; }
+
+/* PAYLOAD COMPARE */
+.payload-grid {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  gap: 16px; align-items: stretch; margin: 16px 0;
+}
+.payload-box {
+  border: 1.5px solid var(--border); border-radius: var(--r); overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.payload-header {
+  padding: 8px 14px; font-weight: 700; font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.payload-header.req { background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 20%, transparent); }
+.payload-header.res { background: var(--success-bg); color: var(--success); border-color: color-mix(in srgb, var(--success) 20%, transparent); }
+.payload-body {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5;
+  color: var(--fg); padding: 12px 14px; background: var(--surface); flex: 1;
+}
+.payload-mid {
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  gap: 4px; padding: 0 4px;
+}
+.payload-mid-label { font-size: 11px; font-weight: 700; color: var(--primary); text-align: center; }
+.payload-mid-arrow { font-size: 20px; color: var(--primary); }
+.payload-mid-sub { font-size: 10px; color: var(--fg-muted); text-align: center; }
+
+/* DIAGRAM WRAP */
+.diagram-wrap {
+  border: 1px solid var(--border); border-radius: var(--r);
+  overflow: hidden; margin: 16px 0; background: var(--surface);
+}
+.diagram-wrap img { width: 100%; height: auto; }
+.diagram-caption {
+  padding: 10px 14px; font-size: 12px; color: var(--fg-muted);
+  background: var(--chip-bg); border-top: 1px solid var(--border); line-height: 1.6;
+}
+
+/* VIDEO CARD */
+.video-card {
+  border: 1px solid var(--border); border-radius: var(--r);
+  overflow: hidden; margin: 20px 0; box-shadow: var(--shadow-md);
+}
+.video-header {
+  background: #1A1F2E; color: #E6EDF3; padding: 10px 16px;
+  font-size: 13px; font-weight: 600;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.video-body { padding: 16px; background: var(--surface); text-align: center; }
+.video-body video { width: 100%; max-width: 820px; border-radius: 6px; border: 1px solid var(--border); background: #000; }
+.video-desc {
+  margin-top: 12px; padding: 10px 14px;
+  background: var(--chip-bg); border: 1px solid var(--border); border-radius: var(--r);
+  text-align: left; font-size: 12.5px; color: var(--fg-muted); line-height: 1.6;
+}
+
+/* API RESULT CARD */
+.api-result-card {
+  border: 1px solid var(--border); border-radius: var(--r);
+  overflow: hidden; margin: 16px 0; box-shadow: var(--shadow);
+}
+.api-result-header {
+  background: #1A1F2E; color: #E6EDF3; padding: 10px 16px;
+  font-size: 13px; font-weight: 600;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.api-result-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.api-panel {
+  border: 1px solid var(--border); border-radius: var(--r); overflow: hidden;
+}
+.api-panel-title {
+  padding: 8px 12px; font-size: 12.5px; font-weight: 700;
+  border-bottom: 1px solid var(--border);
+}
+.api-panel-title.req { background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); }
+.api-panel-title.res { background: var(--success-bg); color: var(--success); }
+.api-panel-body { padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; line-height: 1.5; background: var(--surface); }
+
+/* FOOTER */
+.footer {
+  border-top: 1px solid var(--border); padding-top: 24px;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 8px;
+}
+.footer-left  { font-size: 12px; color: var(--fg-light); }
+.footer-right { font-size: 11px; color: var(--fg-light); font-family: 'JetBrains Mono', monospace; }
+
+/* RESPONSIVE */
+@media (max-width: 760px) {
+  .arch-flow   { grid-template-columns: 1fr 1fr; }
+  .case-grid   { grid-template-columns: 1fr; }
+  .payload-grid{ grid-template-columns: 1fr; }
+  .meta-box    { grid-template-columns: auto 1fr; }
+  .nav-links   { display: none; }
+  .page        { padding-block: 32px 60px; }
+}
+@media (max-width: 480px) {
+  .arch-flow { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <span class="nav-brand">Defect Predictor</span>
+    <div class="nav-links">
+      <a href="#overview">개요</a>
+      <a href="#sec-1">ML 배포</a>
+      <a href="#sec-2">에이전트 설계</a>
+      <a href="#sec-3">입력 스키마</a>
+      <a href="#sec-4">파이프라인</a>
+      <a href="#sec-5">골든셋</a>
+      <a href="#sec-6">검증</a>
+      <a href="#sec-7">프롬프트</a>
+      <a href="#sec-8">용어사전</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero" id="overview">
+    <div class="hero-eyebrow">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M6 3.5v3l1.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Defect Predictor · 2026-11
+    </div>
+    <h1>AI Hub ML 배포 및<br>LLM 자연어 연동 가이드</h1>
+    <p class="hero-sub">
+      사용자 자연어에서 공정 조건 12개를 추출·슬롯 필링하고, AI Hub GBT 회귀 엔드포인트로 결함률(%)을 예측하는 대화형 에이전트 아키텍처 및 구현 가이드.
+    </p>
+    <div class="chip-row">
+      <span class="chip">AI Hub / RapidMiner</span>
+      <span class="chip">GBT Regression</span>
+      <span class="chip">LLM Slot-Filling</span>
+      <span class="chip">FastAPI / Python</span>
+      <span class="chip">Pydantic Validation</span>
+      <span class="chip">Golden Set Evaluation</span>
+      <span class="chip">httpx</span>
+    </div>
+  </div>
+
+  <!-- META -->
+  <div class="meta-box">
+    <span class="meta-label">과제명</span>
+    <span class="meta-value">과제 3: AI Hub를 통한 ML 배포 및 지능형 에이전트 구축</span>
+    <span class="meta-label">기간</span>
+    <span class="meta-value">2026.10.21 ~ 2026.10.28</span>
+    <span class="meta-label">핵심 기술</span>
+    <div class="meta-tags">
+      <span class="meta-tag">AI Hub</span>
+      <span class="meta-tag">GBT Regression</span>
+      <span class="meta-tag">LLM Slot-Filling</span>
+      <span class="meta-tag">Pydantic Validation</span>
+      <span class="meta-tag">Golden Set Evaluation</span>
+    </div>
+  </div>
+
+  <!-- SECTION 1 -->
+  <section id="sec-1">
+    <div class="section-label">Section 01</div>
+    <div class="section-title">AI Hub를 통한 ML 모델 생성 및 배포</div>
+
+    <p style="font-size:14px; color:var(--fg-muted); margin-bottom:20px;">
+      제조 공정 결함률(<code style="font-family:'JetBrains Mono',monospace; font-size:12px; background:var(--code-bg); border:1px solid var(--border); border-radius:3px; padding:1px 5px;">defect_rate_pct</code>)을
+      예측하는 ML 파이프라인을 AI Studio에서 학습하고 AI Hub 엔드포인트로 서비스화하는 과정입니다.
+    </p>
+
+    <!-- AI Studio Process Arch -->
+    <div class="arch-flow">
+      <div class="arch-node">
+        <span class="arch-node-icon">🔬</span>
+        <div class="arch-node-title">데이터 준비</div>
+        <div class="arch-node-desc">IQR 이상치 필터링<br>불필요 컬럼 제거<br>dataset_split 기준 분할</div>
+      </div>
+      <div class="arch-node" style="border-left:1px solid var(--border);">
+        <span class="arch-node-icon">⚙️</span>
+        <div class="arch-node-title">GBT 학습</div>
+        <div class="arch-node-desc">Grid Search (792 조합)<br>trees / depth / lr 탐색<br>RMSE · R² 평가</div>
+      </div>
+      <div class="arch-node" style="border-left:1px solid var(--border);">
+        <span class="arch-node-icon">💾</span>
+        <div class="arch-node-title">모델 저장</div>
+        <div class="arch-node-desc">최적 모델 선택<br>AI Hub 저장소 연동<br>ai hub repo/model/v0.2</div>
+      </div>
+      <div class="arch-node" style="border-left:1px solid var(--border);">
+        <span class="arch-node-icon">☁️</span>
+        <div class="arch-node-title">AI Hub 배포</div>
+        <div class="arch-node-desc">스냅샷 발행<br>엔드포인트 생성<br>자동 업데이트 활성화</div>
+      </div>
+    </div>
+
+    <div class="subsection-title">1.1 하이퍼파라미터 최적화 및 모델 학습</div>
+    <div class="card">
+      <ul>
+        <li><strong>알고리즘:</strong> Gradient Boosted Trees (GBT) Regression</li>
+        <li><strong>탐색 조합:</strong> 총 792 combinations grid search 수행</li>
+        <li><strong>number of trees:</strong> min 50 ~ max 500 (step: 10)</li>
+        <li><strong>maximal depth:</strong> min 3 ~ max 15 (step: 7)</li>
+        <li><strong>learning rate:</strong> min 0.001 ~ max 0.1 (step: 8)</li>
+        <li><strong>전처리:</strong> Select Attribute Operator로 불필요 컬럼 제거 및 IQR 기반 이상치 필터링 후 최적 모델을 AI Hub 저장소에 저장</li>
+      </ul>
+    </div>
+
+    <div class="subsection-title">1.2 AI Hub 배포 프로세스</div>
+    <div class="card">
+      <ol style="padding-left:20px; display:flex; flex-direction:column; gap:8px; font-size:13.5px; color:var(--fg-muted);">
+        <li><strong>AI Hub 프로젝트 생성 및 연동</strong> — AI Studio에서 AI Hub URL 연동 및 Git 저장소 연결</li>
+        <li><strong>스냅샷(Snapshot) 생성</strong> — 모델 및 실행 프로세스가 포함된 폴더에서 스냅샷 발행</li>
+        <li><strong>엔드포인트 생성</strong> — 자동 업데이트 활성화, 배포 프로세스 및 의존성 모델 등록 후 배포 완료</li>
+      </ol>
+    </div>
+
+    <div class="subsection-title">1.3 엔드포인트 규격</div>
+    <div class="endpoint-card">
+      <span class="method-badge method-post">POST</span>
+      <div>
+        <div class="endpoint-url">https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/defect_rate_pred/deploy</div>
+        <div class="endpoint-desc">공정 조건 12개 → GBT 회귀 추론 → <code style="font-family:'JetBrains Mono',monospace; font-size:11px; background:var(--code-bg); border:1px solid var(--border); border-radius:3px; padding:1px 4px;">prediction(defect_rate_pct)</code> 반환 · Content-Type: application/json</div>
+      </div>
+    </div>
+
+    <!-- API Validation Card -->
+    <div class="api-result-card">
+      <div class="api-result-header">
+        <span>AI Hub 엔드포인트 실측 검증 (HTTP 200 · 0.547s)</span>
+        <span class="chat-badge badge-ok">PASS</span>
+      </div>
+      <div class="api-result-body">
+        <div class="api-panel">
+          <div class="api-panel-title req">POST 요청 Payload (Content-Type: application/json)</div>
+          <div class="api-panel-body">{"data": [{"production_line": "LINE-BPR-01", "shift": "DAY",
+  "supplier_code": "SIM-SUP-B", "planned_quantity": 533,
+  "ambient_humidity_pct": 54.49, "incoming_material_quality_score": 83.95,
+  "coating_target_thickness_um": 79.22, "weld_energy_setting_pct": 92.67,
+  "fixture_alignment_offset_mm": 0.112, "process_setting_deviation_pct": 13.06,
+  "tool_wear_pct": 14.41, "days_since_maintenance": 30}]}</div>
+        </div>
+        <div class="api-panel">
+          <div class="api-panel-title res">200 OK 응답 — Latency: 0.547s</div>
+          <div class="api-panel-body">{"data": [{
+  "production_line": "LINE-BPR-01", ...  ← 입력 피처 12개 에코
+  "prediction(defect_rate_pct)": 1.6498678908...  ← LLM 환산: 약 1.65%
+}]}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 2 -->
+  <section id="sec-2">
+    <div class="section-label">Section 02</div>
+    <div class="section-title">에이전트 설계 개요</div>
+
+    <p style="font-size:14px; color:var(--fg-muted); margin-bottom:20px;">
+      LLM이 결함률을 직접 추측하지 않고, <strong>언어 처리(자연어 추출/정규화)</strong>와 <strong>결과 해설</strong>만을 담당하며 정밀 수치 연산은 검증된 ML API가 수행하는 철저한 역할 분리형 구조입니다.
+    </p>
+
+    <div class="notice-item warn">
+      <span class="notice-icon">🚫</span>
+      <div>
+        <div class="notice-title">추측 절대 금지</div>
+        <div class="notice-body">질의에 명시되지 않은 필드는 임의로 채우지 않고 반드시 <code>null</code> 처리합니다. LLM이 직접 수치를 보완하거나 기본값을 가정하지 않습니다.</div>
+      </div>
+    </div>
+    <div class="notice-item info">
+      <span class="notice-icon">🔍</span>
+      <div>
+        <div class="notice-title">모호성 격리</div>
+        <div class="notice-body">"약간 높음", "평소대로"와 같은 모호한 발화는 <code>null</code> 처리 및 <code>ambiguous_fields</code>에 기록 후 정확한 수치를 되묻습니다. 모호 필드는 세션 슬롯에서도 즉시 삭제합니다.</div>
+      </div>
+    </div>
+    <div class="notice-item info">
+      <span class="notice-icon">🔄</span>
+      <div>
+        <div class="notice-title">세션 맥락 유지 (멀티턴)</div>
+        <div class="notice-body">이전 대화에서 확인된 슬롯은 유지하며, 새로운 입력 및 정정 사항을 점진적으로 병합합니다. 명시적으로 덮어쓰기 전까지 기존 값이 보존됩니다.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3 -->
+  <section id="sec-3">
+    <div class="section-label">Section 03</div>
+    <div class="section-title">공정 입력 데이터 명세 및 세션 슬롯 흐름</div>
+
+    <p style="font-size:14px; color:var(--fg-muted); margin-bottom:20px;">
+      결함률 예측 ML 엔드포인트에 전달되어야 하는 <strong>12개 핵심 입력 피처</strong>의 정의, 단위 환산 규칙, 허용값 제약입니다.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>필드명</th>
+            <th>정의</th>
+            <th>타입 / 단위</th>
+            <th>유효값 제약</th>
+            <th>정규화 규칙</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><code>production_line</code></td><td>생산 라인 코드</td><td>string</td><td><code>LINE-BPR-01</code>, <code>LINE-BPR-02</code></td><td>라인 1 → <code>LINE-BPR-01</code></td></tr>
+          <tr><td>2</td><td><code>shift</code></td><td>근무 교대조</td><td>string</td><td><code>DAY</code>, <code>NIGHT</code></td><td>주간/낮 → DAY, 야간/밤 → NIGHT</td></tr>
+          <tr><td>3</td><td><code>supplier_code</code></td><td>자재 공급사 코드</td><td>string</td><td><code>SIM-SUP-A</code>, <code>SIM-SUP-B</code>, <code>SIM-SUP-C</code></td><td>A/B/C 식별 코드 매핑</td></tr>
+          <tr><td>4</td><td><code>planned_quantity</code></td><td>계획 생산 수량</td><td>int / 개</td><td>&gt; 0 (양수)</td><td>천/만/쉼표 변환, 단위 '개' 단독 매칭</td></tr>
+          <tr><td>5</td><td><code>ambient_humidity_pct</code></td><td>작업장 상대습도</td><td>float / %</td><td>0.0 ~ 100.0</td><td>소수점 반올림 및 실수형 정규화</td></tr>
+          <tr><td>6</td><td><code>incoming_material_quality_score</code></td><td>원자재 품질 점수</td><td>float / 점</td><td>0.0 ~ 100.0</td><td>수입검사 품질 평점, 소수점 유지</td></tr>
+          <tr><td>7</td><td><code>coating_target_thickness_um</code></td><td>코팅 목표 두께</td><td>float / µm</td><td>≥ 0.0</td><td>mm/cm/m 입력 시 µm 자동 환산</td></tr>
+          <tr><td>8</td><td><code>weld_energy_setting_pct</code></td><td>용접 에너지 설정값</td><td>float / %</td><td>0.0 ~ 150.0</td><td>기준 100% 대비 인가 비율</td></tr>
+          <tr><td>9</td><td><code>fixture_alignment_offset_mm</code></td><td>지그 정렬 오프셋</td><td>float / mm</td><td>≥ 0.0 (음수 불가)</td><td>cm/m/µm 입력 시 mm 자동 환산</td></tr>
+          <tr><td>10</td><td><code>process_setting_deviation_pct</code></td><td>공정 설정 편차</td><td>float / %</td><td>실수값 (음수 허용)</td><td>표준 파라미터 대비 편차 비율</td></tr>
+          <tr><td>11</td><td><code>tool_wear_pct</code></td><td>공구 마모율</td><td>float / %</td><td>0.0 ~ 100.0</td><td>0~100 초과/미만 시 오류 차단</td></tr>
+          <tr><td>12</td><td><code>days_since_maintenance</code></td><td>정비 후 경과일</td><td>int / 일</td><td>≥ 0</td><td>주(weeks) × 7 환산 (2주 → 14일)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="subsection-title">3.1 턴별 데이터 흐름 (슬롯 채우기 멀티턴)</div>
+    <div class="diagram-wrap">
+      <img src="./AI Hub 기반 ML 모델 배포 및 LLM 연동 결함률 예측 가이드_files/H74PtpGA" alt="턴별 슬롯 채우기 흐름 (Turn 1: 12/12 충족 → ML 호출, Turn 2 What-if: 1개 슬롯 갱신 후 즉시 재예측)">
+      <div class="diagram-caption">
+        <strong>슬롯 필링 핵심 흐름:</strong><br>
+        • <strong>Turn 1:</strong> 12개 값이 모두 들어오면 세션 12/12 충족 → 즉시 ML API를 호출하여 결함률(1.65%)을 산출합니다.<br>
+        • <strong>Turn 2 (What-if):</strong> 지그 오프셋만 0.05cm(0.5mm)로 변경 시, 언급된 1개 슬롯만 갱신되고 나머지 11개 슬롯은 유지되어 즉시 재예측(status: ok)이 실행됩니다.
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 4 -->
+  <section id="sec-4">
+    <div class="section-label">Section 04</div>
+    <div class="section-title">파이프라인 구조 및 동작 흐름</div>
+
+    <p style="font-size:14px; color:var(--fg-muted); margin-bottom:20px;">
+      자연어 질의 수신부터 슬롯 채우기, 다단계 검증, ML API 추론, LLM 해설 및 응답 반환까지의 전체 아키텍처 흐름도입니다.
+    </p>
+
+    <div class="diagram-wrap">
+      <img src="./AI Hub 기반 ML 모델 배포 및 LLM 연동 결함률 예측 가이드_files/yhwmSYtF" alt="불량률 예측 파이프라인 흐름도 (질의 → 슬롯 채우기 → 검증 → ML 추론 → 응답)">
+      <div class="diagram-caption">
+        <strong>8단계 파이프라인 핵심 흐름:</strong><br>
+        • <strong>1~3단계 (추출 &amp; 병합):</strong> SDC LLM 구조화 출력 → 개별 필드 조기 검증(<code>validate_provided_fields</code>) → 세션 병합 (부족 시 <code>need_more_info</code> 되묻기)<br>
+        • <strong>4~6단계 (검증 &amp; 추론):</strong> Pydantic 최종 검증(<code>DefectRateInput</code>) → JSON Payload 생성 → AI Hub ML Client 호출 (실패 시 <code>endpoint_error</code>)<br>
+        • <strong>7~8단계 (해설 &amp; 반환):</strong> 예측 결함률(%) 수신 → LLM 공정 인자 민감도 해설 생성 → <code>status: ok</code> 최종 사용자 응답
+      </div>
+    </div>
+
+    <div class="subsection-title">4.1 ML 모델 송수신 Payload 구조</div>
+    <p style="font-size:14px; color:var(--fg-muted); margin-bottom:14px;">
+      사용자 자연어로부터 추출·검증된 12개 필드는 AI Hub RapidMiner 엔진의 입력 규격에 맞춰 최상위 <code style="font-family:'JetBrains Mono',monospace; font-size:12px; background:var(--code-bg); border:1px solid var(--border); border-radius:3px; padding:1px 5px;">data</code> 배열 키를 갖는 JSON 레코드로 패키징됩니다.
+    </p>
+
+    <div class="payload-grid">
+      <div class="payload-box">
+        <div class="payload-header req">POST Request Payload</div>
+        <div class="payload-body">// Content-Type: application/json
+{
+  "data": [{
+    "production_line": "LINE-BPR-01",
+    "shift": "DAY",
+    "supplier_code": "SIM-SUP-B",
+    "planned_quantity": 533,
+    "ambient_humidity_pct": 54.49,
+    "incoming_material_quality_score": 83.95,
+    "coating_target_thickness_um": 79.22,
+    "weld_energy_setting_pct": 92.67,
+    "fixture_alignment_offset_mm": 0.112,
+    "process_setting_deviation_pct": 13.06,
+    "tool_wear_pct": 14.41,
+    "days_since_maintenance": 30
+  }]
+}</div>
+      </div>
+      <div class="payload-mid">
+        <div class="payload-mid-label">AI Hub ML API</div>
+        <div class="payload-mid-arrow">→</div>
+        <div class="payload-mid-sub">GBT 모델 추론<br>(약 100~500ms)</div>
+      </div>
+      <div class="payload-box">
+        <div class="payload-header res">200 OK Response · 0.547s</div>
+        <div class="payload-body">// 입력 피처 에코 + 예측 컬럼
+{
+  "data": [{
+    "production_line": "LINE-BPR-01",
+    ...  ← 12개 필드 에코
+    "prediction(defect_rate_pct)":
+      1.649867890802181
+  }]
+}
+
+// LLM 최종 사용자 해설:
+// "예측 결함률은 1.65%입니다.
+//  공구 마모도(14.41%), 정비 경과일(30일),
+//  설정 편차(13.06%)에 민감하며 ..."</div>
+      </div>
+    </div>
+
+    <div class="notice-item info">
+      <span class="notice-icon">📌</span>
+      <div>
+        <div class="notice-title">ML 입출력 3가지 핵심 규칙</div>
+        <div class="notice-body">
+          <strong>단건/배치 일관성:</strong> 단일 조건이라도 반드시 <code>{"data": [{...}]}</code> 형태 1개 요소 배열로 전송합니다.<br>
+          <strong>순서 기반 1:1 매핑:</strong> 비교 질의 시 2개 레코드 전송 → <code>[1.6499, 1.5401]</code> 순서 보장.<br>
+          <strong>단위 확정:</strong> 반환 <code>prediction(defect_rate_pct)</code>는 백분율(%) 단위 부동소수점. LLM은 소수점 둘째 자리로 가공합니다.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5 -->
+  <section id="sec-5">
+    <div class="section-label">Section 05</div>
+    <div class="section-title">LLM을 활용한 Golden Set 구축 및 고도화</div>
+
+    <p style="font-size:14px; color:var(--fg-muted); margin-bottom:20px;">
+      추출 정확도 및 파이프라인 견고성을 객관적으로 측정하기 위해 Golden Set을 v1에서 v3까지 점진적으로 고도화했습니다.
+    </p>
+
+    <div class="subsection-title">5.1 골든셋 버전별 진화</div>
+    <div class="ach-list" style="margin-bottom:24px;">
+      <div class="ach-item">
+        <div class="ach-dot"></div>
+        <div class="ach-text"><strong>Golden Set v1:</strong> 초기 질의-응답 셋 구성. 실제 존재하지 않는 라인 코드(LINE-ASM-02 등) 및 음수 오프셋 등 물리적 사양 불일치 문제 발견.</div>
+      </div>
+      <div class="ach-item">
+        <div class="ach-dot"></div>
+        <div class="ach-text"><strong>Golden Set v2 (35 케이스, 6 멀티턴):</strong> <code style="font-family:'JetBrains Mono',monospace; font-size:11.5px; background:var(--code-bg); border:1px solid var(--border); border-radius:3px; padding:1px 5px;">input_schema.md</code>의 유효값 제약을 엄격히 반영하여 재생성. 라인 코드 및 오프셋 음수 제거.</div>
+      </div>
+      <div class="ach-item">
+        <div class="ach-dot"></div>
+        <div class="ach-text"><strong>Golden Set v3 (단일턴 60 케이스, 멀티턴 14 케이스):</strong> 전 필드 단위 환산 검증(cm/m/µm, 주/일 등), 슬롯 미완성 상태의 필드 단위 검증, 항목 라벨 없는 수치 입력 처리 규칙 반영. 최종 100% 통과 달성.</div>
+      </div>
+    </div>
+
+    <div class="subsection-title">5.2 골든셋 평가 카테고리 구성 (v3 기준)</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>카테고리</th>
+            <th>케이스 수</th>
+            <th>테스트 목적</th>
+            <th>기대 상태</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>C</code> (Complete)</td><td>19건</td><td>12개 입력이 모두 명시된 질의 (단위 환산, 비교 질의 포함)</td><td><code>ok</code> (ML API 호출)</td></tr>
+          <tr><td><code>P</code> (Partial)</td><td>12건</td><td>일부 필드만 제공된 질의 (누락 필드 되묻기)</td><td><code>need_more_info</code></td></tr>
+          <tr><td><code>N</code> (No-input / Noise)</td><td>5건</td><td>공정 조건 없거나 단순 인사/무관 질의</td><td><code>need_more_info</code></td></tr>
+          <tr><td><code>A</code> (Ambiguous)</td><td>12건</td><td>모호한 표현("평소대로", "약간 높음", 단위 없는 코팅두께 등)</td><td><code>need_more_info</code></td></tr>
+          <tr><td><code>I</code> (Invalid)</td><td>12건</td><td>허용 범위 초과(음수 오프셋, 잘못된 공급사 코드 등)</td><td><code>invalid_input</code></td></tr>
+          <tr><td><code>MT</code> (Multi-Turn)</td><td>14건</td><td>누락 채우기, 정정 대화, What-if 시뮬레이션</td><td>대화 맥락에 따라 전이</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="subsection-title">5.3 챗봇 UI 테스트 시뮬레이션</div>
+    <p style="font-size:14px; color:var(--fg-muted); margin-bottom:14px;">
+      FastAPI 로컬 웹 UI(<code style="font-family:'JetBrains Mono',monospace; font-size:12px; background:var(--code-bg); border:1px solid var(--border); border-radius:3px; padding:1px 5px;">http://127.0.0.1:8000/</code>) 환경에서 골든셋 유형별로 수행된 대화 시나리오입니다.
+    </p>
+
+    <div class="case-grid">
+      <!-- Case 1 -->
+      <div class="chat-card">
+        <div class="chat-header">
+          <span>Case 1 · C01 단일턴 완전 질의</span>
+          <span class="chat-badge badge-ok">status: ok</span>
+        </div>
+        <div class="chat-body">
+          <div class="bubble-user">
+            LINE-BPR-01 주간조에서 SIM-SUP-B 자재로 533개 생산 예정입니다. 습도 54.49%, 품질점수 83.95, 코팅두께 79.22µm, 용접에너지 92.67%, 지그 오프셋 0.112mm, 설정편차 13.06%, 마모도 14.41%, 정비 후 30일 지났습니다. 결함률 예측해주세요.
+          </div>
+          <div class="bubble-bot">
+            <div class="bot-title" style="color:#16A34A;">🎯 예측 결함률: 1.65%</div>
+            <div>공구 마모도(14.41%)와 정비 후 경과일(30일), 설정 편차(13.06%)에 민감하며, 자재 품질점수(83.95)가 양호하여 결함률 상승을 일부 상쇄하고 있습니다.</div>
+            <div class="bot-meta">Latency: 112ms · Slots Filled: 12/12</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Case 2 -->
+      <div class="chat-card">
+        <div class="chat-header">
+          <span>Case 2 · P01 슬롯 채우기 멀티턴</span>
+          <span class="chat-badge badge-info">need_more_info → ok</span>
+        </div>
+        <div class="chat-body">
+          <div class="bubble-user">LINE-BPR-01 주간에 SIM-SUP-B로 500개 생산할 때 결함률 얼마야?</div>
+          <div class="bubble-bot">
+            <div class="bot-title" style="color:#D97706;">추가 공정 조건이 필요합니다 (8개 누락)</div>
+            <div style="font-size:11.5px; color:var(--fg-muted);">작업장 습도, 자재 품질 점수, 코팅 두께, 용접 에너지, 지그 오프셋, 설정 편차, 마모도, 정비 경과일을 알려주세요.</div>
+          </div>
+          <div class="bubble-user">습도 50%, 품질 90, 코팅 80µm, 용접 90%, 오프셋 0.1mm, 편차 10%, 마모도 15%, 정비 20일이야.</div>
+          <div class="bubble-bot">
+            <div class="bot-title" style="color:#16A34A;">🎯 예측 결함률: 1.52%</div>
+            <div style="font-size:11.5px;">이전 턴의 조건(라인·교대조·공급사·수량)과 새 조건을 병합해 분석했습니다.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Case 3 -->
+      <div class="chat-card">
+        <div class="chat-header">
+          <span>Case 3 · What-if 가상 시뮬레이션</span>
+          <span class="chat-badge badge-purple">what-if update</span>
+        </div>
+        <div class="chat-body">
+          <div class="bubble-user">(C01 예측 완료 후) 다른 조건은 동일하게 두고 공구 마모도만 90%로 오르면 어떻게 돼?</div>
+          <div class="bubble-bot">
+            <div class="bot-title" style="color:#DC2626;">📈 예측 결함률: 3.17% (▲ 1.52%p 상승)</div>
+            <div>공구 마모도가 14.41%에서 90%로 극단적으로 증가함에 따라 결함 발생 확률이 약 2배 급증했습니다. 즉각적인 공구 교체 및 셋업 점검을 권장합니다.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Case 4 -->
+      <div class="chat-card">
+        <div class="chat-header">
+          <span>Case 4 · 라인 간 비교 (배치 2 레코드)</span>
+          <span class="chat-badge badge-blue">batch: 2 records</span>
+        </div>
+        <div class="chat-body">
+          <div class="bubble-user">동일한 공정 조건에서 LINE-BPR-01과 LINE-BPR-02의 결함률을 비교해줘.</div>
+          <div class="bubble-bot">
+            <div class="bot-title" style="color:var(--primary);">📊 라인별 비교 예측 결과 (배치 1회 호출)</div>
+            <div style="font-size:12px;">
+              • LINE-BPR-01: <strong>1.65%</strong><br>
+              • LINE-BPR-02: <strong>1.54%</strong> (0.11%p 더 안정적)
+            </div>
+            <div style="font-size:11px; color:var(--fg-muted); margin-top:4px;">동일 투입 자재 및 파라미터 기준 2호 라인이 약간 더 우수한 수율을 보입니다.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Demo Video -->
+    <div class="video-card">
+      <div class="video-header">
+        <span>결함률 예측 AI 에이전트 멀티턴 시연 영상 (261027 실측 데모)</span>
+        <span class="chat-badge badge-purple">Multi-Turn Live Demo</span>
+      </div>
+      <div class="video-body">
+        <video controls>
+          <source src="https://www.genspark.ai/api/files/s/prlYgQbB" type="video/mp4">
+          브라우저가 HTML5 비디오 태그를 지원하지 않습니다.
+        </video>
+        <div class="video-desc">
+          <strong>시연 영상 주요 시나리오:</strong><br>
+          1. <strong>초기 부분 입력 (Partial):</strong> 사용자가 일부 조건만 입력 시, 에이전트가 누락된 피처를 파악하고 되묻기(<code>need_more_info</code>) 수행.<br>
+          2. <strong>슬롯 누적 완성:</strong> 후속 발화로 나머지 조건을 전달받아 12개 슬롯 충족 후 AI Hub ML 엔드포인트 호출 및 실시간 예측.<br>
+          3. <strong>What-if 시뮬레이션:</strong> 기존 세션을 유지한 상태에서 특정 변수(공구 마모도, 지그 오차 등)만 변경하여 즉시 재예측하는 대화 맥락 유지 검증.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 6 -->
+  <section id="sec-6">
+    <div class="section-label">Section 06</div>
+    <div class="section-title">Golden Set 테스트 결과 및 주요 개선</div>
+
+    <p style="font-size:14px; color:var(--fg-muted); margin-bottom:20px;">
+      Golden Set v3 기반 회귀 테스트를 수행한 결과, 초기 <strong>93.3% (56/60 통과)</strong>에서 주요 병목 원인을 분석하고 프롬프트 및 파이프라인 로직을 수정하여 <strong>100% 통과</strong>를 달성했습니다.
+    </p>
+
+    <div class="trouble-list">
+      <div class="trouble-item">
+        <div class="trouble-title">C08, P06 — 수량 누락 오류</div>
+        <div class="trouble-sol">
+          <strong>원인:</strong> "533개" 등 명확한 단위가 있는 첫 발화 수치를 항목명이 없다는 이유로 폐기하여 수량 누락.<br>
+          <strong>조치:</strong> <strong>단위-필드 1:1 매칭 규칙 도입</strong> — "개"는 <code>planned_quantity</code>의 유일한 후보이므로 항목 라벨이 없어도 즉시 매칭하도록 프롬프트 완화.
+        </div>
+      </div>
+      <div class="trouble-item">
+        <div class="trouble-title">A06 — 과도한 모호성 판단</div>
+        <div class="trouble-sol">
+          <strong>원인:</strong> "습도가 약간 높고 마모가 심함" 질의에 대해 언급되지 않은 필드까지 12개 전체를 모호(ambiguous)로 판단.<br>
+          <strong>조치:</strong> <strong>미언급 필드와 모호 필드 명확 분리</strong> — 언급되지 않은 필드는 <code>null</code>(누락), 수치 없이 성향만 언급된 필드만 <code>ambiguous_fields</code>로 격리.
+        </div>
+      </div>
+      <div class="trouble-item">
+        <div class="trouble-title">What-if 세션 오동작</div>
+        <div class="trouble-sol">
+          <strong>원인:</strong> 기존 습도(54.49%) 세션 후 "습도가 꽤 높아지면?" 질의 시, 추출값이 <code>null</code>이라 기존 세션의 54.49%가 유지되어 예측이 바로 실행되는 오류.<br>
+          <strong>조치:</strong> <strong><code>pipeline.py</code> 로직 수정</strong> — 추출된 <code>ambiguous_fields</code>에 포함된 필드는 세션 슬롯에서 즉시 <code>pop</code>하여 재질문되도록 변경.
+        </div>
+      </div>
+      <div class="trouble-item">
+        <div class="trouble-title">I08 / 슬롯 미완성 상태 조기 검증 부재</div>
+        <div class="trouble-sol">
+          <strong>원인:</strong> 슬롯이 12개 채워지기 전에는 Pydantic 검증이 돌지 않아 잘못된 공급사 코드(SIM-SUP-D)가 세션에 저장.<br>
+          <strong>조치:</strong> <strong><code>validate_provided_fields</code> 도입</strong> — 슬롯 완성 여부와 관계없이 값이 들어온 필드는 세션 저장 직전 개별 유효성을 즉시 검증하여 위반 시 세션 저장 차단.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 7 -->
+  <section id="sec-7">
+    <div class="section-label">Section 07</div>
+    <div class="section-title">프롬프트 엔지니어링 및 수정 내역</div>
+
+    <p style="font-size:14px; color:var(--fg-muted); margin-bottom:20px;">
+      프롬프트의 복잡도와 중복을 줄이고 LLM의 구조화된 추출 신뢰도를 극대화하기 위해 프롬프트 v2로 리팩토링을 단행했습니다.
+    </p>
+
+    <div class="subsection-title">7.1 프롬프트 최적화 주요 변경점 (v1 → v2)</div>
+    <div class="ach-list" style="margin-bottom:20px;">
+      <div class="ach-item">
+        <div class="ach-dot"></div>
+        <div class="ach-text"><strong>분량 약 35~40% 감소:</strong> 불필요한 번호 체계(2-1 등)를 제거하고 명확한 기능별 섹션 제목으로 개편.</div>
+      </div>
+      <div class="ach-item">
+        <div class="ach-dot"></div>
+        <div class="ach-text"><strong>불확실성 처리 2분기(A/B) 통합:</strong> A분기(필드 특정, 값 불명) → 값은 <code>null</code> + <code>ambiguous_fields</code>에 필드명 등록. B분기(값은 존재, 대상 필드 불명) → 값 폐기 + <code>notes</code>에만 사유 기록.</div>
+      </div>
+      <div class="ach-item">
+        <div class="ach-dot"></div>
+        <div class="ach-text"><strong>단위 환산표 단일화:</strong> 길이(m/cm/µm → mm), 두께(m/cm/mm → µm), 시간(주 → 일) 등 단위 환산 정의를 단일 표로 통합.</div>
+      </div>
+      <div class="ach-item">
+        <div class="ach-dot"></div>
+        <div class="ach-text"><strong>다중 조건 비교 처리:</strong> "라인1과 라인2를 비교해줘"와 같은 질의는 <code>records</code> 배열에 2개의 개별 객체로 분리하여 추출하도록 명세화.</div>
+      </div>
+    </div>
+
+<div class="code-block"># 프롬프트 v2 핵심 지침 발췌 (aihub/prompt/extractor_v2.txt)
+
+[기본 원칙]
+1. 추측 절대 금지: 질의에 없는 필드는 null로 둡니다.
+2. 단위 정규화: 환산표에 따라 기준 단위(mm, µm, 일 등)로 변환하여 수치만 입력합니다.
+3. 불확실성 처리:
+   - 특정 필드의 상태/성향만 언급된 경우: 해당 필드 null + ambiguous_fields에 추가
+   - 항목명과 단위가 없어 필드를 특정할 수 없는 수치: 값 버림 + notes에 기록
+4. 다중 조건 비교: "라인1과 라인2를 비교해줘"와 같은 질의는
+   records 배열에 2개의 개별 객체로 분리하여 추출합니다.</div>
+  </section>
+
+  <!-- SECTION 8 -->
+  <section id="sec-8">
+    <div class="section-label">Section 08</div>
+    <div class="section-title">전문 용어 사전</div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>용어</th><th>설명</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>AI Hub</strong></td>
+            <td>머신러닝 모델의 버전 관리, 스냅샷 생성 및 클라우드 REST API 엔드포인트 자동 배포를 제공하는 통합 MLOps 플랫폼.</td>
+          </tr>
+          <tr>
+            <td><strong>GBT (Gradient Boosted Trees)</strong></td>
+            <td>여러 의사결정 나무(Decision Tree)를 순차적으로 학습시켜 이전 트리의 오차를 보정해 나가는 고성능 회귀/분류 머신러닝 알고리즘.</td>
+          </tr>
+          <tr>
+            <td><strong>Slot Filling (슬롯 필링)</strong></td>
+            <td>대화형 AI에서 사용자의 발화로부터 사전에 정의된 필수 파라미터(슬롯)를 추출하고 채워 넣는 대화 관리 기법. 멀티턴 대화에서 점진적으로 슬롯을 완성해 나감.</td>
+          </tr>
+          <tr>
+            <td><strong>Golden Set (골든셋)</strong></td>
+            <td>다양한 엣지 케이스와 정답 레이블을 정의하여 LLM 및 데이터 파이프라인의 정확도/회귀 여부를 검증하는 표준 평가 데이터셋.</td>
+          </tr>
+          <tr>
+            <td><strong>What-if Simulation</strong></td>
+            <td>"다른 조건은 그대로 두고 공구 마모도만 90%로 올리면 결함률이 어떻게 변해?" 처럼 특정 공정 변수 변화에 따른 결과를 가상 시뮬레이션하는 기능.</td>
+          </tr>
+          <tr>
+            <td><strong>Pydantic</strong></td>
+            <td>Python 타입 어노테이션을 사용하여 데이터의 유효성 검증(Validation)과 직렬화를 고속으로 수행하는 라이브러리. <code>DefectRateInput</code> 모델이 12개 필드의 타입·범위·허용값을 검증한다.</td>
+          </tr>
+          <tr>
+            <td><strong>SDC LLM Gateway</strong></td>
+            <td>Siemens Digital Connect 기반 LLM 호출 게이트웨이. 추출·해설 프롬프트 실행에 사용되며 JSON 구조화 출력을 지원한다.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <span class="footer-left">AI Hub ML 배포 및 LLM 연동 파이프라인 가이드 · 프로젝트 팀 문서</span>
+    <span class="footer-right">최종 갱신: 2026.11.04</span>
+  </div>
+
+</div>
+</body>
+</html>
