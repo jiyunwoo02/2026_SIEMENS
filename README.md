@@ -9,6 +9,7 @@ Siemens AI Platform 관련 서비스 연동 및 로컬 머신러닝 데모 프�
 | `defect-predictor/` | 자연어 질의에서 공정 조건 12개를 추출해 외부 결함률 예측 API로 보내고, 결과를 해설하는 대화형 서비스 (CLI, HTTP API, 로컬 웹 UI) | Python, FastAPI, Pydantic, httpx, Siemens SDC LLM Gateway |
 | `defect-advisor/` | `defect-predictor`와 동일한 예측 기능에 **공정 최적화(불량 최소화 / 위험 조건 탐색) API 연동**을 추가한 버전 (CLI, HTTP API, 로컬 웹 UI — 웹 UI는 최적화 조건 전용 렌더링 영역 없음, 결과는 답변 텍스트와 raw JSON으로 확인) | Python, FastAPI, Pydantic, httpx, Siemens SDC LLM Gateway |
 | `local-ml/` | 같은 12개 공정 조건으로 결함률(%)을 예측하는 모델을 로컬에서 탐색·학습·예측해 보는 스크립트 모음 | Python, pandas, scikit-learn, joblib |
+| `test/` | 루트 공통 유틸리티. `llm_model_test.py`: SDC LLM 게이트웨이에 연결해 지원 모델 목록을 출력 (루트 `.env` 필요) | Python 표준 라이브러리 |
 
 세 폴더는 서로 독립된 프로젝트이며 코드로 연결되어 있지 않습니다. `defect-predictor`와 `defect-advisor`는 입력 스키마(12개 필드)와 패키지 구조가 거의 동일해 같은 계통의 코드베이스로 보이지만, 저장소 안에 둘 사이의 명시적인 연결(같은 import, 변경 이력 문서 등)은 확인되지 않았습니다. `local-ml`는 둘 다와 코드로 연결되어 있지 않으며 입력 컬럼 12개의 이름만 같습니다(아래 [두 프로젝트의 관계](#두-프로젝트의-관계) 참고).
 
@@ -100,4 +101,5 @@ Siemens AI Platform 관련 서비스 연동 및 로컬 머신러닝 데모 프�
 ## 변경 이력
 
 - (작성일 미상) 루트 README 최초 작성: 폴더별 목적·구성·설치·실행 중심으로 작성.
+- **2026-11-04**: `llm_model_test.py`를 루트에서 `test/`로 이동. 한눈에 보기 표에 `test/` 항목 추가.
 - **2026-11-02**: defect-advisor 섹션을 소스 대조 후 3건 수정. (1) intent 표에 `predict_and_find_risk` 추가, `target` 열 추가, "추정" 주석 제거. (2) 웹 UI 설명을 현재 상태(clarify 처리 완료, 최적화 결과 answer/raw JSON 표시)로 수정. (3) 검증 범위의 pytest/`.pyc` 관련 구 상태 기술 제거.
