@@ -630,7 +630,7 @@ tr:last-child td { border-bottom: none; }
       </table>
     </div>
 
-    <div class="subsection-title">3.1 턴별 데이터 흐름 (슬롯 채우기 멀티턴)</div>
+    <!-- <div class="subsection-title">3.1 턴별 데이터 흐름 (슬롯 채우기 멀티턴)</div>
     <div class="diagram-wrap">
       <img src="./AI Hub 기반 ML 모델 배포 및 LLM 연동 결함률 예측 가이드_files/H74PtpGA" alt="턴별 슬롯 채우기 흐름 (Turn 1: 12/12 충족 → ML 호출, Turn 2 What-if: 1개 슬롯 갱신 후 즉시 재예측)">
       <div class="diagram-caption">
@@ -638,7 +638,7 @@ tr:last-child td { border-bottom: none; }
         • <strong>Turn 1:</strong> 12개 값이 모두 들어오면 세션 12/12 충족 → 즉시 ML API를 호출하여 결함률(1.65%)을 산출합니다.<br>
         • <strong>Turn 2 (What-if):</strong> 지그 오프셋만 0.05cm(0.5mm)로 변경 시, 언급된 1개 슬롯만 갱신되고 나머지 11개 슬롯은 유지되어 즉시 재예측(status: ok)이 실행됩니다.
       </div>
-    </div>
+    </div> -->
   </section>
 
   <!-- SECTION 4 -->
@@ -651,7 +651,7 @@ tr:last-child td { border-bottom: none; }
     </p>
 
     <div class="diagram-wrap">
-      <img src="./AI Hub 기반 ML 모델 배포 및 LLM 연동 결함률 예측 가이드_files/yhwmSYtF" alt="불량률 예측 파이프라인 흐름도 (질의 → 슬롯 채우기 → 검증 → ML 추론 → 응답)">
+      <!-- <img src="./AI Hub 기반 ML 모델 배포 및 LLM 연동 결함률 예측 가이드_files/yhwmSYtF" alt="불량률 예측 파이프라인 흐름도 (질의 → 슬롯 채우기 → 검증 → ML 추론 → 응답)"> -->
       <div class="diagram-caption">
         <strong>8단계 파이프라인 핵심 흐름:</strong><br>
         • <strong>1~3단계 (추출 &amp; 병합):</strong> SDC LLM 구조화 출력 → 개별 필드 조기 검증(<code>validate_provided_fields</code>) → 세션 병합 (부족 시 <code>need_more_info</code> 되묻기)<br>
@@ -849,7 +849,7 @@ tr:last-child td { border-bottom: none; }
       </div>
     </div>
 
-    <!-- Demo Video -->
+    <!-- Demo Video
     <div class="video-card">
       <div class="video-header">
         <span>결함률 예측 AI 에이전트 멀티턴 시연 영상 (261027 실측 데모)</span>
@@ -867,7 +867,7 @@ tr:last-child td { border-bottom: none; }
           3. <strong>What-if 시뮬레이션:</strong> 기존 세션을 유지한 상태에서 특정 변수(공구 마모도, 지그 오차 등)만 변경하여 즉시 재예측하는 대화 맥락 유지 검증.
         </div>
       </div>
-    </div>
+    </div> -->
   </section>
 
   <!-- SECTION 6 -->
