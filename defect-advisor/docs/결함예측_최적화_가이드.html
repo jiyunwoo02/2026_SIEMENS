@@ -328,9 +328,11 @@ td code, th code {
   border-radius: var(--r); padding: 14px;
   color: #f8fafc; font-size: 13px;
   box-shadow: var(--shadow-md);
+  min-width: 0; overflow: hidden;
 }
 .chat-header {
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  flex-wrap: wrap; gap: 6px;
   border-bottom: 1px solid #334155; padding-bottom: 8px;
   margin-bottom: 10px; font-weight: 700; font-size: 12px;
 }
@@ -358,11 +360,14 @@ td code, th code {
   padding: 8px 12px; border-radius: 8px;
   margin-bottom: 8px; font-size: 12px; line-height: 1.45;
 }
+.table-mini-wrap { overflow-x: auto; margin: 6px 0 8px; }
 .table-mini {
-  width: 100%; margin: 6px 0 8px; border-collapse: collapse; font-size: 11px;
+  width: 100%; border-collapse: collapse; font-size: 11px;
+  min-width: 220px;
 }
 .table-mini th, .table-mini td {
   border: 1px solid #e2e8f0; padding: 4px 6px; color: #1e293b;
+  word-break: keep-all;
 }
 .table-mini th { background: #f1f5f9; font-weight: 600; }
 .table-mini tr:nth-child(even) { background: #f8fafc; }
@@ -392,9 +397,11 @@ ul, ol { padding-left: 22px; margin-bottom: 14px; }
 .footer-left  { font-size: 12px; color: var(--fg-light); }
 .footer-right { font-size: 11px; color: var(--fg-light); font-family: 'JetBrains Mono', monospace; }
 
+@media (max-width: 760px) {
+  .case-grid  { grid-template-columns: 1fr; }
+}
 @media (max-width: 640px) {
   .arch-flow  { grid-template-columns: 1fr 1fr; }
-  .case-grid  { grid-template-columns: 1fr; }
   .spec-grid  { grid-template-columns: 1fr; }
   .nav-links  { display: none; }
   .page       { padding-block: 32px 60px; }
@@ -1026,7 +1033,7 @@ bash aihub/web/ui.sh       # → http://127.0.0.1:8000</div>
           <div class="msg-user">불량 최소화 조건 알려줘</div>
           <div class="msg-bot">
             <strong style="color:#0369a1;">✅ 불량 확률을 최소화하는 최적 조건입니다.</strong>
-            <table class="table-mini">
+            <div class="table-mini-wrap"><table class="table-mini">
               <thead><tr><th>항목</th><th>값</th><th>구분</th></tr></thead>
               <tbody>
                 <tr><td>생산 라인 / 교대조</td><td>LINE-BPR-02 / 주간</td><td>참고</td></tr>
@@ -1035,7 +1042,7 @@ bash aihub/web/ui.sh       # → http://127.0.0.1:8000</div>
                 <tr><td>공정 설정 편차</td><td><strong>2.06%</strong></td><td>제어</td></tr>
                 <tr><td>공구 마모도 / 정비일</td><td><strong>11.98% / 57일</strong></td><td>제어</td></tr>
               </tbody>
-            </table>
+            </table></div>
             <strong style="color:#15803d; font-size:11.5px;">🎯 이 조건에서의 예상 확률 — 불량: 1.83%, 정상: 98.17%</strong>
             <div style="font-size:10px; color:#64748b; margin-top:4px;">※ 이 결과는 모델 기반 추정이며 실제 공정 결과를 보장하지 않습니다.</div>
           </div>
@@ -1051,15 +1058,15 @@ bash aihub/web/ui.sh       # → http://127.0.0.1:8000</div>
           <div class="msg-bot">
             <strong style="color:#db2777;">📊 현재 조건의 예측 결함률: 1.65%</strong><br>
             <div style="margin-top:4px; font-weight:600; color:#0f172a;">불량 확률을 최소화하는 개선 조건:</div>
-            <table class="table-mini">
-              <thead><tr><th>주요 공정 항목</th><th>현재값</th><th>최적 추천값</th></tr></thead>
+            <div class="table-mini-wrap"><table class="table-mini">
+              <thead><tr><th>공정 항목</th><th>현재값</th><th>추천값</th></tr></thead>
               <tbody>
-                <tr><td>입고 자재 품질</td><td>83.95점</td><td><strong>96.20점 (▲)</strong></td></tr>
-                <tr><td>용접 에너지 설정</td><td>92.67%</td><td><strong>111.45% (▲)</strong></td></tr>
-                <tr><td>공정 설정 편차</td><td>13.06%</td><td><strong>2.06% (▼)</strong></td></tr>
+                <tr><td>자재 품질</td><td>83.95점</td><td><strong>96.20점 (▲)</strong></td></tr>
+                <tr><td>용접 에너지</td><td>92.67%</td><td><strong>111.45% (▲)</strong></td></tr>
+                <tr><td>설정 편차</td><td>13.06%</td><td><strong>2.06% (▼)</strong></td></tr>
                 <tr><td>공구 마모도</td><td>14.41%</td><td><strong>11.98% (▼)</strong></td></tr>
               </tbody>
-            </table>
+            </table></div>
             <strong style="color:#15803d; font-size:11.5px;">✨ 개선 조건 적용 시 예상 불량 확률: 1.83%</strong>
           </div>
         </div>
@@ -1086,15 +1093,15 @@ bash aihub/web/ui.sh       # → http://127.0.0.1:8000</div>
           <div class="msg-user">불량이 가장 잘 나는 위험 조건이 뭐야?</div>
           <div class="msg-bot">
             <strong style="color:#dc2626;">⚠️ 불량 발생 위험이 높은 조건입니다. (target=0)</strong>
-            <table class="table-mini">
+            <div class="table-mini-wrap"><table class="table-mini">
               <thead><tr><th>항목</th><th>위험 조건값</th></tr></thead>
               <tbody>
-                <tr><td>공급사 / 교대조</td><td>SIM-SUP-C / 야간(NIGHT)</td></tr>
-                <tr><td>입고 자재 품질점수</td><td><strong>78.68점 (낮음)</strong></td></tr>
+                <tr><td>공급사 / 교대조</td><td>SIM-SUP-C / 야간</td></tr>
+                <tr><td>자재 품질점수</td><td><strong>78.68점 (낮음)</strong></td></tr>
                 <tr><td>공구 마모도</td><td><strong>68.94% (높음)</strong></td></tr>
-                <tr><td>공정 설정 편차</td><td><strong>11.11% (높음)</strong></td></tr>
+                <tr><td>설정 편차</td><td><strong>11.11% (높음)</strong></td></tr>
               </tbody>
-            </table>
+            </table></div>
             <strong style="color:#dc2626; font-size:11.5px;">🎯 이 조건에서의 예상 불량 확률: 98.95%</strong>
             <div style="font-size:10px; color:#64748b; margin-top:4px;">※ 이 결과는 경계 조건 탐색용이며 현장 적용 목적이 아닙니다.</div>
           </div>
