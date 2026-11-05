@@ -10,9 +10,10 @@ Siemens AI Platform 관련 서비스 연동 및 로컬 머신러닝 데모 프�
 | `defect-advisor/` | `defect-predictor`와 동일한 예측 기능에 **공정 최적화(불량 최소화 / 위험 조건 탐색) API 연동**을 추가한 버전 (CLI, HTTP API, 로컬 웹 UI — 웹 UI는 최적화 조건 전용 렌더링 영역 없음, 결과는 답변 텍스트와 raw JSON으로 확인) | Python, FastAPI, Pydantic, httpx, Siemens SDC LLM Gateway |
 | `local-ml/` | 같은 12개 공정 조건으로 결함률(%)을 예측하는 모델을 로컬에서 탐색·학습·예측해 보는 스크립트 모음 | Python, pandas, scikit-learn, joblib |
 | `defect-dashboard/` | 결함률 예측 및 최적 공정조건 추천 Panopticon 대시보드 제작물 (AI Studio GBT 모델 → AI Hub 배포 → Panopticon 시각화) | Altair AI Studio, AI Hub, Panopticon |
+| `agent-learning/` | Tool Calling → MCP Server → ReAct Agent 개념을 Siemens SDC 환경에서 단계별로 직접 구현해보는 학습 레포 | Python, httpx, FastMCP, Siemens SDC LLM Gateway, AI Hub GBT 예측 API |
 | `test/` | 루트 공통 유틸리티. `llm_model_test.py`: SDC LLM 게이트웨이에 연결해 지원 모델 목록을 출력 (루트 `.env` 필요) | Python 표준 라이브러리 |
 
-세 폴더는 서로 독립된 프로젝트이며 코드로 연결되어 있지 않습니다. `defect-predictor`와 `defect-advisor`는 입력 스키마(12개 필드)와 패키지 구조가 거의 동일해 같은 계통의 코드베이스로 보이지만, 저장소 안에 둘 사이의 명시적인 연결(같은 import, 변경 이력 문서 등)은 확인되지 않았습니다. `local-ml`는 둘 다와 코드로 연결되어 있지 않으며 입력 컬럼 12개의 이름만 같습니다(아래 [두 프로젝트의 관계](#두-프로젝트의-관계) 참고).
+네 폴더는 서로 독립된 프로젝트이며 코드로 연결되어 있지 않습니다. `defect-predictor`와 `defect-advisor`는 입력 스키마(12개 필드)와 패키지 구조가 거의 동일해 같은 계통의 코드베이스로 보이지만, 저장소 안에 둘 사이의 명시적인 연결(같은 import, 변경 이력 문서 등)은 확인되지 않았습니다. `local-ml`는 둘 다와 코드로 연결되어 있지 않으며 입력 컬럼 12개의 이름만 같습니다(아래 [두 프로젝트의 관계](#두-프로젝트의-관계) 참고).
 
 ## defect-predictor
 
@@ -127,6 +128,40 @@ Panopticon의 Python Transform이 이 두 엔드포인트를 직접 호출합니
 - **`defect-predictor`와 `defect-advisor`의 관계**: 두 패키지는 `config.py`/`schema.py`/`ml.py`/`cli.py`/`api.py` 등 상당 부분의 코드가 동일해 보입니다(문서화 과정에서 비교해 확인). `defect-advisor`가 `defect-predictor`를 복사한 뒤 최적화 기능을 추가해 만든 것으로 추정되나, 두 폴더 사이의 git 이력이나 명시적 선언은 확인하지 못해 **추정**입니다. 두 패키지는 코드로 서로 import하지 않습니다.
 
 
+---
+
+## agent-learning
+
+### 목적
+
+Tool Calling · MCP · AI Agent 개념을 Siemens SDC 환경에서 단계적으로 직접 구현해보는 학습 레포입니다. 각 단계가 독립된 스크립트로 구성되어 있으며, 같은 도메인(공정 결함률 예측)을 소재로 개념을 쌓아 올립니다.
+
+### 학습 단계
+
+| 단계 | 디렉토리 | 핵심 개념 |
+|------|----------|-----------|
+| 1 | `01_tool_calling/` | LLM이 외부 함수를 어떻게 호출하는가 (Tool Calling 기본 + ML API 연동) |
+| 2 | `02_mcp_server/` | 도구를 USB처럼 표준화해 연결하는 MCP 서버 구현 (FastMCP) |
+| 3 | `03_agent/` | Tool Calling을 반복하는 자율 루프 — ReAct 패턴 Agent (최대 15 스텝) |
+
+### 아키텍처
+
+```
+core/    ← 인프라: 환경변수·HTTP 호출만 처리
+tools/   ← 도메인: 비즈니스 로직·스키마·라우팅
+01~03/   ← 애플리케이션: 대화 루프·ReAct 루프
+```
+
+### defect-predictor / defect-advisor와의 관계
+
+- 같은 AI Hub GBT 결함률 예측 API(12개 피처 → `prediction(defect_rate_pct)`)를 사용합니다.
+- `agent-learning`은 개념 학습용이므로 운영 코드(`defect-predictor` 등)의 슬롯 필링·Pydantic 검증 등의 안전장치가 없습니다.
+- 코드 의존 없음 — 세 폴더는 import로 연결되어 있지 않습니다.
+
+폴더 구조, 설치, 실행 방법은 [`agent-learning/README.md`](agent-learning/README.md)를 보세요.
+
+---
+
 ## 이 문서의 검증 범위
 
 - 소스·설정·기존 문서를 읽고 작성했습니다. CLI, 웹 UI, local-ml 스크립트, 최적화 API를 **실행해 확인한 결과는 없습니다**.
@@ -135,5 +170,6 @@ Panopticon의 Python Transform이 이 두 엔드포인트를 직접 호출합니
 ## 변경 이력
 
 - (작성일 미상) 루트 README 최초 작성: 폴더별 목적·구성·설치·실행 중심으로 작성.
+- **2026-11-05**: `agent-learning/` 폴더 추가 — 한눈에 보기 표 및 섹션 반영.
 - **2026-11-04**: `defect-dashboard/` README 작성 및 루트 README 섹션 상세화. `defect-dashboard/` 폴더 추가 — 한눈에 보기 표 및 섹션 반영. `llm_model_test.py`를 루트에서 `test/`로 이동. 한눈에 보기 표에 `test/` 항목 추가.
 - **2026-11-02**: defect-advisor 섹션을 소스 대조 후 3건 수정. (1) intent 표에 `predict_and_find_risk` 추가, `target` 열 추가, "추정" 주석 제거. (2) 웹 UI 설명을 현재 상태(clarify 처리 완료, 최적화 결과 answer/raw JSON 표시)로 수정. (3) 검증 범위의 pytest/`.pyc` 관련 구 상태 기술 제거.

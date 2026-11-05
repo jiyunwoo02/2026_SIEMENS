@@ -1,0 +1,1261 @@
+<title>아키텍처 구현 가이드</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+/* Layout: sticky 220px sidebar + scrollable main, tech-doc */
+:root {
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --raised: #F1F5F9;
+  --code-bg: #EEF2FF;
+  --fg: #0F172A;
+  --muted: #64748B;
+  --subtle: #94A3B8;
+  --accent: #6D28D9;
+  --accent-lt: #EDE9FE;
+  --accent-mid: #7C3AED;
+  --border: #E2E8F0;
+  --ok: #059669;    --ok-bg: #ECFDF5;
+  --warn: #D97706;  --warn-bg: #FFFBEB;
+  --info: #0284C7;  --info-bg: #F0F9FF;
+  --s-kw: #6D28D9;  --s-str: #059669;  --s-num: #D97706;
+  --s-cmt: #94A3B8; --s-fn: #2563EB;   --s-dec: #0EA5E9;
+  --s-cls: #9A3412; --s-op: #64748B;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D1117; --surface: #161B22; --raised: #1E2733; --code-bg: #150E30;
+    --fg: #E6EDF3; --muted: #8B949E; --subtle: #6E7681;
+    --accent: #A78BFA; --accent-lt: #2D1B69; --accent-mid: #C4B5FD; --border: #30363D;
+    --ok: #3FB950; --ok-bg: #0A2D18; --warn: #D29922; --warn-bg: #221A07;
+    --info: #58A6FF; --info-bg: #09203A;
+    --s-kw: #C4B5FD; --s-str: #3FB950; --s-num: #D29922;
+    --s-cmt: #6E7681; --s-fn: #79C0FF; --s-dec: #38BDF8;
+    --s-cls: #FFA657; --s-op: #8B949E;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D1117; --surface: #161B22; --raised: #1E2733; --code-bg: #150E30;
+  --fg: #E6EDF3; --muted: #8B949E; --subtle: #6E7681;
+  --accent: #A78BFA; --accent-lt: #2D1B69; --accent-mid: #C4B5FD; --border: #30363D;
+  --ok: #3FB950; --ok-bg: #0A2D18; --warn: #D29922; --warn-bg: #221A07;
+  --info: #58A6FF; --info-bg: #09203A;
+  --s-kw: #C4B5FD; --s-str: #3FB950; --s-num: #D29922;
+  --s-cmt: #6E7681; --s-fn: #79C0FF; --s-dec: #38BDF8;
+  --s-cls: #FFA657; --s-op: #8B949E;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans KR', system-ui, sans-serif;
+  background: var(--bg); color: var(--fg);
+  font-size: 15px; line-height: 1.75;
+  padding-left: max(0px, env(safe-area-inset-left, 0px));
+  padding-right: max(0px, env(safe-area-inset-right, 0px));
+}
+
+/* Shell */
+.shell {
+  max-width: 1200px; margin: 0 auto;
+  display: grid; grid-template-columns: 220px 1fr; align-items: start;
+}
+
+/* Sidebar */
+.sidebar {
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  padding: 32px 14px 32px 20px;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.sidebar-logo {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 20px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-mark {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: var(--accent); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.logo-mark svg { width: 16px; height: 16px; fill: white; }
+.logo-text { font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); line-height: 1.3; }
+
+.nav-group { margin-top: 14px; }
+.nav-group-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--subtle); padding: 0 8px; margin-bottom: 3px;
+}
+.nav-link {
+  display: block; padding: 5px 10px; border-radius: 6px;
+  font-size: 13px; color: var(--muted); text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+}
+.nav-link:hover { background: var(--accent-lt); color: var(--accent); }
+.nav-link.active { background: var(--accent-lt); color: var(--accent); font-weight: 600; }
+
+.theme-btn {
+  margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; color: var(--muted); cursor: pointer;
+  background: none; border-bottom: none; border-left: none; border-right: none;
+  width: 100%; text-align: left; padding-left: 10px; padding-bottom: 0;
+}
+.theme-btn:hover { color: var(--accent); }
+
+/* Main */
+.main {
+  min-width: 0;
+  padding: 48px 48px 80px;
+}
+
+/* Sections */
+.section { margin-bottom: 72px; scroll-margin-top: 24px; }
+
+.section-eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 6px;
+}
+h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; margin-bottom: 14px; text-wrap: balance; }
+h2 { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 14px; margin-top: 44px; padding-bottom: 10px; border-bottom: 1px solid var(--border); text-wrap: balance; }
+h2:first-child { margin-top: 0; }
+h3 { font-size: 15.5px; font-weight: 600; margin-bottom: 10px; margin-top: 28px; }
+h4 { font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; margin-top: 24px; }
+p { margin-bottom: 12px; }
+p:last-child { margin-bottom: 0; }
+
+/* Hero */
+.hero { padding-bottom: 40px; border-bottom: 1px solid var(--border); margin-bottom: 0; }
+.hero h1 { font-size: 34px; }
+.hero-lead { font-size: 16px; color: var(--muted); max-width: 580px; margin-bottom: 20px; }
+.badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 11px; border-radius: 20px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.03em;
+}
+.badge-purple { background: var(--accent-lt); color: var(--accent); }
+.badge-green  { background: var(--ok-bg);     color: var(--ok); }
+.badge-blue   { background: var(--info-bg);   color: var(--info); }
+.badge-warn   { background: var(--warn-bg);   color: var(--warn); }
+
+/* Concept cards */
+.concept-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 20px; }
+.concept-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 18px; display: flex; flex-direction: column; gap: 8px;
+}
+.concept-num {
+  font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 500;
+  color: var(--accent); letter-spacing: 0.08em;
+}
+.concept-card h3 { font-size: 14.5px; margin: 0; color: var(--fg); }
+.concept-card p  { font-size: 13px; color: var(--muted); margin: 0; line-height: 1.6; }
+.concept-pill {
+  margin-top: auto; display: inline-block; padding: 2px 8px;
+  border-radius: 10px; font-size: 11px; font-weight: 600;
+  background: var(--raised); color: var(--muted);
+  align-self: flex-start;
+}
+
+/* Code blocks */
+.code-wrap { margin: 14px 0; }
+.code-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 14px; background: var(--raised);
+  border: 1px solid var(--border); border-bottom: none;
+  border-radius: 10px 10px 0 0;
+}
+.code-path { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--muted); }
+.code-lang { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--subtle); }
+pre.code {
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 18px 20px;
+  overflow-x: auto; margin: 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.65;
+}
+.code-header + pre.code { border-radius: 0 0 10px 10px; }
+pre.code code { background: none; padding: 0; color: var(--fg); font-size: inherit; border-radius: 0; }
+code {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.85em;
+  background: var(--raised); padding: 1px 5px; border-radius: 4px; color: var(--accent);
+}
+/* syntax */
+.kw  { color: var(--s-kw);  font-style: normal; }
+.str { color: var(--s-str); }
+.num { color: var(--s-num); }
+.cmt { color: var(--s-cmt); font-style: italic; }
+.fn  { color: var(--s-fn);  }
+.dec { color: var(--s-dec); }
+.cls { color: var(--s-cls); }
+.op  { color: var(--s-op);  }
+
+/* Flow steps */
+.flow { display: flex; flex-direction: column; margin: 20px 0; }
+.flow-step { display: grid; grid-template-columns: 28px 1fr; gap: 14px; }
+.flow-line { display: flex; flex-direction: column; align-items: center; padding-top: 4px; }
+.flow-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.flow-trail { width: 2px; flex: 1; background: var(--border); min-height: 28px; }
+.flow-step:last-child .flow-trail { display: none; }
+.flow-body { padding-bottom: 22px; }
+.flow-step-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 3px; }
+.flow-step-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.flow-step-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+/* Callouts */
+.callout {
+  display: flex; gap: 11px; padding: 13px 16px; border-radius: 10px; margin: 14px 0; font-size: 13.5px;
+}
+.callout.info   { background: var(--info-bg);   border-left: 3px solid var(--info); }
+.callout.warn   { background: var(--warn-bg);   border-left: 3px solid var(--warn); }
+.callout.ok     { background: var(--ok-bg);     border-left: 3px solid var(--ok);   }
+.callout.accent { background: var(--accent-lt); border-left: 3px solid var(--accent); }
+.callout-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+.callout-body { min-width: 0; color: var(--fg); }
+.callout-title { font-weight: 600; margin-bottom: 3px; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; margin: 14px 0; border-radius: 10px; border: 1px solid var(--border); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+thead th {
+  background: var(--raised); text-align: left; padding: 9px 14px;
+  font-weight: 600; font-size: 11.5px; letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--border); color: var(--muted);
+}
+tbody td { padding: 8px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--raised); }
+
+/* Layer diagram */
+.layers { display: flex; flex-direction: column; gap: 4px; margin: 20px 0; }
+.layer {
+  border-radius: 10px; padding: 14px 20px;
+  display: grid; grid-template-columns: 100px 1fr; gap: 20px; align-items: start;
+}
+.layer-app    { background: var(--accent-lt); border: 1px solid var(--accent); }
+.layer-domain { background: var(--ok-bg);     border: 1px solid var(--ok);     }
+.layer-infra  { background: var(--warn-bg);   border: 1px solid var(--warn);   }
+.layer-label  { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding-top: 2px; }
+.layer-app    .layer-label { color: var(--accent); }
+.layer-domain .layer-label { color: var(--ok);     }
+.layer-infra  .layer-label { color: var(--warn);   }
+.layer-files  { display: flex; flex-wrap: wrap; gap: 6px; }
+.layer-file {
+  font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+  padding: 2px 8px; border-radius: 6px; background: var(--surface); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.dep-arrow { text-align: center; color: var(--subtle); font-size: 18px; line-height: 1; padding: 2px; }
+
+/* Step sequence */
+.seq { display: flex; flex-direction: column; gap: 0; margin: 20px 0; }
+.seq-row { display: flex; gap: 0; }
+.seq-num {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--accent-lt);
+  color: var(--accent); font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  margin-top: 2px;
+}
+.seq-connector { width: 32px; display: flex; justify-content: center; }
+.seq-line { width: 2px; background: var(--border); flex: 1; }
+.seq-row:last-child .seq-line { display: none; }
+.seq-content { padding: 0 0 20px 16px; min-width: 0; flex: 1; }
+.seq-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; color: var(--fg); }
+.seq-desc  { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+/* Comparison grid */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+.compare-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px;
+}
+.compare-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.compare-card h4 { font-size: 14px; margin: 0 0 6px; text-transform: none; letter-spacing: 0; color: var(--fg); }
+.compare-card ul { padding-left: 18px; font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+/* Mermaid diagram container */
+.mermaid-wrap {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 24px; margin: 16px 0; overflow-x: auto;
+}
+
+/* Run command block */
+.run-block { margin: 10px 0; }
+.run-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+
+/* Module ref */
+.module-section { margin-bottom: 36px; }
+.module-title {
+  font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500;
+  color: var(--accent); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 8px;
+}
+.module-badge {
+  font-family: 'Noto Sans KR', system-ui, sans-serif;
+  font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 10px;
+  background: var(--raised); color: var(--muted); letter-spacing: 0.03em;
+}
+.module-desc { font-size: 13.5px; color: var(--muted); margin-bottom: 10px; }
+
+/* Responsive */
+@media (max-width: 800px) {
+  .shell { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); flex-direction: row; flex-wrap: wrap; padding: 16px; gap: 8px; }
+  .sidebar-logo { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .nav-group { margin-top: 0; }
+  .theme-btn { margin-top: 0; padding-top: 0; border-top: none; }
+  .main { padding: 24px max(16px, env(safe-area-inset-left, 0px)) 48px; }
+  .concept-grid { grid-template-columns: 1fr; }
+  .compare-grid { grid-template-columns: 1fr; }
+  .layer { grid-template-columns: 1fr; gap: 8px; }
+}
+</style>
+
+<div class="shell">
+
+<!-- ═══ SIDEBAR ══════════════════════════════════════════════ -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 16 16"><path d="M8 2 L14 5 L14 11 L8 14 L2 11 L2 5 Z" fill="none" stroke="white" stroke-width="1.5"/><circle cx="8" cy="8" r="2" fill="white"/></svg>
+    </div>
+    <div class="logo-text">Agent<br>Learning</div>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">개요</div>
+    <a class="nav-link" href="#overview">학습 목표</a>
+    <a class="nav-link" href="#concepts">세 가지 개념</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">아키텍처</div>
+    <a class="nav-link" href="#architecture">계층 구조</a>
+    <a class="nav-link" href="#dependency">의존 관계</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">구현</div>
+    <a class="nav-link" href="#tool-calling">Tool Calling</a>
+    <a class="nav-link" href="#ml-api">ML API 연동</a>
+    <a class="nav-link" href="#mcp">MCP 서버</a>
+    <a class="nav-link" href="#agent">ReAct Agent</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">레퍼런스</div>
+    <a class="nav-link" href="#modules">모듈 레퍼런스</a>
+    <a class="nav-link" href="#running">실행 방법</a>
+  </div>
+
+  <button class="theme-btn" onclick="toggleTheme()">
+    <span id="theme-icon">🌙</span> <span id="theme-label">다크 모드</span>
+  </button>
+</nav>
+
+<!-- ═══ MAIN ══════════════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- HERO ───────────────────────────────────────────── -->
+  <div class="hero section" id="overview">
+    <div class="section-eyebrow">AI Agent Learning</div>
+    <h1>아키텍처 &amp; 구현 가이드</h1>
+    <p class="hero-lead">Tool Calling · MCP · ReAct Agent 세 개념의 동작 원리와 Siemens SDC 환경에서의 구체적인 구현 방법을 설명합니다.</p>
+
+    <div class="badge-row">
+      <span class="badge badge-purple">Tool Calling</span>
+      <span class="badge badge-blue">MCP Server</span>
+      <span class="badge badge-green">ReAct Agent</span>
+      <span class="badge badge-warn">SDC LLM Gateway</span>
+    </div>
+
+    <div class="table-wrap" style="margin-top: 28px;">
+      <table>
+        <thead>
+          <tr>
+            <th>단계</th><th>주제</th><th>핵심 질문</th><th>구현 파일</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>01</code></td>
+            <td>Tool Calling</td>
+            <td>LLM이 외부 함수를 어떻게 호출하는가?</td>
+            <td><code>01_tool_calling/basic.py</code></td>
+          </tr>
+          <tr>
+            <td><code>01-B</code></td>
+            <td>Tool Calling + ML</td>
+            <td>Tool 내부에서 실제 ML API를 연결하면?</td>
+            <td><code>01_tool_calling/with_ml_api.py</code></td>
+          </tr>
+          <tr>
+            <td><code>02</code></td>
+            <td>MCP Server</td>
+            <td>도구를 어떻게 표준화해서 연결하는가?</td>
+            <td><code>02_mcp_server/server.py</code></td>
+          </tr>
+          <tr>
+            <td><code>03</code></td>
+            <td>ReAct Agent</td>
+            <td>Tool Calling을 반복하는 자율 루프는?</td>
+            <td><code>03_agent/react_agent.py</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CONCEPTS ────────────────────────────────────────── -->
+  <div class="section" id="concepts">
+    <h2>세 가지 개념</h2>
+    <p>세 개념은 순서대로 발전합니다. Tool Calling이 기반이고, MCP는 도구 연결을 표준화하며, Agent는 Tool Calling을 자율적으로 반복합니다.</p>
+
+    <div class="concept-grid">
+      <div class="concept-card">
+        <div class="concept-num">CONCEPT 01</div>
+        <h3>Tool Calling</h3>
+        <p>LLM이 외부 함수를 "직접 실행"하지 않습니다. 어떤 함수를, 어떤 인자로 호출할지 JSON으로 선언하면 앱 코드가 실제로 실행합니다.</p>
+        <span class="concept-pill">단방향 1~2회</span>
+      </div>
+      <div class="concept-card">
+        <div class="concept-num">CONCEPT 02</div>
+        <h3>MCP</h3>
+        <p>Tool Calling의 도구 연결을 USB처럼 표준화한 프로토콜입니다. 한 번 서버를 만들면 Claude Desktop, Cursor 등 모든 MCP 클라이언트에서 사용할 수 있습니다.</p>
+        <span class="concept-pill">표준 광고 프로토콜</span>
+      </div>
+      <div class="concept-card">
+        <div class="concept-num">CONCEPT 03</div>
+        <h3>ReAct Agent</h3>
+        <p>목표를 받으면 LLM이 스스로 단계를 분해하고 도구를 N번 반복 호출합니다. 개발자가 순서를 하드코딩하지 않아도 됩니다.</p>
+        <span class="concept-pill">자율 N회 루프</span>
+      </div>
+    </div>
+
+    <div class="callout accent" style="margin-top: 20px;">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <div class="callout-title">핵심 원칙 — LLM은 함수를 실행하지 않는다</div>
+        <p>LLM은 JSON을 반환할 뿐입니다. 앱 코드가 함수를 실행한 뒤 결과를 <code>role="tool"</code> 메시지로 대화 히스토리에 추가해야 LLM이 다음 답변에서 그 결과를 활용할 수 있습니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARCHITECTURE ─────────────────────────────────────── -->
+  <div class="section" id="architecture">
+    <h2>계층 구조</h2>
+    <p>책임을 3개 계층으로 분리합니다. 역방향 의존은 없습니다.</p>
+
+    <div class="layers">
+      <div class="layer layer-app">
+        <div class="layer-label">애플리케이션</div>
+        <div>
+          <div class="layer-files">
+            <span class="layer-file">01_tool_calling/basic.py</span>
+            <span class="layer-file">01_tool_calling/with_ml_api.py</span>
+            <span class="layer-file">02_mcp_server/test_client.py</span>
+            <span class="layer-file">03_agent/react_agent.py</span>
+          </div>
+          <p style="font-size:12px; margin-top:6px; color: var(--accent);">대화 루프 · ReAct 루프 — <code>core/</code>와 <code>tools/</code>를 조합하는 진입점</p>
+        </div>
+      </div>
+      <div class="dep-arrow">↑</div>
+      <div class="layer layer-domain">
+        <div class="layer-label">도메인</div>
+        <div>
+          <div class="layer-files">
+            <span class="layer-file">tools/schemas.py</span>
+            <span class="layer-file">tools/functions.py</span>
+            <span class="layer-file">tools/registry.py</span>
+            <span class="layer-file">02_mcp_server/server.py</span>
+          </div>
+          <p style="font-size:12px; margin-top:6px; color: var(--ok);">비즈니스 로직 · Tool JSON Schema · 이름→함수 매핑</p>
+        </div>
+      </div>
+      <div class="dep-arrow">↑</div>
+      <div class="layer layer-infra">
+        <div class="layer-label">인프라</div>
+        <div>
+          <div class="layer-files">
+            <span class="layer-file">core/config.py</span>
+            <span class="layer-file">core/llm.py</span>
+            <span class="layer-file">core/ml.py</span>
+          </div>
+          <p style="font-size:12px; margin-top:6px; color: var(--warn);">외부 API I/O만 처리 — 비즈니스 로직 없음</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ️</div>
+      <div class="callout-body">
+        <div class="callout-title">모든 패턴이 tools/functions.py 하나를 공유합니다</div>
+        <p>MCP 서버(<code>server.py</code>)도 <code>@mcp.tool()</code> 래퍼만 추가한 얇은 래퍼입니다. 비즈니스 로직은 항상 <code>tools/functions.py</code>에 있습니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEPENDENCY ──────────────────────────────────────── -->
+  <div class="section" id="dependency">
+    <h2>의존 관계 다이어그램</h2>
+
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+flowchart TB
+    subgraph ENTRY["진입점 (실행 가능한 4가지 패턴)"]
+        B["01_tool_calling/basic.py<br/>Tool Calling"]
+        M["01_tool_calling/with_ml_api.py<br/>Tool Calling + ML API"]
+        MC["02_mcp_server/test_client.py<br/>MCP Client"]
+        A["03_agent/react_agent.py<br/>ReAct Agent"]
+    end
+
+    S["02_mcp_server/server.py<br/>FastMCP · @mcp.tool 래퍼"]
+
+    subgraph TOOLS["tools/ — 도구 계층"]
+        SC["schemas.py<br/>TOOLS_BASIC / TOOLS_ML / TOOLS_AGENT"]
+        RG["registry.py<br/>name → callable 매핑"]
+        FN["functions.py<br/>실제 비즈니스 로직"]
+    end
+
+    subgraph CORE["core/ — 인프라 계층"]
+        LLM["llm.py<br/>call_llm / get_finish_reason"]
+        MLM["ml.py<br/>call_ml_api"]
+        CFG["config.py<br/>API_KEY · BASE_URL · LLM_MODEL"]
+    end
+
+    EXT["외부 ML API<br/>defect_rate 예측"]
+    LAPI["SDC LLM Gateway<br/>OpenAI 호환"]
+
+    B --> SC
+    B --> RG
+    B --> LLM
+    M --> SC
+    M --> RG
+    M --> LLM
+    A --> SC
+    A --> RG
+    A --> LLM
+    MC -.->|stdio subprocess| S
+    S --> FN
+    RG --> FN
+    FN --> MLM
+    MLM --> EXT
+    LLM --> CFG
+    LLM --> LAPI
+
+    classDef entry fill:#EDE9FE,stroke:#7C3AED,color:#0F172A
+    classDef tool  fill:#ECFDF5,stroke:#059669,color:#0F172A
+    classDef core  fill:#FFFBEB,stroke:#D97706,color:#0F172A
+    classDef ext   fill:#F0F9FF,stroke:#0284C7,color:#0F172A
+    class B,M,MC,A entry
+    class SC,RG,FN,S tool
+    class LLM,MLM,CFG core
+    class EXT,LAPI ext
+      </pre>
+    </div>
+  </div>
+
+  <!-- TOOL CALLING ────────────────────────────────────── -->
+  <div class="section" id="tool-calling">
+    <h2>Tool Calling 구현</h2>
+    <p>구현 위치: <code>01_tool_calling/basic.py</code></p>
+    <p><strong>예시 질의:</strong> "야간 2라인의 결함률을 조회하고, 2.5%를 초과하면 HIGH 심각도로 알림 보내줘"</p>
+
+    <h3>전체 흐름 (5단계)</h3>
+
+    <div class="seq">
+      <div class="seq-row">
+        <div>
+          <div class="seq-num">1</div>
+          <div class="seq-connector"><div class="seq-line"></div></div>
+        </div>
+        <div class="seq-content">
+          <div class="seq-title">도구 정의 — JSON Schema 작성</div>
+          <div class="seq-desc">앱 코드가 LLM에게 "이런 함수를 쓸 수 있다"고 알려주기 위해 <code>tools/schemas.py</code>에 JSON Schema를 작성합니다.</div>
+        </div>
+      </div>
+      <div class="seq-row">
+        <div>
+          <div class="seq-num">2</div>
+          <div class="seq-connector"><div class="seq-line"></div></div>
+        </div>
+        <div class="seq-content">
+          <div class="seq-title">1차 LLM 호출 — 도구 선택</div>
+          <div class="seq-desc"><code>finish_reason: "tool_calls"</code> → LLM이 어떤 함수를, 어떤 인자로 호출할지 JSON으로 반환합니다. 함수는 실행하지 않습니다.</div>
+        </div>
+      </div>
+      <div class="seq-row">
+        <div>
+          <div class="seq-num">3</div>
+          <div class="seq-connector"><div class="seq-line"></div></div>
+        </div>
+        <div class="seq-content">
+          <div class="seq-title">앱 코드 함수 실행</div>
+          <div class="seq-desc"><code>execute_tool()</code>가 <code>REGISTRY_BASIC</code>에서 함수를 꺼내 실행합니다. 결과를 <code>role="tool"</code> 메시지로 대화 히스토리에 추가합니다.</div>
+        </div>
+      </div>
+      <div class="seq-row">
+        <div>
+          <div class="seq-num">4</div>
+          <div class="seq-connector"><div class="seq-line"></div></div>
+        </div>
+        <div class="seq-content">
+          <div class="seq-title">2차 LLM 호출 — 결과 판단</div>
+          <div class="seq-desc">결함률 2.91% &gt; 2.5% 임을 판단하고 다음 도구(<code>create_alert</code>)를 선택합니다. 앱 코드가 다시 실행합니다.</div>
+        </div>
+      </div>
+      <div class="seq-row">
+        <div>
+          <div class="seq-num">5</div>
+          <div class="seq-connector"><div class="seq-line"></div></div>
+        </div>
+        <div class="seq-content">
+          <div class="seq-title">3차 LLM 호출 — 최종 답변</div>
+          <div class="seq-desc"><code>finish_reason: "stop"</code> → 루프 종료. 지금까지의 결과를 종합한 한국어 답변을 생성합니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>핵심 코드</h3>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-path">tools/schemas.py</span>
+        <span class="code-lang">Python</span>
+      </div>
+      <pre class="code"><code><span class="cmt"># LLM에게 함수의 존재를 알리는 JSON Schema</span>
+<span class="cls">SCHEMA_GET_SHIFT_STATS</span> <span class="op">=</span> {
+    <span class="str">"type"</span>: <span class="str">"function"</span>,
+    <span class="str">"function"</span>: {
+        <span class="str">"name"</span>: <span class="str">"get_shift_stats"</span>,
+        <span class="str">"description"</span>: <span class="str">"교대조와 생산 라인의 과거 평균 결함률을 조회합니다."</span>,
+        <span class="str">"parameters"</span>: {
+            <span class="str">"properties"</span>: {
+                <span class="str">"shift"</span>:           {<span class="str">"type"</span>: <span class="str">"string"</span>, <span class="str">"enum"</span>: [<span class="str">"DAY"</span>, <span class="str">"NIGHT"</span>]},
+                <span class="str">"production_line"</span>: {<span class="str">"type"</span>: <span class="str">"string"</span>, <span class="str">"enum"</span>: [<span class="str">"LINE-BPR-01"</span>, <span class="str">"LINE-BPR-02"</span>]},
+            },
+            <span class="str">"required"</span>: [<span class="str">"shift"</span>, <span class="str">"production_line"</span>],
+        },
+    },
+}</code></pre>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-path">01_tool_calling/basic.py — 루프 핵심</span>
+        <span class="code-lang">Python</span>
+      </div>
+      <pre class="code"><code><span class="kw">def</span> <span class="fn">chat_with_tools</span>(user_message: <span class="cls">str</span>) <span class="op">-></span> <span class="cls">str</span>:
+    messages <span class="op">=</span> [
+        {<span class="str">"role"</span>: <span class="str">"system"</span>, <span class="str">"content"</span>: _SYSTEM_PROMPT},
+        {<span class="str">"role"</span>: <span class="str">"user"</span>,   <span class="str">"content"</span>: user_message},
+    ]
+
+    <span class="kw">while True</span>:
+        response      <span class="op">=</span> <span class="fn">call_llm</span>(messages, tools<span class="op">=</span>TOOLS_BASIC)
+        finish_reason <span class="op">=</span> <span class="fn">get_finish_reason</span>(response)
+        message       <span class="op">=</span> <span class="fn">get_message</span>(response)
+
+        <span class="kw">if</span> finish_reason <span class="op">!=</span> <span class="str">"tool_calls"</span>:
+            <span class="kw">break</span>                       <span class="cmt"># finish_reason="stop" → 최종 답변</span>
+
+        <span class="kw">for</span> tc <span class="kw">in</span> message[<span class="str">"tool_calls"</span>]:
+            name   <span class="op">=</span> tc[<span class="str">"function"</span>][<span class="str">"name"</span>]
+            args   <span class="op">=</span> json.<span class="fn">loads</span>(tc[<span class="str">"function"</span>][<span class="str">"arguments"</span>])
+            result <span class="op">=</span> <span class="fn">execute_tool</span>(name, args, REGISTRY_BASIC)
+
+            messages.<span class="fn">append</span>({
+                <span class="str">"role"</span>:         <span class="str">"tool"</span>,
+                <span class="str">"tool_call_id"</span>: tc[<span class="str">"id"</span>],  <span class="cmt"># LLM이 어느 호출의 결과인지 매핑</span>
+                <span class="str">"content"</span>:      result,
+            })
+
+    <span class="kw">return</span> <span class="fn">extract_text</span>(response)</code></pre>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-body">
+        <div class="callout-title">tool_call_id 매핑이 필수입니다</div>
+        <p><code>tool_call_id</code>를 빠뜨리면 LLM이 어떤 도구의 결과인지 알 수 없어 오류가 발생합니다. 항상 LLM이 반환한 <code>tc["id"]</code>를 그대로 돌려줘야 합니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ML API ───────────────────────────────────────────── -->
+  <div class="section" id="ml-api">
+    <h2>ML API 연동 Tool Calling</h2>
+    <p>구현 위치: <code>01_tool_calling/with_ml_api.py</code></p>
+    <p>기본 Tool Calling과 흐름은 동일하지만, Tool 내부에서 외부 ML API를 호출한다는 점이 다릅니다. LLM이 한국어 자연어에서 12개 파라미터를 추출해 ML API를 호출합니다.</p>
+
+    <h3>자연어 → 파라미터 변환 (LLM이 처리)</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>자연어 입력</th><th>추출된 파라미터</th><th>값</th></tr></thead>
+        <tbody>
+          <tr><td>"1라인"</td><td><code>production_line</code></td><td><code>LINE-BPR-01</code></td></tr>
+          <tr><td>"주간조"</td><td><code>shift</code></td><td><code>DAY</code></td></tr>
+          <tr><td>"3주 전"</td><td><code>days_since_maintenance</code></td><td><code>21</code></td></tr>
+          <tr><td>"A공급사"</td><td><code>supplier_code</code></td><td><code>SIM-SUP-A</code></td></tr>
+          <tr><td>"습도 58%"</td><td><code>ambient_humidity_pct</code></td><td><code>58.0</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Tool 내부 ML API 호출 구조</h3>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-path">tools/functions.py — predict_defect_rate</span>
+        <span class="code-lang">Python</span>
+      </div>
+      <pre class="code"><code><span class="kw">def</span> <span class="fn">predict_defect_rate</span>(
+    production_line: <span class="cls">str</span>, shift: <span class="cls">str</span>, supplier_code: <span class="cls">str</span>,
+    planned_quantity: <span class="cls">int</span>, ambient_humidity_pct: <span class="cls">float</span>,
+    <span class="cmt"># ... 12개 파라미터</span>
+) <span class="op">-></span> <span class="cls">dict</span>:
+    row <span class="op">=</span> {
+        <span class="str">"production_line"</span>:   production_line,
+        <span class="str">"shift"</span>:             shift,
+        <span class="cmt"># ... 12개 필드 조립</span>
+    }
+
+    <span class="cmt"># HTTP 호출은 core/ml.py에 위임 — 비즈니스 로직 분리</span>
+    defect_pct <span class="op">=</span> <span class="fn">call_ml_api</span>(row)
+
+    <span class="kw">return</span> {
+        <span class="str">"mode"</span>:                      <span class="str">"mock"</span> <span class="kw">if</span> (MOCK_ML <span class="kw">or not</span> ML_URL) <span class="kw">else</span> <span class="str">"real"</span>,
+        <span class="str">"prediction_defect_rate_pct"</span>: defect_pct,
+    }</code></pre>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-path">core/ml.py — ML API HTTP 호출</span>
+        <span class="code-lang">Python</span>
+      </div>
+      <pre class="code"><code><span class="kw">def</span> <span class="fn">call_ml_api</span>(row: <span class="cls">dict</span>) <span class="op">-></span> <span class="cls">float</span>:
+    <span class="kw">if</span> MOCK_ML <span class="kw">or not</span> ML_URL:
+        <span class="kw">return</span> <span class="fn">_mock_predict</span>(row)       <span class="cmt"># MOCK_ML=true 시 자동 사용</span>
+
+    <span class="kw">with</span> httpx.<span class="cls">Client</span>(verify<span class="op">=</span><span class="kw">False</span>) <span class="kw">as</span> client:    <span class="cmt"># 자체서명 SSL</span>
+        resp <span class="op">=</span> client.<span class="fn">post</span>(
+            ML_URL,
+            json<span class="op">=</span>{<span class="str">"data"</span>: [row]},
+            headers<span class="op">=</span>{<span class="str">"x-api-key"</span>: API_KEY},
+        )
+        result <span class="op">=</span> resp.<span class="fn">json</span>()
+        <span class="kw">return</span> result[<span class="str">"data"</span>][<span class="num">0</span>][<span class="str">"prediction(defect_rate_pct)"</span>]</code></pre>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ️</div>
+      <div class="callout-body">
+        <div class="callout-title">Mock 모드로 먼저 테스트하세요</div>
+        <p>ML API 없이도 <code>MOCK_ML=true python 01_tool_calling/with_ml_api.py</code>로 전체 흐름을 확인할 수 있습니다. <code>core/ml.py</code>의 <code>_mock_predict</code>가 공구 마모·정비 경과일을 기반으로 결함률을 계산합니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MCP ─────────────────────────────────────────────── -->
+  <div class="section" id="mcp">
+    <h2>MCP 서버 구현</h2>
+    <p>구현 위치: <code>02_mcp_server/server.py</code>, <code>02_mcp_server/test_client.py</code></p>
+
+    <div class="compare-grid">
+      <div class="compare-card">
+        <div class="compare-label">일반 Tool Calling</div>
+        <h4>앱마다 직접 구성</h4>
+        <ul>
+          <li>각 LLM 앱마다 JSON Schema를 직접 작성</li>
+          <li>해당 앱에서만 사용 가능</li>
+          <li>도구 목록을 코드에 하드코딩</li>
+        </ul>
+      </div>
+      <div class="compare-card">
+        <div class="compare-label">MCP</div>
+        <h4>표준 프로토콜로 광고</h4>
+        <ul>
+          <li><code>@mcp.tool()</code> 데코레이터로 자동 생성</li>
+          <li>Claude Desktop, Cursor 등 모든 MCP 클라이언트에서 사용</li>
+          <li><code>session.list_tools()</code>로 런타임에 동적 조회</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>서버 — 얇은 래퍼 패턴</h3>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-path">02_mcp_server/server.py</span>
+        <span class="code-lang">Python</span>
+      </div>
+      <pre class="code"><code><span class="kw">from</span> mcp.server.fastmcp <span class="kw">import</span> <span class="cls">FastMCP</span>
+<span class="kw">from</span> tools.functions <span class="kw">import</span> get_shift_stats <span class="kw">as</span> _get_shift_stats
+
+mcp <span class="op">=</span> <span class="cls">FastMCP</span>(<span class="str">"defect-predictor-mcp"</span>)
+
+<span class="dec">@mcp.tool()</span>
+<span class="kw">def</span> <span class="fn">get_shift_stats</span>(shift: <span class="cls">str</span>, production_line: <span class="cls">str</span>) <span class="op">-></span> <span class="cls">dict</span>:
+    <span class="str">"""
+    특정 교대조와 생산 라인의 과거 6개월 평균 결함률을 조회합니다.
+
+    Args:
+        shift: 교대조 (DAY 또는 NIGHT)
+        production_line: 생산 라인 코드 (LINE-BPR-01 또는 LINE-BPR-02)
+    """</span>
+    <span class="cmt"># 실제 구현은 tools/functions.py에 위임</span>
+    <span class="kw">return</span> <span class="fn">_get_shift_stats</span>(shift<span class="op">=</span>shift, production_line<span class="op">=</span>production_line)
+
+<span class="cmt"># 실행 모드 선택</span>
+<span class="kw">if</span> <span class="str">"--port"</span> <span class="kw">in</span> sys.argv:
+    mcp.<span class="fn">run</span>(transport<span class="op">=</span><span class="str">"sse"</span>, port<span class="op">=</span>port)   <span class="cmt"># HTTP SSE 모드</span>
+<span class="kw">else</span>:
+    mcp.<span class="fn">run</span>(transport<span class="op">=</span><span class="str">"stdio"</span>)             <span class="cmt"># stdio 모드 (Claude Desktop)</span></code></pre>
+    </div>
+
+    <h3>클라이언트 — 도구 목록 동적 조회</h3>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-path">02_mcp_server/test_client.py</span>
+        <span class="code-lang">Python</span>
+      </div>
+      <pre class="code"><code><span class="kw">async def</span> <span class="fn">main</span>():
+    <span class="cmt"># server.py를 subprocess로 자동 실행 — 별도 터미널 불필요</span>
+    params <span class="op">=</span> <span class="cls">StdioServerParameters</span>(command<span class="op">=</span><span class="str">"python"</span>, args<span class="op">=</span>[<span class="str">"02_mcp_server/server.py"</span>])
+
+    <span class="kw">async with</span> <span class="fn">stdio_client</span>(params) <span class="kw">as</span> (read, write):
+        <span class="kw">async with</span> <span class="cls">ClientSession</span>(read, write) <span class="kw">as</span> session:
+            <span class="kw">await</span> session.<span class="fn">initialize</span>()           <span class="cmt"># 프로토콜 버전 협상</span>
+
+            tools <span class="op">=</span> <span class="kw">await</span> session.<span class="fn">list_tools</span>()   <span class="cmt"># 서버가 광고하는 도구 목록 조회</span>
+
+            result <span class="op">=</span> <span class="kw">await</span> session.<span class="fn">call_tool</span>(
+                <span class="str">"get_shift_stats"</span>,
+                arguments<span class="op">=</span>{<span class="str">"shift"</span>: <span class="str">"DAY"</span>, <span class="str">"production_line"</span>: <span class="str">"LINE-BPR-01"</span>},
+            )
+            <span class="cmt"># → '{"avg_defect_pct": 1.82, ...}'</span></code></pre>
+    </div>
+
+    <h3>Claude Desktop 연결 설정</h3>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-path">~/.config/claude/claude_desktop_config.json</span>
+        <span class="code-lang">JSON</span>
+      </div>
+      <pre class="code"><code>{
+  <span class="str">"mcpServers"</span>: {
+    <span class="str">"defect-predictor"</span>: {
+      <span class="str">"command"</span>: <span class="str">"python"</span>,
+      <span class="str">"args"</span>: [<span class="str">"/home/jywoo/siemens/agent-learning/02_mcp_server/server.py"</span>],
+      <span class="str">"env"</span>: {
+        <span class="str">"API_KEY"</span>:         <span class="str">"..."</span>,
+        <span class="str">"ML_ENDPOINT_URL"</span>: <span class="str">"..."</span>
+      }
+    }
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <!-- AGENT ──────────────────────────────────────────── -->
+  <div class="section" id="agent">
+    <h2>ReAct Agent 구현</h2>
+    <p>구현 위치: <code>03_agent/react_agent.py</code></p>
+    <p><strong>예시 목표:</strong> "1라인과 2라인의 주간·야간 교대조 결함률을 모두 조회하고, 2.5%를 초과하는 조합은 HIGH 심각도로 알림을 발송해줘"</p>
+
+    <h3>ReAct 루프 구조</h3>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <span class="code-path">03_agent/react_agent.py — run_agent()</span>
+        <span class="code-lang">Python</span>
+      </div>
+      <pre class="code"><code><span class="cls">MAX_STEPS</span> <span class="op">=</span> <span class="num">15</span>  <span class="cmt"># 무한 루프 방지</span>
+
+<span class="kw">def</span> <span class="fn">run_agent</span>(goal: <span class="cls">str</span>) <span class="op">-></span> <span class="cls">str</span>:
+    messages <span class="op">=</span> [
+        {<span class="str">"role"</span>: <span class="str">"system"</span>, <span class="str">"content"</span>: _SYSTEM_PROMPT},
+        {<span class="str">"role"</span>: <span class="str">"user"</span>,   <span class="str">"content"</span>: goal},
+    ]
+
+    <span class="kw">while</span> step <span class="op">&lt;</span> MAX_STEPS:
+        step <span class="op">+=</span> <span class="num">1</span>
+        response      <span class="op">=</span> <span class="fn">call_llm</span>(messages, tools<span class="op">=</span>TOOLS_AGENT)
+        finish_reason <span class="op">=</span> <span class="fn">get_finish_reason</span>(response)
+        message       <span class="op">=</span> <span class="fn">get_message</span>(response)
+
+        <span class="kw">if</span> finish_reason <span class="op">!=</span> <span class="str">"tool_calls"</span>:
+            <span class="kw">break</span>                   <span class="cmt"># 최종 답변 → 루프 종료</span>
+
+        <span class="cmt"># Thought: LLM의 판단 내용 출력</span>
+        <span class="kw">if</span> message.<span class="fn">get</span>(<span class="str">"content"</span>):
+            <span class="fn">print</span>(<span class="str">f"💭 Thought: </span>{message[<span class="str">'content'</span>]}<span class="str">"</span>)
+
+        <span class="cmt"># Action + Observation</span>
+        <span class="kw">for</span> tc <span class="kw">in</span> message[<span class="str">"tool_calls"</span>]:
+            result <span class="op">=</span> <span class="fn">execute_tool</span>(tc[<span class="str">"function"</span>][<span class="str">"name"</span>], args, REGISTRY_AGENT)
+            messages.<span class="fn">append</span>({
+                <span class="str">"role"</span>: <span class="str">"tool"</span>, <span class="str">"tool_call_id"</span>: tc[<span class="str">"id"</span>], <span class="str">"content"</span>: result
+            })
+    <span class="kw">else</span>:
+        <span class="cmt"># MAX_STEPS 초과 시 강제 종료</span>
+        messages.<span class="fn">append</span>({<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">"지금까지의 결과를 종합해줘."</span>})
+        response <span class="op">=</span> <span class="fn">call_llm</span>(messages)</code></pre>
+    </div>
+
+    <h3>실제 실행 흐름 예시</h3>
+
+    <div class="code-wrap">
+      <pre class="code"><code>🎯 목표: 1·2라인 주·야간 전체 조회 + 2.5% 초과 알림
+
+── STEP 1 ──────────────────────────────────────────
+💭 Thought: "2개 라인 × 2교대 = 4개 조합. 먼저 1라인 주간부터."
+⚙️  Action: get_shift_stats(shift="DAY", production_line="LINE-BPR-01")
+📋 Obs:    {"avg_defect_pct": 1.82, "avg_quantity": 523, "sample_count": 180}
+
+── STEP 2 ──────────────────────────────────────────
+⚙️  Action: get_shift_stats(shift="DAY", production_line="LINE-BPR-02")
+📋 Obs:    {"avg_defect_pct": 2.14, "avg_quantity": 497, "sample_count": 162}
+
+── STEP 3 ──────────────────────────────────────────
+⚙️  Action: get_shift_stats(shift="NIGHT", production_line="LINE-BPR-01")
+📋 Obs:    {"avg_defect_pct": 2.45, "avg_quantity": 488, "sample_count": 174}
+
+── STEP 4 ──────────────────────────────────────────
+⚙️  Action: get_shift_stats(shift="NIGHT", production_line="LINE-BPR-02")
+📋 Obs:    {"avg_defect_pct": 2.91, "avg_quantity": 471, "sample_count": 158}
+
+── STEP 5 ──────────────────────────────────────────
+💭 Thought: "2.91% > 2.5% 초과: 야간 2라인에 HIGH 알림 발송."
+⚙️  Action: create_alert(message="야간 2라인 결함률 2.91%", severity="HIGH")
+📋 Obs:    {"status": "sent", "alert_id": "ALERT-1234567890"}
+
+── STEP 6 ──────────────────────────────────────────
+finish_reason="stop" → 최종 답변 도출</code></pre>
+    </div>
+
+    <h3>Tool Calling vs Agent 비교</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th></th><th>Tool Calling (basic)</th><th>Tool Calling (ML)</th><th>MCP</th><th>ReAct Agent</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>도구 호출 횟수</td><td>1~2회</td><td>1회</td><td>직접 호출</td><td>N회 (자율 결정)</td></tr>
+          <tr><td>도구 선택 주체</td><td>LLM</td><td>LLM</td><td>LLM</td><td>LLM</td></tr>
+          <tr><td>실제 실행 주체</td><td>앱 코드</td><td>앱 코드</td><td>MCP 서버</td><td>앱 코드</td></tr>
+          <tr><td>계획 주체</td><td>없음 (단발)</td><td>없음 (단발)</td><td>없음 (단발)</td><td>LLM이 스스로 분해</td></tr>
+          <tr><td>Tool 내부</td><td>mock 함수</td><td>외부 ML API</td><td>비즈니스 로직</td><td>mock + ML + 알림</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MODULES ─────────────────────────────────────────── -->
+  <div class="section" id="modules">
+    <h2>모듈 레퍼런스</h2>
+
+    <h3>core/</h3>
+
+    <div class="module-section">
+      <div class="module-title">
+        core/config.py
+        <span class="module-badge">인프라</span>
+      </div>
+      <div class="module-desc"><code>.env</code> 파일을 읽어 상수로 export하는 단일 진입점. <code>load_dotenv</code>는 이 파일에서만 호출됩니다.</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>상수</th><th>설명</th><th>기본값</th></tr></thead>
+          <tbody>
+            <tr><td><code>API_KEY</code></td><td>SDC LLM Gateway 인증 키</td><td><code>""</code></td></tr>
+            <tr><td><code>BASE_URL</code></td><td>SDC LLM Gateway 엔드포인트</td><td><code>https://llm.sdc.siemens.cloud/v1</code></td></tr>
+            <tr><td><code>LLM_MODEL</code></td><td>사용할 모델명</td><td><code>gpt-5</code></td></tr>
+            <tr><td><code>ML_URL</code></td><td>AI Hub ML API 엔드포인트</td><td><code>""</code></td></tr>
+            <tr><td><code>MOCK_ML</code></td><td>mock 모드 활성화 여부</td><td><code>false</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="module-section">
+      <div class="module-title">
+        core/llm.py
+        <span class="module-badge">인프라</span>
+      </div>
+      <div class="module-desc">Siemens SDC LLM Gateway HTTP 호출 전담. 인증 헤더는 표준 <code>Authorization: Bearer</code>가 아닌 <code>x-api-key</code> 헤더를 사용합니다.</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>함수</th><th>시그니처</th><th>설명</th></tr></thead>
+          <tbody>
+            <tr><td><code>call_llm</code></td><td><code>(messages, tools=None, model=None) → dict</code></td><td>LLM에 채팅 요청. tools 전달 시 tool_choice=auto</td></tr>
+            <tr><td><code>extract_text</code></td><td><code>(response) → str</code></td><td>응답 JSON에서 텍스트 콘텐츠 추출</td></tr>
+            <tr><td><code>get_finish_reason</code></td><td><code>(response) → str</code></td><td><code>"stop"</code> 또는 <code>"tool_calls"</code> 반환</td></tr>
+            <tr><td><code>get_message</code></td><td><code>(response) → dict</code></td><td><code>choices[0].message</code> 객체 반환</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="module-section">
+      <div class="module-title">
+        core/ml.py
+        <span class="module-badge">인프라</span>
+      </div>
+      <div class="module-desc">AI Hub GBT 결함률 예측 ML API의 HTTP 호출 전담. <code>MOCK_ML=true</code>이거나 <code>ML_URL</code>이 비어 있으면 자동으로 mock 사용. 자체서명 SSL → <code>httpx.Client(verify=False)</code>.</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>함수</th><th>시그니처</th><th>설명</th></tr></thead>
+          <tbody>
+            <tr><td><code>call_ml_api</code></td><td><code>(row: dict) → float</code></td><td>12개 피처 딕셔너리 → 결함률(%) 예측값 반환</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h3>tools/</h3>
+
+    <div class="module-section">
+      <div class="module-title">
+        tools/schemas.py
+        <span class="module-badge">도메인</span>
+      </div>
+      <div class="module-desc">OpenAI Tool Calling JSON Schema 정의. MCP 서버는 <code>@mcp.tool()</code>이 자동 생성하므로 이 파일을 사용하지 않습니다.</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>그룹</th><th>포함 스키마</th><th>사용처</th></tr></thead>
+          <tbody>
+            <tr><td><code>TOOLS_BASIC</code></td><td>GET_SHIFT_STATS, CREATE_ALERT</td><td><code>01_tool_calling/basic.py</code></td></tr>
+            <tr><td><code>TOOLS_ML</code></td><td>PREDICT_DEFECT_RATE</td><td><code>01_tool_calling/with_ml_api.py</code></td></tr>
+            <tr><td><code>TOOLS_AGENT</code></td><td>GET_SHIFT_STATS, PREDICT_DEFECT_RATE, CREATE_QUALITY_ALERT</td><td><code>03_agent/react_agent.py</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="module-section">
+      <div class="module-title">
+        tools/functions.py
+        <span class="module-badge">도메인</span>
+      </div>
+      <div class="module-desc">실제 도구 함수 구현. HTTP 호출은 <code>core/ml.py</code>에 위임하고, 비즈니스 로직만 처리합니다. 모든 패턴이 이 파일을 공유합니다.</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>함수</th><th>반환</th><th>설명</th></tr></thead>
+          <tbody>
+            <tr><td><code>get_shift_stats(shift, production_line)</code></td><td>dict</td><td>mock DB에서 과거 6개월 평균 통계 반환</td></tr>
+            <tr><td><code>create_alert(message, severity, production_line="")</code></td><td>dict</td><td>콘솔 출력 형태의 mock 알림 발송</td></tr>
+            <tr><td><code>predict_defect_rate(12개 파라미터)</code></td><td>dict</td><td>파라미터 조립 후 <code>core/ml.call_ml_api</code>에 위임</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="module-section">
+      <div class="module-title">
+        tools/registry.py
+        <span class="module-badge">도메인</span>
+      </div>
+      <div class="module-desc">도구 이름 → 함수 매핑 딕셔너리와 <code>execute_tool</code> 디스패처 제공.</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>레지스트리</th><th>포함 함수</th><th>사용처</th></tr></thead>
+          <tbody>
+            <tr><td><code>REGISTRY_BASIC</code></td><td>get_shift_stats, create_alert</td><td>basic.py</td></tr>
+            <tr><td><code>REGISTRY_ML</code></td><td>predict_defect_rate</td><td>with_ml_api.py</td></tr>
+            <tr><td><code>REGISTRY_AGENT</code></td><td>get_shift_stats, predict_defect_rate, create_alert</td><td>react_agent.py</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h3>새 도구 추가 방법</h3>
+
+    <div class="seq">
+      <div class="seq-row">
+        <div>
+          <div class="seq-num">1</div>
+          <div class="seq-connector"><div class="seq-line"></div></div>
+        </div>
+        <div class="seq-content">
+          <div class="seq-title"><code>tools/schemas.py</code>에 <code>SCHEMA_*</code> 상수 추가</div>
+          <div class="seq-desc">OpenAI Tool JSON Schema 형식으로 함수 시그니처와 파라미터를 정의합니다.</div>
+        </div>
+      </div>
+      <div class="seq-row">
+        <div>
+          <div class="seq-num">2</div>
+          <div class="seq-connector"><div class="seq-line"></div></div>
+        </div>
+        <div class="seq-content">
+          <div class="seq-title"><code>tools/functions.py</code>에 함수 구현</div>
+          <div class="seq-desc">실제 비즈니스 로직을 구현합니다. 외부 HTTP 호출이 필요하면 <code>core/</code>에 위임하세요.</div>
+        </div>
+      </div>
+      <div class="seq-row">
+        <div>
+          <div class="seq-num">3</div>
+          <div class="seq-connector"><div class="seq-line"></div></div>
+        </div>
+        <div class="seq-content">
+          <div class="seq-title"><code>tools/registry.py</code>의 적절한 <code>REGISTRY_*</code>에 등록</div>
+          <div class="seq-desc">도구 이름과 함수 객체를 딕셔너리에 추가합니다.</div>
+        </div>
+      </div>
+      <div class="seq-row">
+        <div>
+          <div class="seq-num">4</div>
+          <div class="seq-connector"><div class="seq-line"></div></div>
+        </div>
+        <div class="seq-content">
+          <div class="seq-title">사용할 스크립트의 <code>TOOLS_*</code> 그룹에 스키마 추가</div>
+          <div class="seq-desc">해당 패턴의 LLM 호출에 새 스키마가 포함되도록 그룹에 추가합니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RUNNING ─────────────────────────────────────────── -->
+  <div class="section" id="running">
+    <h2>실행 방법</h2>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-body">
+        <div class="callout-title">반드시 agent-learning/ 루트에서 실행하세요</div>
+        <p>스크립트 내부에서 <code>sys.path.insert(0, ...)</code>로 루트를 추가합니다. 서브디렉토리에서 실행하면 import 오류가 발생합니다.</p>
+      </div>
+    </div>
+
+    <h3>환경 설정 (최초 1회)</h3>
+
+    <div class="code-wrap">
+      <pre class="code"><code>python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt</code></pre>
+    </div>
+
+    <h3>단계별 실행</h3>
+
+    <div class="run-block">
+      <div class="run-label">1단계 — Tool Calling 기본</div>
+      <pre class="code"><code>python 01_tool_calling/basic.py</code></pre>
+    </div>
+
+    <div class="run-block">
+      <div class="run-label">2단계 — ML API 연동 (mock 모드)</div>
+      <pre class="code"><code>MOCK_ML=true python 01_tool_calling/with_ml_api.py</code></pre>
+    </div>
+
+    <div class="run-block">
+      <div class="run-label">2단계 — ML API 연동 (실제 API)</div>
+      <pre class="code"><code>python 01_tool_calling/with_ml_api.py</code></pre>
+    </div>
+
+    <div class="run-block">
+      <div class="run-label">3단계 — MCP 클라이언트 테스트 (서버 자동 실행)</div>
+      <pre class="code"><code>python 02_mcp_server/test_client.py</code></pre>
+    </div>
+
+    <div class="run-block">
+      <div class="run-label">3단계 — MCP 서버 직접 실행 (SSE 모드)</div>
+      <pre class="code"><code>python 02_mcp_server/server.py --port 8000</code></pre>
+    </div>
+
+    <div class="run-block">
+      <div class="run-label">4단계 — ReAct Agent</div>
+      <pre class="code"><code>python 03_agent/react_agent.py</code></pre>
+    </div>
+
+    <h3>환경 변수 (.env)</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>변수</th><th>설명</th><th>예시</th></tr></thead>
+        <tbody>
+          <tr><td><code>API_KEY</code></td><td>SDC LLM Gateway 인증 키</td><td><code>sk-...</code></td></tr>
+          <tr><td><code>BASE_URL</code></td><td>LLM 엔드포인트</td><td><code>https://llm.sdc.siemens.cloud/v1</code></td></tr>
+          <tr><td><code>LLM_MODEL</code></td><td>사용할 모델</td><td><code>gpt-5</code></td></tr>
+          <tr><td><code>ML_ENDPOINT_URL</code></td><td>AI Hub ML API URL</td><td><code>https://...</code></td></tr>
+          <tr><td><code>MOCK_ML</code></td><td>mock 모드 (API 없이 테스트)</td><td><code>true</code> / <code>false</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout ok">
+      <div class="callout-icon">✅</div>
+      <div class="callout-body">
+        <div class="callout-title">패키지 의존</div>
+        <p><code>httpx ≥0.27</code> · <code>python-dotenv ≥1.0</code> · <code>pydantic ≥2.0</code> · <code>mcp[cli] ≥1.3</code></p>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+(function() {
+  /* Active nav link on scroll */
+  var links = document.querySelectorAll('.nav-link');
+  var sections = Array.from(links).map(function(l) {
+    var id = l.getAttribute('href').slice(1);
+    return document.getElementById(id);
+  });
+
+  function updateActive() {
+    var scrollY = window.scrollY + 80;
+    var current = sections[0];
+    sections.forEach(function(s) {
+      if (s && s.offsetTop <= scrollY) current = s;
+    });
+    links.forEach(function(l) {
+      l.classList.toggle('active', l.getAttribute('href') === '#' + (current ? current.id : ''));
+    });
+  }
+
+  window.addEventListener('scroll', updateActive, {passive: true});
+  updateActive();
+
+  /* Theme toggle */
+  var root = document.documentElement;
+  var btn  = document.getElementById('theme-label');
+  var icon = document.getElementById('theme-icon');
+
+  function applyTheme(t) {
+    root.setAttribute('data-theme', t);
+    btn.textContent  = t === 'dark' ? '라이트 모드' : '다크 모드';
+    icon.textContent = t === 'dark' ? '☀️' : '🌙';
+    try { localStorage.setItem('theme', t); } catch(e) {}
+  }
+
+  window.toggleTheme = function() {
+    applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  };
+
+  try {
+    var saved = localStorage.getItem('theme');
+    if (saved) applyTheme(saved);
+  } catch(e) {}
+})();
+</script>
+
+<script>
+/* Mermaid 다이어그램 렌더링 */
+(function(){
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js';
+  s.onload = function() {
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+               (!document.documentElement.getAttribute('data-theme') &&
+                window.matchMedia('(prefers-color-scheme: dark)').matches);
+    mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', securityLevel: 'loose' });
+    mermaid.run({ querySelector: 'pre.mermaid' });
+  };
+  document.head.appendChild(s);
+})();
+</script>
