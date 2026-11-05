@@ -16,7 +16,7 @@
   <!-- queries -->
   <text x="330" y="124" font-size="10.5" fill="#475569">"LINE-BPR-01 주간조에서 SIM-SUP-B 자재로 533개 생산 예정…</text>
   <text x="330" y="139" font-size="10.5" fill="#475569"> 공구 마모도 14.41%, 마지막 정비 후 30일. 결함률 예측해주세요."</text>
-  <text x="740" y="124" font-size="10.5" fill="#475569">"그럼 지그 정렬 오차가 0.05cm라면 어떨까요?"</text>
+  <text x="740" y="124" font-size="10.5" fill="#475569">"그럼 지그 정렬 오차가 0.5cm라면 어떨까요?"</text>
   <text x="740" y="139" font-size="10.5" fill="#94a3b8">직전 세션: Turn 1의 확인값 12개</text>
   <text x="40" y="124" font-size="10.5" fill="#94a3b8">직전 세션</text>
   <text x="40" y="139" font-size="10.5" font-family="ui-monospace, Menlo, Consolas, monospace" fill="#cbd5e1">{ }  0/12</text>
