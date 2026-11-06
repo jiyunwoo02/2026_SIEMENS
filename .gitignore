@@ -52,3 +52,9 @@ Desktop.ini
 *.swp
 *.swo
 *~
+
+# [추가] AI Studio (RapidMiner) 바이너리 산출물 제외 — hd-modeling 등
+*.txt
+*.rmp
+*.rmmodel
+*.rmhdf5table

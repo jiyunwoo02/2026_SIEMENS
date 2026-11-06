@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>최적화 가이드</title>
+<style>
+  :root {
+    --bg: #f8f9fa; --surface: #ffffff; --border: #e0e3e8;
+    --text: #1a1d23; --text-sub: #5a6072;
+    --accent: #0d9488; --accent-light: #f0fdfa;
+    --success: #16a34a; --success-light: #f0fdf4;
+    --danger: #dc2626; --danger-light: #fef2f2;
+    --warning: #d97706; --warning-light: #fffbeb;
+    --code-bg: #f1f3f7;
+    --tag-numeric: #dbeafe; --tag-numeric-text: #1e40af;
+    --tag-string: #d1fae5; --tag-string-text: #065f46;
+    --tag-int: #ede9fe; --tag-int-text: #5b21b6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1117; --surface: #1a1d2e; --border: #2a2d3e;
+      --text: #e8eaf0; --text-sub: #8b90a8;
+      --accent: #2dd4bf; --accent-light: #0a2420;
+      --success: #34d399; --success-light: #0a2a1a;
+      --danger: #f87171; --danger-light: #2a0f0f;
+      --warning: #fbbf24; --warning-light: #2a1f0a;
+      --code-bg: #0d0f18;
+      --tag-numeric: #1e3a5f; --tag-numeric-text: #93c5fd;
+      --tag-string: #0a2a1a; --tag-string-text: #6ee7b7;
+      --tag-int: #2e1f5e; --tag-int-text: #c4b5fd;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1117; --surface: #1a1d2e; --border: #2a2d3e;
+    --text: #e8eaf0; --text-sub: #8b90a8;
+    --accent: #2dd4bf; --accent-light: #0a2420;
+    --success: #34d399; --success-light: #0a2a1a;
+    --danger: #f87171; --danger-light: #2a0f0f;
+    --warning: #fbbf24; --warning-light: #2a1f0a;
+    --code-bg: #0d0f18;
+    --tag-numeric: #1e3a5f; --tag-numeric-text: #93c5fd;
+    --tag-string: #0a2a1a; --tag-string-text: #6ee7b7;
+    --tag-int: #2e1f5e; --tag-int-text: #c4b5fd;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif; font-size: 15px; line-height: 1.65; }
+
+  .header { background: var(--accent); color: #fff; padding: 2.5rem 2rem; }
+  .header h1 { font-size: 1.75rem; font-weight: 700; }
+  .header .subtitle { opacity: 0.85; margin-top: .3rem; font-size: .95rem; }
+  .badge { display: inline-block; background: rgba(255,255,255,.2); border-radius: 20px; padding: .2rem .75rem; font-size: .8rem; margin-top: .6rem; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+  section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--accent); display: flex; align-items: center; gap: .5rem; }
+  h2::before { content: ''; display: inline-block; width: 4px; height: 1.1rem; background: var(--accent); border-radius: 2px; }
+  h3 { font-size: .95rem; font-weight: 600; margin: 1.25rem 0 .6rem; color: var(--text); }
+  p { color: var(--text-sub); margin-bottom: .75rem; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th { background: var(--code-bg); color: var(--text-sub); font-weight: 600; padding: .6rem .8rem; text-align: left; border-bottom: 2px solid var(--border); }
+  td { padding: .55rem .8rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+
+  .tag { display: inline-block; border-radius: 4px; padding: .15rem .5rem; font-size: .78rem; font-weight: 600; }
+  .tag-numeric { background: var(--tag-numeric); color: var(--tag-numeric-text); }
+  .tag-string  { background: var(--tag-string);  color: var(--tag-string-text); }
+  .tag-int     { background: var(--tag-int);     color: var(--tag-int-text); }
+
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+  .flow-box { background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: .5rem 1rem; font-size: .88rem; font-weight: 600; }
+  .flow-arrow { color: var(--text-sub); font-size: 1.2rem; }
+
+  .target-row { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0; }
+  .target-card { flex: 1; min-width: 200px; border-radius: 8px; padding: 1.1rem; }
+  .target-reduce  { background: var(--success-light); border: 1px solid var(--success); }
+  .target-risk    { background: var(--danger-light);  border: 1px solid var(--danger); }
+  .target-card .val  { font-size: 2.5rem; font-weight: 800; }
+  .target-card .name { font-weight: 700; font-size: 1rem; margin-top: .2rem; }
+  .target-card .desc { font-size: .84rem; color: var(--text-sub); margin-top: .4rem; line-height: 1.5; }
+  .target-card .intent { font-size: .8rem; margin-top: .6rem; padding: .3rem .6rem; border-radius: 4px; display: inline-block; font-family: monospace; }
+  .target-reduce .val, .target-reduce .name { color: var(--success); }
+  .target-reduce .intent { background: var(--success-light); color: var(--success); border: 1px solid var(--success); }
+  .target-risk .val, .target-risk .name { color: var(--danger); }
+  .target-risk .intent { background: var(--danger-light); color: var(--danger); border: 1px solid var(--danger); }
+
+  code { background: var(--code-bg); padding: .15rem .4rem; border-radius: 4px; font-size: .88rem; font-family: 'Fira Code', monospace; }
+  pre { background: var(--code-bg); padding: 1.2rem; border-radius: 8px; overflow-x: auto; font-size: .84rem; line-height: 1.6; font-family: 'Fira Code', monospace; border: 1px solid var(--border); }
+  .info-box { background: var(--accent-light); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; padding: .8rem 1rem; font-size: .9rem; color: var(--text); margin: .75rem 0; }
+  .warn-box  { background: var(--warning-light); border-left: 3px solid var(--warning); border-radius: 0 6px 6px 0; padding: .8rem 1rem; font-size: .9rem; color: var(--text); margin: .75rem 0; }
+
+  .intent-table td:first-child { font-family: monospace; font-size: .85rem; }
+  .dot-y { color: var(--success); font-weight: 700; }
+  .dot-n { color: var(--text-sub); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="max-width:900px;margin:0 auto;">
+    <h1>최적화 프로세스 가이드</h1>
+    <p class="subtitle">GBT 분류 + Prescriptive Analytics → 최적 공정조건 1세트 탐색</p>
+    <span class="badge">deploy-optimization.rmp</span>
+    <span class="badge" style="margin-left:.4rem">defect-advisor 전용</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 개요 -->
+  <section>
+    <h2>프로세스 개요</h2>
+    <p>GBT 분류 모델을 목적 함수로 삼아 Prescriptive Analytics(Evolutionary)가 <strong>목표 조건(target)을 달성하는 최적 공정 파라미터 1세트</strong>를 탐색합니다.
+    결과는 현장에서 실제로 적용 가능한 공정조건 조합으로 반환됩니다.</p>
+
+    <div class="flow">
+      <div class="flow-box">target 매크로 (0 / 1)</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">학습 데이터 로드</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">GBT 분류 모델</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Prescriptive Analytics</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">최적 공정조건 1세트</div>
+    </div>
+  </section>
+
+  <!-- target 파라미터 -->
+  <section>
+    <h2>target 파라미터</h2>
+    <p>GET 쿼리스트링으로 주입. AI Studio 배포 프로세스 내에서 매크로로 전달됩니다.</p>
+
+    <div class="target-row">
+      <div class="target-card target-reduce">
+        <div class="val">1</div>
+        <div class="name">불량 최소화</div>
+        <div class="desc">고결함(1) 확률을 최소화하는 공정조건 탐색.<br>결함을 줄이기 위한 <strong>개선 조건</strong>을 추천한다.</div>
+        <div class="intent">optimize_reduce_defect</div><br>
+        <div class="intent" style="margin-top:.3rem">predict_and_optimize</div>
+      </div>
+      <div class="target-card target-risk">
+        <div class="val">0</div>
+        <div class="name">위험 조건 탐색</div>
+        <div class="desc">정상(0) 확률을 최소화하는 공정조건 탐색.<br>결함이 발생하기 쉬운 <strong>위험 조건</strong>을 역탐색한다.</div>
+        <div class="intent">optimize_find_defect_risk</div><br>
+        <div class="intent" style="margin-top:.3rem">predict_and_find_risk</div>
+      </div>
+    </div>
+
+    <div class="info-box"><strong>설계 원칙</strong>: LLM은 intent 문자열만 판단합니다. <code>target</code> 값("0"/"1") 변환은 <code>INTENT_TO_TARGET</code> 사전이 담당하여 LLM 환각을 방지합니다.</div>
+  </section>
+
+  <!-- API -->
+  <section>
+    <h2>API 명세</h2>
+    <table>
+      <thead><tr><th>항목</th><th>값</th></tr></thead>
+      <tbody>
+        <tr><td>메서드</td><td><code>GET</code></td></tr>
+        <tr><td>엔드포인트</td><td><code>https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/defect_flag_classification/deploy-optimization</code></td></tr>
+        <tr><td>쿼리 파라미터</td><td><code>target=0</code> 또는 <code>target=1</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>호출 예시</h3>
+<pre># 개선 조건 탐색 (불량 최소화)
+curl "https://43-200-118-70.sslip.io/.../deploy-optimization?target=1"
+
+# 위험 조건 탐색 (정상 최소화)
+curl "https://43-200-118-70.sslip.io/.../deploy-optimization?target=0"</pre>
+
+    <h3>응답 예시</h3>
+<pre>{
+  "data": [{
+    "production_line": "LINE-BPR-01",
+    "shift": "DAY",
+    "supplier_code": "SIM-SUP-A",
+    "planned_quantity": 480,
+    "ambient_humidity_pct": 35.2,
+    "incoming_material_quality_score": 95.1,
+    "coating_target_thickness_um": 72.0,
+    "weld_energy_setting_pct": 88.0,
+    "fixture_alignment_offset_mm": 0.05,
+    "process_setting_deviation_pct": 0.3,
+    "tool_wear_pct": 12.0,
+    "days_since_maintenance": 3,
+    "confidence(1)": 0.0183,
+    "confidence(0)": 0.9817,
+    "prediction(high_defect_flag)": "0"
+  }]
+}</pre>
+
+    <div class="warn-box">최적화 탐색에 Evolutionary 알고리즘을 사용하므로 응답 시간이 길 수 있습니다 (실측 기준 최대 180초). 타임아웃 설정을 충분히 여유 있게 잡으세요.</div>
+  </section>
+
+  <!-- 출력 필드 -->
+  <section>
+    <h2>출력 필드</h2>
+    <table>
+      <thead><tr><th>필드</th><th>타입</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td><code>production_line</code> ~ <code>days_since_maintenance</code></td><td>—</td><td>탐색된 최적 공정조건 12개 변수</td></tr>
+        <tr><td><code>confidence(0)</code></td><td><span class="tag tag-numeric">float</span></td><td>정상일 확률</td></tr>
+        <tr><td><code>confidence(1)</code></td><td><span class="tag tag-numeric">float</span></td><td>고결함일 확률</td></tr>
+        <tr><td><code>prediction(high_defect_flag)</code></td><td><span class="tag tag-string">string</span></td><td>"0" 또는 "1"</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- defect-advisor intent 분기 -->
+  <section>
+    <h2>defect-advisor Intent 분기</h2>
+    <p>최적화 API는 defect-advisor에서만 사용됩니다. intent에 따라 회귀 API, 최적화 API 호출 여부와 target이 결정됩니다.</p>
+
+    <table class="intent-table">
+      <thead><tr><th>intent</th><th>회귀 API</th><th>최적화 API</th><th>target</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>predict</td><td class="dot-y">✓</td><td class="dot-n">—</td><td>—</td><td>결함률 예측만</td></tr>
+        <tr><td>predict_and_optimize</td><td class="dot-y">✓</td><td class="dot-y">✓</td><td>"1"</td><td>예측 + 개선 조건</td></tr>
+        <tr><td>predict_and_find_risk</td><td class="dot-y">✓</td><td class="dot-y">✓</td><td>"0"</td><td>예측 + 위험 조건</td></tr>
+        <tr><td>optimize_reduce_defect</td><td class="dot-n">—</td><td class="dot-y">✓</td><td>"1"</td><td>개선 조건만</td></tr>
+        <tr><td>optimize_find_defect_risk</td><td class="dot-n">—</td><td class="dot-y">✓</td><td>"0"</td><td>위험 조건만</td></tr>
+        <tr><td>clarify</td><td class="dot-n">—</td><td class="dot-n">—</td><td>—</td><td>추가 정보 요청</td></tr>
+      </tbody>
+    </table>
+
+    <h3>부분 성공 처리</h3>
+    <p><code>predict_and_optimize</code> / <code>predict_and_find_risk</code> 에서 최적화 API가 실패해도 <code>status="ok"</code>로 응답합니다.</p>
+<pre>{
+  "status": "ok",
+  "prediction": { "defect_rate_pct": 1.65 },
+  "optimization": null,
+  "errors": ["optimization timeout after 180s"]
+}</pre>
+  </section>
+
+  <!-- AI Studio 프로세스 -->
+  <section>
+    <h2>AI Studio 배포 프로세스 구성</h2>
+    <table>
+      <thead><tr><th>단계</th><th>오퍼레이터</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>매크로 주입</td><td>Set Macro</td><td>GET 파라미터 <code>target</code> 을 프로세스 내 매크로로 전달</td></tr>
+        <tr><td>데이터 로드</td><td>Read RapidMiner Format</td><td>ICX_train_classification_final.rmhdf5table 로드</td></tr>
+        <tr><td>모델 적재</td><td>Retrieve</td><td>strore-classification-gbt-v0.3 로드</td></tr>
+        <tr><td>모델 적용</td><td>Apply Model</td><td>학습 데이터 전체에 분류 모델 적용</td></tr>
+        <tr><td>최적화 탐색</td><td>Prescriptive Analytics (Evolutionary)</td><td>target 방향으로 최적 공정조건 탐색</td></tr>
+        <tr><td>결과 반환</td><td>—</td><td>최적 조건 1행 + confidence 반환</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">
+      <strong>레이블 매핑</strong>: <code>high_defect_flag 0 → normal</code>, <code>high_defect_flag 1 → abnormal</code>.
+      Prescriptive Analytics는 <code>target="1"</code>이면 abnormal 확률을 최소화하는 방향으로 탐색합니다.
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

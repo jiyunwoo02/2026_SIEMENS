@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>분류 모델 가이드</title>
+<style>
+  :root {
+    --bg: #f8f9fa; --surface: #ffffff; --border: #e0e3e8;
+    --text: #1a1d23; --text-sub: #5a6072;
+    --accent: #7c3aed; --accent-light: #f5f3ff;
+    --success: #16a34a; --success-light: #f0fdf4;
+    --danger: #dc2626; --danger-light: #fef2f2;
+    --code-bg: #f1f3f7;
+    --tag-numeric: #dbeafe; --tag-numeric-text: #1e40af;
+    --tag-string: #d1fae5; --tag-string-text: #065f46;
+    --tag-int: #ede9fe; --tag-int-text: #5b21b6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1117; --surface: #1a1d2e; --border: #2a2d3e;
+      --text: #e8eaf0; --text-sub: #8b90a8;
+      --accent: #a78bfa; --accent-light: #1e1040;
+      --success: #34d399; --success-light: #0a2a1a;
+      --danger: #f87171; --danger-light: #2a0f0f;
+      --code-bg: #0d0f18;
+      --tag-numeric: #1e3a5f; --tag-numeric-text: #93c5fd;
+      --tag-string: #0a2a1a; --tag-string-text: #6ee7b7;
+      --tag-int: #2e1f5e; --tag-int-text: #c4b5fd;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1117; --surface: #1a1d2e; --border: #2a2d3e;
+    --text: #e8eaf0; --text-sub: #8b90a8;
+    --accent: #a78bfa; --accent-light: #1e1040;
+    --success: #34d399; --success-light: #0a2a1a;
+    --danger: #f87171; --danger-light: #2a0f0f;
+    --code-bg: #0d0f18;
+    --tag-numeric: #1e3a5f; --tag-numeric-text: #93c5fd;
+    --tag-string: #0a2a1a; --tag-string-text: #6ee7b7;
+    --tag-int: #2e1f5e; --tag-int-text: #c4b5fd;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif; font-size: 15px; line-height: 1.65; }
+
+  .header { background: var(--accent); color: #fff; padding: 2.5rem 2rem; }
+  .header h1 { font-size: 1.75rem; font-weight: 700; }
+  .header .subtitle { opacity: 0.85; margin-top: .3rem; font-size: .95rem; }
+  .badge { display: inline-block; background: rgba(255,255,255,.2); border-radius: 20px; padding: .2rem .75rem; font-size: .8rem; margin-top: .6rem; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+  section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--accent); display: flex; align-items: center; gap: .5rem; }
+  h2::before { content: ''; display: inline-block; width: 4px; height: 1.1rem; background: var(--accent); border-radius: 2px; }
+  h3 { font-size: .95rem; font-weight: 600; margin: 1.25rem 0 .6rem; color: var(--text); }
+  p { color: var(--text-sub); margin-bottom: .75rem; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th { background: var(--code-bg); color: var(--text-sub); font-weight: 600; padding: .6rem .8rem; text-align: left; border-bottom: 2px solid var(--border); }
+  td { padding: .55rem .8rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+
+  .tag { display: inline-block; border-radius: 4px; padding: .15rem .5rem; font-size: .78rem; font-weight: 600; }
+  .tag-numeric { background: var(--tag-numeric); color: var(--tag-numeric-text); }
+  .tag-string  { background: var(--tag-string);  color: var(--tag-string-text); }
+  .tag-int     { background: var(--tag-int);     color: var(--tag-int-text); }
+
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+  .flow-box { background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: .5rem 1rem; font-size: .88rem; font-weight: 600; }
+  .flow-arrow { color: var(--text-sub); font-size: 1.2rem; }
+
+  .label-row { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0; }
+  .label-card { flex: 1; min-width: 180px; border-radius: 8px; padding: 1.1rem; }
+  .label-normal { background: var(--success-light); border: 1px solid var(--success); }
+  .label-abnormal { background: var(--danger-light); border: 1px solid var(--danger); }
+  .label-card .val { font-size: 2rem; font-weight: 800; }
+  .label-card .name { font-weight: 700; font-size: 1rem; margin-top: .2rem; }
+  .label-card .desc { font-size: .84rem; color: var(--text-sub); margin-top: .3rem; }
+  .label-normal .val, .label-normal .name { color: var(--success); }
+  .label-abnormal .val, .label-abnormal .name { color: var(--danger); }
+
+  code { background: var(--code-bg); padding: .15rem .4rem; border-radius: 4px; font-size: .88rem; font-family: 'Fira Code', monospace; }
+  pre { background: var(--code-bg); padding: 1.2rem; border-radius: 8px; overflow-x: auto; font-size: .84rem; line-height: 1.6; font-family: 'Fira Code', monospace; border: 1px solid var(--border); }
+  .info-box { background: var(--accent-light); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; padding: .8rem 1rem; font-size: .9rem; color: var(--text); margin: .75rem 0; }
+
+  .conf-visual { display: flex; height: 36px; border-radius: 6px; overflow: hidden; margin: .75rem 0; font-size: .82rem; }
+  .conf-0 { background: var(--success); display: flex; align-items: center; padding: 0 .75rem; color: #fff; font-weight: 700; }
+  .conf-1 { background: var(--danger); display: flex; align-items: center; padding: 0 .75rem; color: #fff; font-weight: 700; flex: 1; justify-content: flex-end; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="max-width:900px;margin:0 auto;">
+    <h1>GBT 분류 모델 가이드</h1>
+    <p class="subtitle">공정 변수 12개 → 고결함 여부(0/1) 예측</p>
+    <span class="badge">strore-classification-gbt-v0.3</span>
+    <span class="badge" style="margin-left:.4rem">defect-advisor</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 개요 -->
+  <section>
+    <h2>모델 개요</h2>
+    <p>Gradient Boosted Trees(GBT) 분류 모델을 사용해 현재 공정 상태가 <strong>고결함 위험 조건(1)</strong>인지 <strong>정상 조건(0)</strong>인지 예측합니다.
+    분류 결과는 최적화 프로세스의 기반으로도 활용됩니다.</p>
+
+    <div class="flow">
+      <div class="flow-box">공정 변수 12개 입력</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">AI Hub</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">GBT 분류 모델</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">high_defect_flag (0/1)</div>
+    </div>
+
+    <div class="info-box">분류 모델 단독 예측 엔드포인트는 현재 외부에 노출되지 않습니다. 최적화 엔드포인트(<code>deploy-optimization.rmp</code>) 내부에서 사용됩니다.</div>
+  </section>
+
+  <!-- 입력 변수 -->
+  <section>
+    <h2>입력 변수</h2>
+    <table>
+      <thead><tr><th>변수명</th><th>타입</th><th>설명</th><th>범위</th></tr></thead>
+      <tbody>
+        <tr><td><code>production_line</code></td><td><span class="tag tag-string">string</span></td><td>생산 라인</td><td>LINE-BPR-01, LINE-BPR-02</td></tr>
+        <tr><td><code>shift</code></td><td><span class="tag tag-string">string</span></td><td>근무 교대</td><td>DAY, NIGHT</td></tr>
+        <tr><td><code>supplier_code</code></td><td><span class="tag tag-string">string</span></td><td>공급업체 코드</td><td>SIM-SUP-A/B/C</td></tr>
+        <tr><td><code>planned_quantity</code></td><td><span class="tag tag-int">int</span></td><td>계획 생산량</td><td>440 – 561</td></tr>
+        <tr><td><code>ambient_humidity_pct</code></td><td><span class="tag tag-numeric">float</span></td><td>주변 습도 (%)</td><td>28 – 86</td></tr>
+        <tr><td><code>incoming_material_quality_score</code></td><td><span class="tag tag-numeric">float</span></td><td>입고 자재 품질 점수</td><td>70.8 – 99</td></tr>
+        <tr><td><code>coating_target_thickness_um</code></td><td><span class="tag tag-numeric">float</span></td><td>코팅 목표 두께 (μm)</td><td>62 – 121</td></tr>
+        <tr><td><code>weld_energy_setting_pct</code></td><td><span class="tag tag-numeric">float</span></td><td>용접 에너지 설정값 (%)</td><td>76 – 118</td></tr>
+        <tr><td><code>fixture_alignment_offset_mm</code></td><td><span class="tag tag-numeric">float</span></td><td>지그 정렬 편차 (mm)</td><td>0.02 – 1.6</td></tr>
+        <tr><td><code>process_setting_deviation_pct</code></td><td><span class="tag tag-numeric">float</span></td><td>공정 설정 편차 (%)</td><td>0.05 – 16</td></tr>
+        <tr><td><code>tool_wear_pct</code></td><td><span class="tag tag-numeric">float</span></td><td>공구 마모율 (%)</td><td>2 – 83.9</td></tr>
+        <tr><td><code>days_since_maintenance</code></td><td><span class="tag tag-int">int</span></td><td>마지막 정비 후 경과일</td><td>1 – 60</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 출력 -->
+  <section>
+    <h2>출력 및 레이블</h2>
+
+    <div class="label-row">
+      <div class="label-card label-normal">
+        <div class="val">0</div>
+        <div class="name">normal (정상)</div>
+        <div class="desc">고결함 위험이 낮은 조건</div>
+      </div>
+      <div class="label-card label-abnormal">
+        <div class="val">1</div>
+        <div class="name">abnormal (고결함)</div>
+        <div class="desc">고결함 위험이 높은 조건</div>
+      </div>
+    </div>
+
+    <h3>출력 필드</h3>
+    <table>
+      <thead><tr><th>필드</th><th>타입</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td><code>prediction(high_defect_flag)</code></td><td><span class="tag tag-string">string</span></td><td>"0" 또는 "1"</td></tr>
+        <tr><td><code>confidence(0)</code></td><td><span class="tag tag-numeric">float</span></td><td>정상일 확률 (0–1)</td></tr>
+        <tr><td><code>confidence(1)</code></td><td><span class="tag tag-numeric">float</span></td><td>고결함일 확률 (0–1)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>confidence 예시 (정상 판정)</h3>
+    <div class="conf-visual">
+      <div class="conf-0" style="width:98.17%">confidence(0) = 0.9817</div>
+      <div class="conf-1" style="width:1.83%">1</div>
+    </div>
+    <p style="font-size:.84rem">confidence(0) + confidence(1) = 1.0</p>
+  </section>
+
+  <!-- 모델 버전 이력 -->
+  <section>
+    <h2>모델 버전 이력</h2>
+    <table>
+      <thead><tr><th>버전</th><th>파일</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr><td>v0.1</td><td><code>strore-classification-gbt-v0.1.rmmodel</code></td><td>이전 버전 (보관)</td></tr>
+        <tr><td>v0.2</td><td><code>strore-classification-gbt-v0.2.rmmodel</code></td><td>이전 버전 (보관)</td></tr>
+        <tr><td><strong>v0.3</strong></td><td><code>strore-classification-gbt-v0.3.rmmodel</code></td><td><strong>현행 (defect-advisor 사용 중)</strong></td></tr>
+        <tr><td>v0.1 (RF)</td><td><code>strore-classification-rf-v0.1.rmmodel</code></td><td>실험용 (Random Forest, 미사용)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- AI Studio -->
+  <section>
+    <h2>AI Studio 학습 구성</h2>
+    <table>
+      <thead><tr><th>단계</th><th>오퍼레이터</th><th>주요 파라미터</th></tr></thead>
+      <tbody>
+        <tr><td>데이터 로드</td><td>Read RapidMiner Format</td><td>ICX_train_classification_final.rmhdf5table</td></tr>
+        <tr><td>전처리</td><td>Filter Examples, Select Attributes</td><td>ID/불필요 컬럼 제거, defect_rate_pct 제거</td></tr>
+        <tr><td>데이터 분할</td><td>Filter (dataset_split 기준)</td><td>train/validation → 학습, test → 평가</td></tr>
+        <tr><td>레이블 설정</td><td>Set Role</td><td>target = high_defect_flag (binominal)</td></tr>
+        <tr><td>모델 학습</td><td>Gradient Boosted Trees</td><td>number_of_trees, maximal_depth, learning_rate</td></tr>
+        <tr><td>하이퍼파라미터 탐색</td><td>Optimize Parameters (Grid)</td><td>trees [50–150], depth [3–10], lr [0.01–0.05]</td></tr>
+        <tr><td>평가</td><td>Performance (Binominal)</td><td>Accuracy, AUC, RMSE, R²</td></tr>
+        <tr><td>저장</td><td>Store</td><td>strore-classification-gbt-v0.3</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">분류 모델은 최적화 프로세스(<code>deploy-optimization.rmp</code>)의 Prescriptive Analytics 단계에서 목적 함수로 사용됩니다. 자세한 내용은 <a href="guide-optimization.html" style="color:var(--accent)">최적화 가이드</a>를 참고하세요.</div>
+  </section>
+
+</div>
+</body>
+</html>

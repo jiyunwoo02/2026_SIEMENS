@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>회귀 모델 가이드</title>
+<style>
+  :root {
+    --bg: #f8f9fa;
+    --surface: #ffffff;
+    --border: #e0e3e8;
+    --text: #1a1d23;
+    --text-sub: #5a6072;
+    --accent: #2563eb;
+    --accent-light: #eff4ff;
+    --success: #16a34a;
+    --success-light: #f0fdf4;
+    --warning: #d97706;
+    --warning-light: #fffbeb;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --code-bg: #f1f3f7;
+    --tag-numeric: #dbeafe;
+    --tag-numeric-text: #1e40af;
+    --tag-string: #d1fae5;
+    --tag-string-text: #065f46;
+    --tag-int: #ede9fe;
+    --tag-int-text: #5b21b6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1117;
+      --surface: #1a1d2e;
+      --border: #2a2d3e;
+      --text: #e8eaf0;
+      --text-sub: #8b90a8;
+      --accent: #4f8ef7;
+      --accent-light: #1a2340;
+      --success: #34d399;
+      --success-light: #0a2a1a;
+      --warning: #fbbf24;
+      --warning-light: #2a1f0a;
+      --danger: #f87171;
+      --danger-light: #2a0f0f;
+      --code-bg: #0d0f18;
+      --tag-numeric: #1e3a5f;
+      --tag-numeric-text: #93c5fd;
+      --tag-string: #0a2a1a;
+      --tag-string-text: #6ee7b7;
+      --tag-int: #2e1f5e;
+      --tag-int-text: #c4b5fd;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1117; --surface: #1a1d2e; --border: #2a2d3e;
+    --text: #e8eaf0; --text-sub: #8b90a8;
+    --accent: #4f8ef7; --accent-light: #1a2340;
+    --success: #34d399; --success-light: #0a2a1a;
+    --warning: #fbbf24; --warning-light: #2a1f0a;
+    --danger: #f87171; --danger-light: #2a0f0f;
+    --code-bg: #0d0f18;
+    --tag-numeric: #1e3a5f; --tag-numeric-text: #93c5fd;
+    --tag-string: #0a2a1a; --tag-string-text: #6ee7b7;
+    --tag-int: #2e1f5e; --tag-int-text: #c4b5fd;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif; font-size: 15px; line-height: 1.65; }
+
+  .header { background: var(--accent); color: #fff; padding: 2.5rem 2rem; }
+  .header h1 { font-size: 1.75rem; font-weight: 700; }
+  .header .subtitle { opacity: 0.85; margin-top: .3rem; font-size: .95rem; }
+  .badge { display: inline-block; background: rgba(255,255,255,.2); border-radius: 20px; padding: .2rem .75rem; font-size: .8rem; margin-top: .6rem; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+  section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--accent); display: flex; align-items: center; gap: .5rem; }
+  h2::before { content: ''; display: inline-block; width: 4px; height: 1.1rem; background: var(--accent); border-radius: 2px; }
+  h3 { font-size: .95rem; font-weight: 600; margin: 1.25rem 0 .6rem; color: var(--text); }
+  p { color: var(--text-sub); margin-bottom: .75rem; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th { background: var(--code-bg); color: var(--text-sub); font-weight: 600; padding: .6rem .8rem; text-align: left; border-bottom: 2px solid var(--border); }
+  td { padding: .55rem .8rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+
+  .tag { display: inline-block; border-radius: 4px; padding: .15rem .5rem; font-size: .78rem; font-weight: 600; }
+  .tag-numeric { background: var(--tag-numeric); color: var(--tag-numeric-text); }
+  .tag-string  { background: var(--tag-string);  color: var(--tag-string-text); }
+  .tag-int     { background: var(--tag-int);     color: var(--tag-int-text); }
+
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+  .flow-box { background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: .5rem 1rem; font-size: .88rem; font-weight: 600; }
+  .flow-arrow { color: var(--text-sub); font-size: 1.2rem; }
+
+  .grade-row { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0; }
+  .grade-card { flex: 1; min-width: 150px; border-radius: 8px; padding: 1rem; text-align: center; }
+  .grade-good    { background: var(--success-light); border: 1px solid var(--success); }
+  .grade-warning { background: var(--warning-light); border: 1px solid var(--warning); }
+  .grade-danger  { background: var(--danger-light);  border: 1px solid var(--danger); }
+  .grade-card .label { font-weight: 700; font-size: 1rem; }
+  .grade-card .range { font-size: .82rem; color: var(--text-sub); margin-top: .25rem; }
+  .grade-good    .label { color: var(--success); }
+  .grade-warning .label { color: var(--warning); }
+  .grade-danger  .label { color: var(--danger); }
+
+  code { background: var(--code-bg); padding: .15rem .4rem; border-radius: 4px; font-size: .88rem; font-family: 'Fira Code', monospace; }
+  pre { background: var(--code-bg); padding: 1.2rem; border-radius: 8px; overflow-x: auto; font-size: .84rem; line-height: 1.6; font-family: 'Fira Code', monospace; border: 1px solid var(--border); }
+
+  .info-box { background: var(--accent-light); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; padding: .8rem 1rem; font-size: .9rem; color: var(--text); margin: .75rem 0; }
+
+  .retry-box { display: grid; grid-template-columns: auto 1fr; gap: .3rem 1rem; font-size: .88rem; align-items: start; }
+  .retry-label { color: var(--text-sub); font-weight: 600; padding-top: .1rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="max-width:900px;margin:0 auto;">
+    <h1>GBT 회귀 모델 가이드</h1>
+    <p class="subtitle">공정 변수 12개 → 결함률(%) 예측</p>
+    <span class="badge">strore-regression-gbt-v0.2</span>
+    <span class="badge" style="margin-left:.4rem">defect-predictor · defect-advisor</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 개요 -->
+  <section>
+    <h2>모델 개요</h2>
+    <p>Gradient Boosted Trees(GBT) 회귀 모델을 사용해 현재 공정 상태로부터 <strong>결함률(%)</strong>을 실시간 예측합니다.
+    AI Studio에서 학습하고 AI Hub를 통해 REST API로 서빙됩니다.</p>
+
+    <div class="flow">
+      <div class="flow-box">공정 변수 12개 입력</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">AI Hub (deploy.rmp)</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">GBT 회귀 모델</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">defect_rate_pct (%)</div>
+    </div>
+  </section>
+
+  <!-- 입력 변수 -->
+  <section>
+    <h2>입력 변수</h2>
+    <table>
+      <thead><tr><th>변수명</th><th>타입</th><th>설명</th><th>범위</th></tr></thead>
+      <tbody>
+        <tr><td><code>production_line</code></td><td><span class="tag tag-string">string</span></td><td>생산 라인</td><td>LINE-BPR-01, LINE-BPR-02</td></tr>
+        <tr><td><code>shift</code></td><td><span class="tag tag-string">string</span></td><td>근무 교대</td><td>DAY, NIGHT</td></tr>
+        <tr><td><code>supplier_code</code></td><td><span class="tag tag-string">string</span></td><td>공급업체 코드</td><td>SIM-SUP-A/B/C</td></tr>
+        <tr><td><code>planned_quantity</code></td><td><span class="tag tag-int">int</span></td><td>계획 생산량</td><td>440 – 561</td></tr>
+        <tr><td><code>ambient_humidity_pct</code></td><td><span class="tag tag-numeric">float</span></td><td>주변 습도 (%)</td><td>28 – 86</td></tr>
+        <tr><td><code>incoming_material_quality_score</code></td><td><span class="tag tag-numeric">float</span></td><td>입고 자재 품질 점수</td><td>70.8 – 99</td></tr>
+        <tr><td><code>coating_target_thickness_um</code></td><td><span class="tag tag-numeric">float</span></td><td>코팅 목표 두께 (μm)</td><td>62 – 121</td></tr>
+        <tr><td><code>weld_energy_setting_pct</code></td><td><span class="tag tag-numeric">float</span></td><td>용접 에너지 설정값 (%)</td><td>76 – 118</td></tr>
+        <tr><td><code>fixture_alignment_offset_mm</code></td><td><span class="tag tag-numeric">float</span></td><td>지그 정렬 편차 (mm)</td><td>0.02 – 1.6</td></tr>
+        <tr><td><code>process_setting_deviation_pct</code></td><td><span class="tag tag-numeric">float</span></td><td>공정 설정 편차 (%)</td><td>0.05 – 16</td></tr>
+        <tr><td><code>tool_wear_pct</code></td><td><span class="tag tag-numeric">float</span></td><td>공구 마모율 (%)</td><td>2 – 83.9</td></tr>
+        <tr><td><code>days_since_maintenance</code></td><td><span class="tag tag-int">int</span></td><td>마지막 정비 후 경과일</td><td>1 – 60</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 출력 & 등급 -->
+  <section>
+    <h2>출력 및 등급 판정</h2>
+    <h3>출력 필드</h3>
+    <table>
+      <thead><tr><th>필드</th><th>타입</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td><code>prediction(defect_rate_pct)</code></td><td><span class="tag tag-numeric">float</span></td><td>예측 결함률 (%)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>등급 판정</h3>
+    <div class="grade-row">
+      <div class="grade-card grade-good">
+        <div class="label">양호 (Good)</div>
+        <div class="range">결함률 &lt; 3.0 %</div>
+      </div>
+      <div class="grade-card grade-warning">
+        <div class="label">주의 (Warning)</div>
+        <div class="range">3.0 ≤ 결함률 &lt; 7.0 %</div>
+      </div>
+      <div class="grade-card grade-danger">
+        <div class="label">불량 (Poor)</div>
+        <div class="range">결함률 ≥ 7.0 %</div>
+      </div>
+    </div>
+
+    <div class="info-box">등급 판정은 Panopticon Python Transform 및 defect-predictor LLM 해설 단계에서 적용됩니다.</div>
+  </section>
+
+  <!-- API -->
+  <section>
+    <h2>API 명세</h2>
+    <table>
+      <thead><tr><th>항목</th><th>값</th></tr></thead>
+      <tbody>
+        <tr><td>메서드</td><td><code>POST</code></td></tr>
+        <tr><td>엔드포인트</td><td><code>https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/defect_rate_pred/deploy</code></td></tr>
+        <tr><td>Content-Type</td><td><code>application/json</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>요청 본문</h3>
+<pre>{
+  "data": [{
+    "production_line": "LINE-BPR-01",
+    "shift": "DAY",
+    "supplier_code": "SIM-SUP-B",
+    "planned_quantity": 500,
+    "ambient_humidity_pct": 52.0,
+    "incoming_material_quality_score": 80.0,
+    "coating_target_thickness_um": 80.0,
+    "weld_energy_setting_pct": 100.0,
+    "fixture_alignment_offset_mm": 0.10,
+    "process_setting_deviation_pct": 0.0,
+    "tool_wear_pct": 45.0,
+    "days_since_maintenance": 10
+  }]
+}</pre>
+
+    <h3>응답 예시</h3>
+<pre>{
+  "data": [{
+    "production_line": "LINE-BPR-01",
+    ...
+    "prediction(defect_rate_pct)": 1.65
+  }]
+}</pre>
+  </section>
+
+  <!-- 클라이언트 연동 -->
+  <section>
+    <h2>클라이언트 연동 (defect-predictor)</h2>
+    <p>defect-predictor는 한국어 자연어 질의를 받아 슬롯을 채운 뒤 이 API를 호출합니다.</p>
+
+    <div class="flow">
+      <div class="flow-box">한국어 질의</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">LLM 슬롯 추출</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">SlotFillingSession</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">POST /deploy</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">LLM 해설</div>
+    </div>
+
+    <h3>응답 상태</h3>
+    <table>
+      <thead><tr><th>status</th><th>의미</th></tr></thead>
+      <tbody>
+        <tr><td><code>ok</code></td><td>예측 성공</td></tr>
+        <tr><td><code>need_more_info</code></td><td>슬롯 미입력 — 추가 질문 반환</td></tr>
+        <tr><td><code>invalid_input</code></td><td>입력 검증 실패</td></tr>
+        <tr><td><code>endpoint_error</code></td><td>AI Hub API 오류</td></tr>
+        <tr><td><code>llm_error</code></td><td>LLM 처리 오류</td></tr>
+      </tbody>
+    </table>
+
+    <h3>재시도 정책</h3>
+    <div class="retry-box">
+      <span class="retry-label">대상</span><span>타임아웃 · 5xx 에러</span>
+      <span class="retry-label">최대 횟수</span><span>2회</span>
+      <span class="retry-label">백오프</span><span>0.5s → 1s → 2s (지수)</span>
+      <span class="retry-label">즉시 실패</span><span>4xx 에러</span>
+    </div>
+
+    <div class="info-box">모의 모드: <code>MOCK_ML=true</code> 환경변수 설정 시 AI Hub 미호출, 더미값(1.65%, 2.65%, ...) 반환</div>
+  </section>
+
+  <!-- AI Studio -->
+  <section>
+    <h2>AI Studio 학습 구성</h2>
+    <table>
+      <thead><tr><th>단계</th><th>오퍼레이터</th><th>주요 파라미터</th></tr></thead>
+      <tbody>
+        <tr><td>데이터 로드</td><td>Read RapidMiner Format</td><td>defect_pred_input.rmhdf5table</td></tr>
+        <tr><td>전처리</td><td>Filter Examples, Select Attributes</td><td>ID/불필요 컬럼 제거</td></tr>
+        <tr><td>데이터 분할</td><td>Filter (dataset_split 기준)</td><td>train/validation → 학습, test → 평가</td></tr>
+        <tr><td>모델 학습</td><td>Gradient Boosted Trees</td><td>number_of_trees, maximal_depth, learning_rate</td></tr>
+        <tr><td>하이퍼파라미터 탐색</td><td>Optimize Parameters (Grid)</td><td>trees [50–500], depth [3–15], lr [0.001–0.1]</td></tr>
+        <tr><td>평가</td><td>Performance (Regression)</td><td>RMSE, Absolute Error, R²</td></tr>
+        <tr><td>저장</td><td>Store</td><td>strore-regression-gbt-v0.2</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+</body>
+</html>
