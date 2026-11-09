@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NICE 신용평가 스코어링 가이드</title>
+<style>
+  :root {
+    --bg: #f8f9fa;
+    --surface: #ffffff;
+    --border: #e0e3e8;
+    --text: #1a1d23;
+    --text-sub: #5a6072;
+    --accent: #2563eb;
+    --accent-light: #eff4ff;
+    --success: #16a34a;
+    --success-light: #f0fdf4;
+    --warning: #d97706;
+    --warning-light: #fffbeb;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --code-bg: #f1f3f7;
+    --tag-numeric: #dbeafe;
+    --tag-numeric-text: #1e40af;
+    --tag-string: #d1fae5;
+    --tag-string-text: #065f46;
+    --tag-int: #ede9fe;
+    --tag-int-text: #5b21b6;
+    --tag-warn: #fef9c3;
+    --tag-warn-text: #854d0e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1117;
+      --surface: #1a1d2e;
+      --border: #2a2d3e;
+      --text: #e8eaf0;
+      --text-sub: #8b90a8;
+      --accent: #4f8ef7;
+      --accent-light: #1a2340;
+      --success: #34d399;
+      --success-light: #0a2a1a;
+      --warning: #fbbf24;
+      --warning-light: #2a1f0a;
+      --danger: #f87171;
+      --danger-light: #2a0f0f;
+      --code-bg: #0d0f18;
+      --tag-numeric: #1e3a5f;
+      --tag-numeric-text: #93c5fd;
+      --tag-string: #0a2a1a;
+      --tag-string-text: #6ee7b7;
+      --tag-int: #2e1f5e;
+      --tag-int-text: #c4b5fd;
+      --tag-warn: #2a1f0a;
+      --tag-warn-text: #fbbf24;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1117; --surface: #1a1d2e; --border: #2a2d3e;
+    --text: #e8eaf0; --text-sub: #8b90a8;
+    --accent: #4f8ef7; --accent-light: #1a2340;
+    --success: #34d399; --success-light: #0a2a1a;
+    --warning: #fbbf24; --warning-light: #2a1f0a;
+    --danger: #f87171; --danger-light: #2a0f0f;
+    --code-bg: #0d0f18;
+    --tag-numeric: #1e3a5f; --tag-numeric-text: #93c5fd;
+    --tag-string: #0a2a1a; --tag-string-text: #6ee7b7;
+    --tag-int: #2e1f5e; --tag-int-text: #c4b5fd;
+    --tag-warn: #2a1f0a; --tag-warn-text: #fbbf24;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif; font-size: 15px; line-height: 1.65; }
+
+  .header { background: var(--accent); color: #fff; padding: 2.5rem 2rem; }
+  .header h1 { font-size: 1.75rem; font-weight: 700; }
+  .header .subtitle { opacity: 0.85; margin-top: .3rem; font-size: .95rem; }
+  .badge { display: inline-block; background: rgba(255,255,255,.2); border-radius: 20px; padding: .2rem .75rem; font-size: .8rem; margin-top: .6rem; }
+  .badge-green { background: rgba(52,211,153,.25); }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+  section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--accent); display: flex; align-items: center; gap: .5rem; }
+  h2::before { content: ''; display: inline-block; width: 4px; height: 1.1rem; background: var(--accent); border-radius: 2px; }
+  h3 { font-size: .95rem; font-weight: 600; margin: 1.25rem 0 .6rem; color: var(--text); }
+  p { color: var(--text-sub); margin-bottom: .75rem; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th { background: var(--code-bg); color: var(--text-sub); font-weight: 600; padding: .6rem .8rem; text-align: left; border-bottom: 2px solid var(--border); }
+  td { padding: .55rem .8rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+
+  .tag { display: inline-block; border-radius: 4px; padding: .15rem .5rem; font-size: .78rem; font-weight: 600; }
+  .tag-numeric { background: var(--tag-numeric); color: var(--tag-numeric-text); }
+  .tag-string  { background: var(--tag-string);  color: var(--tag-string-text); }
+  .tag-int     { background: var(--tag-int);     color: var(--tag-int-text); }
+  .tag-warn    { background: var(--tag-warn);    color: var(--tag-warn-text); }
+
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+  .flow-box { background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: .5rem 1rem; font-size: .88rem; font-weight: 600; }
+  .flow-arrow { color: var(--text-sub); font-size: 1.2rem; }
+
+  .score-row { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0; }
+  .score-card { flex: 1; min-width: 150px; border-radius: 8px; padding: 1rem; text-align: center; }
+  .score-high    { background: var(--success-light); border: 1px solid var(--success); }
+  .score-mid     { background: var(--warning-light); border: 1px solid var(--warning); }
+  .score-low     { background: var(--danger-light);  border: 1px solid var(--danger); }
+  .score-card .label { font-weight: 700; font-size: 1rem; }
+  .score-card .range { font-size: .82rem; color: var(--text-sub); margin-top: .25rem; }
+  .score-high .label { color: var(--success); }
+  .score-mid  .label { color: var(--warning); }
+  .score-low  .label { color: var(--danger); }
+
+  code { background: var(--code-bg); padding: .15rem .4rem; border-radius: 4px; font-size: .88rem; font-family: 'Fira Code', monospace; }
+  pre { background: var(--code-bg); padding: 1.2rem; border-radius: 8px; overflow-x: auto; font-size: .84rem; line-height: 1.6; font-family: 'Fira Code', monospace; border: 1px solid var(--border); }
+
+  .info-box  { background: var(--accent-light);  border-left: 3px solid var(--accent);  border-radius: 0 6px 6px 0; padding: .8rem 1rem; font-size: .9rem; color: var(--text); margin: .75rem 0; }
+  .warn-box  { background: var(--warning-light); border-left: 3px solid var(--warning); border-radius: 0 6px 6px 0; padding: .8rem 1rem; font-size: .9rem; color: var(--text); margin: .75rem 0; }
+
+  .status-ok   { color: var(--success); font-weight: 700; }
+  .status-warn { color: var(--warning); font-weight: 700; }
+  .status-err  { color: var(--danger);  font-weight: 700; }
+
+  .version-tab { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .version-badge { border-radius: 6px; padding: .3rem .9rem; font-size: .82rem; font-weight: 700; border: 1px solid; }
+  .version-current { background: var(--success-light); color: var(--success); border-color: var(--success); }
+  .version-old     { background: var(--code-bg);        color: var(--text-sub); border-color: var(--border); }
+
+  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  @media (max-width: 600px) { .param-grid { grid-template-columns: 1fr; } }
+  .param-block { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .param-block h4 { font-size: .82rem; color: var(--text-sub); font-weight: 600; margin-bottom: .6rem; text-transform: uppercase; letter-spacing: .04em; }
+  .param-row { display: flex; justify-content: space-between; align-items: baseline; padding: .2rem 0; border-bottom: 1px solid var(--border); font-size: .88rem; }
+  .param-row:last-child { border-bottom: none; }
+  .param-key { color: var(--text-sub); font-family: 'Fira Code', monospace; }
+  .param-val { font-weight: 700; color: var(--accent); font-family: 'Fira Code', monospace; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="max-width:900px;margin:0 auto;">
+    <h1>NICE 신용평가 스코어링 모델 가이드</h1>
+    <p class="subtitle">고객 신용 피처 47개 → LightGBM 이진 분류 → 신용점수 (0–1000)</p>
+    <span class="badge badge-green">v2 운영 중</span>
+    <span class="badge" style="margin-left:.4rem">261109_ext_lightgbm · LightGBM Extension 1.0.4</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 모델 개요 -->
+  <section>
+    <h2>모델 개요</h2>
+    <p>NICE평가정보 신용평가 데이터를 기반으로 LightGBM 이진 분류 모델을 학습하여 고객의 불량 확률을 예측하고, 오즈 로그 스케일링으로 <strong>신용점수(0–1000점)</strong>를 산출합니다. AI Studio에서 학습하고 AI Hub(mlops)를 통해 REST API로 서빙합니다.</p>
+
+    <div class="flow">
+      <div class="flow-box">피처 47개 입력</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">AI Hub (deploy_scoring_process_v02)</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">LightGBM Extension</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">P(정상) / P(불량)</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Score (0–1000)</div>
+    </div>
+
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>알고리즘</td><td>LightGBM Gradient Boosting (이진 분류, gbdt)</td></tr>
+        <tr><td>학습 데이터</td><td><code>train_data.txt</code> — 875,624행, 피처 47개</td></tr>
+        <tr><td>레이블</td><td><code>TARGET</code>: 0 (정상·우량), 1 (불량)</td></tr>
+        <tr><td>클래스 불균형</td><td>불량률 약 0.4% → <code>scale_pos_weight=240</code>으로 보정</td></tr>
+        <tr><td>출력</td><td><code>confidence(0)</code>, <code>confidence(1)</code> → 오즈 로그 스케일링 → Score 0–1000</td></tr>
+        <tr><td>현행 모델 파일</td><td><code>261109_ext_lightgbm.rmtabmod</code> (LightGBM Extension, Java 직렬화)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 입력 피처 -->
+  <section>
+    <h2>입력 피처</h2>
+    <p>총 <strong>48개 컬럼</strong> 입력 (<code>KEY</code> 포함, <code>TARGET</code> 제외). 피처는 모두 real형이며 접두사 패턴으로 분류됩니다.</p>
+
+    <table>
+      <thead><tr><th>컬럼</th><th>타입</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td><code>KEY</code></td><td><span class="tag tag-int">integer</span></td><td>고객 식별자 (id role로 처리, 모델 학습에 미사용)</td></tr>
+        <tr><td><code>R1_CBINQ_*</code></td><td><span class="tag tag-numeric">real</span></td><td>신용조회 관련 (5개)</td></tr>
+        <tr><td><code>R1_INQPTN_*</code></td><td><span class="tag tag-numeric">real</span></td><td>조회 패턴 관련 (7개)</td></tr>
+        <tr><td><code>R1_CPCBLA_*</code></td><td><span class="tag tag-numeric">real</span></td><td>카드/CB 잔액 관련 (2개)</td></tr>
+        <tr><td><code>R1_L*</code></td><td><span class="tag tag-numeric">real</span></td><td>대출 관련</td></tr>
+        <tr><td><code>R1_Z*</code>, <code>R1_P*</code></td><td><span class="tag tag-numeric">real</span></td><td>기타 신용 지표</td></tr>
+        <tr><td><code>R1_CF*</code>, <code>R1_CL*</code>, <code>R1_LC*</code></td><td><span class="tag tag-numeric">real</span></td><td>현금흐름·한도 관련</td></tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">⚠️ <code>train_data.txt</code> 헤더의 <code>KEY</code> 컬럼명 앞에 공백이 있음 (<code> KEY</code>). Set Role에서 <code>KEY → id</code>를 설정하지 말고 <code>TARGET → label</code>만 유지해야 함.</div>
+  </section>
+
+  <!-- 출력 & 신용점수 -->
+  <section>
+    <h2>출력 및 신용점수 산출</h2>
+
+    <h3>출력 필드</h3>
+    <table>
+      <thead><tr><th>필드</th><th>타입</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td><code>prediction(TARGET)</code></td><td><span class="tag tag-string">string</span></td><td>"0" (정상) / "1" (불량)</td></tr>
+        <tr><td><code>confidence(0)</code></td><td><span class="tag tag-numeric">float</span></td><td>정상일 확률 P(0), 0–1</td></tr>
+        <tr><td><code>confidence(1)</code></td><td><span class="tag tag-numeric">float</span></td><td>불량일 확률 P(1), 0–1</td></tr>
+        <tr><td><code>Score</code></td><td><span class="tag tag-numeric">float</span></td><td>신용점수, 0–1000 (높을수록 우량)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>신용점수 산출 공식</h3>
+    <p>오즈 로그 스케일링(Log Odds Scaling) 방식. 640점 = 정상·불량 확률이 동일한 기준점(odds = 1).</p>
+<pre>anchor = 640       # 기준 점수
+pdo    = 80        # Points to Double the Odds
+factor = 80 / ln(2)  ≈ 115.44
+
+odds  = P(0) / P(1)
+Score = anchor + factor × ln(odds)
+Score = clip(0, 1000).round(0)</pre>
+
+    <p style="margin-top:.75rem">AI Studio <strong>Generate Attributes</strong> 수식 (v2 기준):</p>
+<pre>Score = max(0, min(1000, round(640 + (115.44 * log(([confidence(0)] + 1e-10) / ([confidence(1)] + 1e-10))), 0)))</pre>
+
+    <div class="info-box">LightGBM Extension의 confidence 컬럼명은 <code>confidence(0)</code>, <code>confidence(1)</code>입니다 (Python Learner v1의 <code>confidence(conf(0))</code>과 다름). <code>1e-10</code>은 log(0) 방지용 epsilon이며, 긴 소수(<code>0.0000000001</code>) 표기 시 AI Studio XML 저장에서 자동 줄바꿈이 삽입되어 수식이 깨지는 현상을 방지합니다.</div>
+
+    <h3>점수대별 해석</h3>
+    <div class="score-row">
+      <div class="score-card score-high">
+        <div class="label">우량</div>
+        <div class="range">Score ≥ 700</div>
+        <div class="range" style="margin-top:.4rem">P(불량) 매우 낮음</div>
+      </div>
+      <div class="score-card score-mid">
+        <div class="label">중간</div>
+        <div class="range">400 ≤ Score &lt; 700</div>
+        <div class="range" style="margin-top:.4rem">기준점(640) 근방</div>
+      </div>
+      <div class="score-card score-low">
+        <div class="label">불량 위험</div>
+        <div class="range">Score &lt; 400</div>
+        <div class="range" style="margin-top:.4rem">P(불량) 높음</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 모델 구현 이력 -->
+  <section>
+    <h2>모델 구현 이력</h2>
+
+    <div class="version-tab">
+      <span class="version-badge version-current">v2 현행</span>
+      <span class="version-badge version-old">v1 구버전</span>
+    </div>
+
+    <table>
+      <thead><tr><th>항목</th><th>v1 — Python Learner</th><th>v2 — LightGBM Extension</th></tr></thead>
+      <tbody>
+        <tr><td>오퍼레이터</td><td><code>python_scripting:python_learner</code></td><td><code>lightgbm:lightgbm</code> (JAR 익스텐션)</td></tr>
+        <tr><td>모델 파일</td><td><code>261106_pyl_lightgbm.rmmodel</code></td><td><code>261109_ext_lightgbm.rmtabmod</code></td></tr>
+        <tr><td>Python 의존성</td><td>AI Hub 서버 Python Extension 필요</td><td><span class="status-ok">불필요</span> — 순수 Java 구현</td></tr>
+        <tr><td>AI Hub 호환성</td><td><span class="status-err">ExecutionError</span> (서버 Python Extension 미구성)</td><td><span class="status-ok">정상 동작</span></td></tr>
+        <tr><td>confidence 컬럼명</td><td><code>confidence(conf(0))</code>, <code>confidence(conf(1))</code></td><td><code>confidence(0)</code>, <code>confidence(1)</code></td></tr>
+        <tr><td>KEY 처리</td><td>id role 미설정</td><td>배포 프로세스에서 <code>Set Role(KEY → id)</code></td></tr>
+        <tr><td>상태</td><td><span class="status-warn">⚠️ 미사용</span></td><td><span class="status-ok">✅ 운영 중</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 하이퍼파라미터 -->
+  <section>
+    <h2>하이퍼파라미터</h2>
+    <p>v1 Python Learner의 sklearn API 파라미터를 LightGBM Extension UI 파라미터로 1:1 매핑.</p>
+
+    <div class="param-grid">
+      <div class="param-block">
+        <h4>UI 파라미터</h4>
+        <div class="param-row"><span class="param-key">boosting</span><span class="param-val">gbdt</span></div>
+        <div class="param-row"><span class="param-key">num_iterations</span><span class="param-val">3000</span></div>
+        <div class="param-row"><span class="param-key">objective</span><span class="param-val">auto</span></div>
+        <div class="param-row"><span class="param-key">learning_rate</span><span class="param-val">0.005</span></div>
+        <div class="param-row"><span class="param-key">num_leaves</span><span class="param-val">8</span></div>
+        <div class="param-row"><span class="param-key">max_depth</span><span class="param-val">3</span></div>
+        <div class="param-row"><span class="param-key">min_data_in_leaf</span><span class="param-val">800</span></div>
+        <div class="param-row"><span class="param-key">feature_fraction</span><span class="param-val">0.3</span></div>
+        <div class="param-row"><span class="param-key">bagging_fraction</span><span class="param-val">1.0</span></div>
+        <div class="param-row"><span class="param-key">early_stopping</span><span class="param-val">none</span></div>
+      </div>
+      <div class="param-block">
+        <h4>Expert Parameters</h4>
+        <div class="param-row"><span class="param-key">lambda_l1</span><span class="param-val">15</span></div>
+        <div class="param-row"><span class="param-key">lambda_l2</span><span class="param-val">200</span></div>
+        <div class="param-row"><span class="param-key">min_gain_to_split</span><span class="param-val">0.5</span></div>
+        <div class="param-row"><span class="param-key">scale_pos_weight</span><span class="param-val">240</span></div>
+        <div class="param-row"><span class="param-key">seed</span><span class="param-val">317</span></div>
+        <div class="param-row"><span class="param-key">num_iterations</span><span class="param-val">3000</span></div>
+      </div>
+    </div>
+
+    <div class="warn-box">⚠️ <strong>bagging_fraction 주의</strong>: v1 Python Learner의 <code>subsample=0.8</code>은 <code>subsample_freq</code> 미지정(기본 0)으로 실제 적용되지 않은 상태였음. v2에서는 <code>bagging_fraction=1.0</code>으로 원본 동작 재현.</div>
+  </section>
+
+  <!-- AI Studio 프로세스 -->
+  <section>
+    <h2>AI Studio 프로세스 구성</h2>
+
+    <h3>학습 — <code>create_lightgbm_process_v0.2.rmp</code></h3>
+    <div class="flow">
+      <div class="flow-box">Read CSV<br><small>train_data.txt</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Numerical to Polynominal<br><small>TARGET 0/1 → nominal</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Set Role<br><small>TARGET → label</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">LightGBM<br><small>Extension 오퍼레이터</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Store<br><small>261109_ext_lightgbm</small></div>
+    </div>
+
+    <h3>배포 — <code>deploy_scoring_process_v02.rmp</code></h3>
+    <div class="flow">
+      <div class="flow-box">외부 입력<br><small>피처 47개 + KEY</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Set Role<br><small>KEY → id</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Apply Model<br><small>← Retrieve 261109_ext_lightgbm</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Generate Attributes<br><small>Score 계산</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">result</div>
+    </div>
+
+    <h3>로컬 테스트 — <code>test_scoring_process.rmp</code></h3>
+    <div class="flow">
+      <div class="flow-box">Read CSV</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Sample<br><small>1,000행 (비활성화 가능)</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Numerical to Polynominal + Set Role</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Apply Model ← Retrieve</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Generate Attributes</div>
+    </div>
+    <div class="info-box">Sample 오퍼레이터 우클릭 → Deactivate하면 전체 875,624행으로 실행 가능.</div>
+  </section>
+
+  <!-- API 명세 -->
+  <section>
+    <h2>API 명세</h2>
+
+    <h3>엔드포인트</h3>
+    <table>
+      <thead><tr><th>버전</th><th>Endpoint URL</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="tag tag-string">v2 현행</span></td>
+          <td><code>https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02</code></td>
+          <td><span class="status-ok">✅ 운영 중</span></td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-warn">v1 구</span></td>
+          <td><code>https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/nice_score/deploy_scoring_process</code></td>
+          <td><span class="status-err">⚠️ ExecutionError</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <table style="margin-top:1rem">
+      <thead><tr><th>항목</th><th>값</th></tr></thead>
+      <tbody>
+        <tr><td>Method</td><td><code>POST</code></td></tr>
+        <tr><td>Content-Type</td><td><code>application/json</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>요청 본문</h3>
+<pre>{
+  "data": [{
+    "KEY": 1,
+    "R1_CBINQ_CNT05": 2.0,
+    "R1_CBINQ_CNT10_CD": 1.0,
+    "R1_CBINQ__CNT07_TL": 1.0,
+    "R1_CBINQ_CNT6M_TZ": 1.0,
+    "R1_CBINQ_GGN1Y": 2.0,
+    "R1_INQPTN_1Y_FN_03_FN": 3.0,
+    ...
+    "R1_CL1200915": 2.0
+  }]
+}</pre>
+
+    <h3>응답 예시</h3>
+<pre>{
+  "data": [{
+    "KEY": 1,
+    "prediction(TARGET)": "0",
+    "confidence(0)": 0.9821,
+    "confidence(1)": 0.0179,
+    "Score": 812.0
+  }]
+}</pre>
+
+    <h3>Python 연동 예시</h3>
+<pre>import requests
+
+url = "https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02"
+payload = {"data": [{"KEY": 1, "R1_CBINQ_CNT05": 2.0, ...}]}
+
+response = requests.post(url, json=payload)
+result = response.json()
+
+score = result["data"][0]["Score"]
+print(f"신용점수: {score}")</pre>
+  </section>
+
+  <!-- 트러블슈팅 -->
+  <section>
+    <h2>트러블슈팅 이력</h2>
+
+    <table>
+      <thead><tr><th>#</th><th>증상</th><th>원인</th><th>해결</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>Python Learner — <code>missing label</code></td>
+          <td>헤더 <code> KEY</code> 앞 공백 → Set Role 충돌</td>
+          <td>Set Role에서 <code>KEY → id</code> 항목 제거, <code>TARGET → label</code>만 유지</td>
+          <td><span class="status-ok">✅ 해결</span></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Python Learner — <code>failed to run python code</code></td>
+          <td>base conda 환경에 lightgbm 미설치</td>
+          <td>Python312 환경에 <code>lightgbm==4.6.0</code> 설치</td>
+          <td><span class="status-ok">✅ 해결</span></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>AI Hub 배포 후 한글 주석·numpy 인코딩 에러</td>
+          <td>서버 Python Extension 환경 차이</td>
+          <td>한글 주석 제거, numpy → math 모듈 대체</td>
+          <td><span class="status-ok">✅ 해결</span></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>AI Hub — <code>ExecutionError: script could not be parsed</code></td>
+          <td>서버 Python Extension 미구성 → <code>rm_apply()</code> 실행 불가</td>
+          <td>LightGBM Extension (JAR)으로 전환 → Python 의존성 제거</td>
+          <td><span class="status-ok">✅ 해결</span></td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>AI Hub — <code>LightGBMModel not registered for deserialization</code></td>
+          <td>AI Hub 서버에 LightGBM Extension JAR 미설치</td>
+          <td>서버에 <code>lightgbm_extension-1.0.4-all.jar</code> 설치</td>
+          <td><span class="status-ok">✅ 해결</span></td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>AI Hub — <code>KEY is of value type 'Real' but should be 'Integer'</code></td>
+          <td>API JSON 입력 숫자는 항상 Real로 파싱 → KEY 타입 불일치</td>
+          <td>배포 프로세스에 <code>Set Role(KEY → id)</code> 추가 + 재학습·재배포</td>
+          <td><span class="status-ok">✅ 해결</span></td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>AI Hub — <code>attribute 'confidence(conf(0))' is unknown</code></td>
+          <td>Python Learner와 LightGBM Extension의 confidence 컬럼명 상이</td>
+          <td>Score 수식을 <code>confidence(0)</code>, <code>confidence(1)</code>로 수정</td>
+          <td><span class="status-ok">✅ 해결</span></td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>Score가 수식 문자열 그대로 반환</td>
+          <td>AI Studio XML 저장 시 긴 소수(<code>0.0000000001</code>)에 자동 줄바꿈 삽입 → 수식 파싱 실패</td>
+          <td><code>1e-10</code> 단축 표기로 변경</td>
+          <td><span class="status-ok">✅ 해결</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-box" style="margin-top:1rem">상세 내용: <code>docs/test/troubleshooting.md</code> | LightGBM 파라미터 마이그레이션 가이드: <code>docs/lightgbm.md</code></div>
+  </section>
+
+</div>
+</body>
+</html>

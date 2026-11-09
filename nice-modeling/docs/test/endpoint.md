@@ -1,15 +1,48 @@
 # NICE 신용평가 스코어링 API 엔드포인트
 
-## 기본 정보
+## 배포 이력 요약
+
+| 버전 | 서버 | 서비스명 | 모델 | 상태 |
+|------|------|---------|------|------|
+| **v1** | `43-200-118-70.sslip.io` | `nice_score` | Python Learner (3,000 trees) | ⚠️ ExecutionError (서버 Python Extension 미구성) |
+| **v2** | `mlops.nice.plda-cloud.com` | `nice-scoring` | LightGBM Extension | ✅ 운영 중 |
+
+---
+
+## v1 — Python Learner 기반 (1차 배포)
 
 | 항목 | 값 |
 |---|---|
-| AI Hub 프로젝트 | `jiyoon-nice` |
+| 서버 | AI Hub (`43-200-118-70.sslip.io`) |
+| 프로젝트 | `jiyoon-nice` |
 | 서비스명 | `nice_score` |
 | 프로세스명 | `deploy_scoring_process` |
 | Endpoint URL | `https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/nice_score/deploy_scoring_process` |
 | Method | `POST` |
 | Content-Type | `application/json` |
+| 모델 파일 | `261106_pyl_lightgbm.rmmodel` |
+| 비고 | Python Extension 의존 → 서버 미구성으로 ExecutionError 발생 중 |
+
+---
+
+## v2 — LightGBM Extension 기반 (2차 배포)
+
+| 항목 | 값 |
+|---|---|
+| 서버 | `mlops.nice.plda-cloud.com` |
+| 서비스명 | `nice-scoring` |
+| 프로세스명 | `deploy_scoring_process_v02` |
+| Endpoint URL | `https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02` |
+| Method | `POST` |
+| Content-Type | `application/json` |
+| 모델 파일 | `261109_ext_lightgbm.rmtabmod` |
+| 비고 | Python 의존성 없음. KEY를 id role로 학습, 배포 프로세스에 Set Role 포함 |
+
+---
+
+## 요청/응답 (v1·v2 공통)
+
+### 기본 정보
 
 ---
 
@@ -89,6 +122,14 @@
 
 ### cURL
 
+**v2 (현재 테스트 중)**
+```bash
+curl -X POST "https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02" \
+  -H "Content-Type: application/json" \
+  -d '{"data": [{"KEY": 1, "R1_CBINQ_CNT05": 2.0, ...}]}'
+```
+
+**v1 (참고용)**
 ```bash
 curl -X POST "https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/nice_score/deploy_scoring_process" \
   -H "Content-Type: application/json" \
@@ -151,7 +192,8 @@ curl -X POST "https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/nice
 ```python
 import requests
 
-url = "https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/nice_score/deploy_scoring_process"
+url = "https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02"  # v2
+# url = "https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/nice_score/deploy_scoring_process"  # v1
 headers = {"Content-Type": "application/json"}
 
 payload = {
@@ -225,9 +267,9 @@ print(f"신용점수: {score}")
     {
       "KEY": 1,
       "prediction(TARGET)": "0",
-      "confidence(conf(0))": 0.9821,
-      "confidence(conf(1))": 0.0179,
-      "Score": 812
+      "confidence(0)": 0.9821,
+      "confidence(1)": 0.0179,
+      "Score": 928
     }
   ]
 }
@@ -238,8 +280,8 @@ print(f"신용점수: {score}")
 | 필드 | 설명 |
 |---|---|
 | `prediction(TARGET)` | 예측 클래스 (`"0"`: 정상, `"1"`: 불량) |
-| `confidence(conf(0))` | 정상일 확률 P(0), 0~1 |
-| `confidence(conf(1))` | 불량일 확률 P(1), 0~1 |
+| `confidence(0)` | 정상일 확률 P(0), 0~1 |
+| `confidence(1)` | 불량일 확률 P(1), 0~1 |
 | `Score` | 신용점수 (0~1000, 높을수록 우량) |
 
 ---

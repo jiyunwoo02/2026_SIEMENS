@@ -270,15 +270,29 @@ train_data.txt
 
 ## 배포 정보
 
-스코어링 프로세스(`ckj_scoring_process.rmp`)는 Altair AI Hub에 REST API로 배포되어 있습니다.
+> 요청/응답 형식 및 컬럼 목록 상세는 [endpoint.md](./endpoint.md) 참조.
+
+### v1 — Python Learner 기반 (1차 배포, 구)
 
 | 항목 | 값 |
 |---|---|
-| AI Hub 프로젝트 | `jiyoon-nice` |
+| 서버 | AI Hub (`43-200-118-70.sslip.io`) |
+| 프로젝트 | `jiyoon-nice` |
 | 서비스명 | `nice_score` |
-| Endpoint | `https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/nice_score/ckj_scoring_process` |
+| 프로세스 | `deploy_scoring_process` |
+| Endpoint | `https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/nice_score/deploy_scoring_process` |
+| 상태 | ⚠️ ExecutionError — 서버 Python Extension 미구성으로 Apply Model 단계 실패 |
 
-요청/응답 형식 및 컬럼 목록 상세는 [endpoint.md](./endpoint.md) 참조.
+### v2 — LightGBM Extension 기반 (2차 배포, 신규)
+
+| 항목 | 값 |
+|---|---|
+| 서버 | `mlops.nice.plda-cloud.com` |
+| 서비스명 | `nice-scoring` |
+| 프로세스 | `deploy_scoring_process_v02` |
+| Endpoint | `https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02` |
+| 모델 | `261109_ext_lightgbm.rmmodel` (LightGBM Extension JAR 기반) |
+| 상태 | 🔄 테스트 중 — Boosting iterations 13 이슈 해결 후 정식 운영 예정 |
 
 ---
 

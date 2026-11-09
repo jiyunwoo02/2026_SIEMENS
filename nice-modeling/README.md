@@ -19,11 +19,14 @@ nice-modeling/
 │   └── test_scoring_process.rmp          — 로컬 테스트용 스코어링 프로세스
 ├── deploy/
 │   └── deploy_scoring_process.rmp        — AI Hub 배포용 스코어링 프로세스
-└── docs/test/
-    ├── endpoint.md              — API 엔드포인트 명세
-    ├── initial_guide.md         — AI Studio 모델 구축 가이드
-    ├── logic.md                 — 프로젝트 동작 원리 & 프로세스 문서
-    └── troubleshooting.md       — 트러블슈팅 기록
+├── docs/
+│   ├── guide-nice-scoring.html  — 전체 가이드 (HTML, 한눈에 보기용)
+│   ├── lightgbm.md              — LightGBM 파라미터 · 마이그레이션 가이드 (상세)
+│   └── test/
+│       ├── endpoint.md          — API 엔드포인트 명세
+│       ├── initial_guide.md     — AI Studio 모델 구축 가이드
+│       ├── logic.md             — 프로젝트 동작 원리 & 프로세스 문서
+│       └── troubleshooting.md   — 트러블슈팅 기록
 ```
 
 ---
@@ -61,24 +64,30 @@ nice-modeling/
 
 ## 모델
 
-### LightGBM 이진 분류 (Python Learner)
+### LightGBM 이진 분류
+
+> 상세 파라미터·마이그레이션 가이드: [docs/lightgbm.md](docs/lightgbm.md)
 
 | 하이퍼파라미터 | 값 |
 |--------------|-----|
-| `n_estimators` | 3,000 |
+| `num_iterations` | 3,000 |
 | `max_depth` | 3 |
 | `num_leaves` | 8 |
-| `min_child_samples` | 800 |
+| `min_data_in_leaf` | 800 |
 | `learning_rate` | 0.005 |
-| `subsample` | 0.8 |
-| `colsample_bytree` | 0.3 |
-| `reg_alpha` | 15 |
-| `reg_lambda` | 200 |
-| `min_split_gain` | 0.5 |
+| `feature_fraction` | 0.3 |
+| `lambda_l1` | 15 |
+| `lambda_l2` | 200 |
+| `min_gain_to_split` | 0.5 |
 | `scale_pos_weight` | 240 |
-| `random_state` | 317 |
+| `seed` | 317 |
 
-Python 환경: `Python312` / `lightgbm==4.6.0`
+#### 구현 이력
+
+| 버전 | 오퍼레이터 | 모델 파일 | 비고 |
+|------|-----------|-----------|------|
+| v1 (기존) | Python Learner (`python_scripting:python_learner`) | `261106_pyl_lightgbm.rmmodel` | AI Hub Python Extension 의존 → 이슈 4 발생 |
+| v2 (현행) | LightGBM Extension (`lightgbm_extension-1.0.4-all 1.jar`) | `261109_ext_lightgbm.rmtabmod` | Python 의존성 없음, KEY를 id role로 학습, ✅ 운영 중 |
 
 ---
 
@@ -106,14 +115,14 @@ Score = max(0, min(1000, round(640 + 115.44 * ln(P(0) / P(1)), 0)))
 
 ---
 
-## AI Hub 엔드포인트
+## 엔드포인트
 
-| 항목 | 값 |
-|-----|-----|
-| 프로젝트 | `jiyoon-nice` |
-| 서비스명 | `nice_score` |
-| 메서드 | `POST` |
-| URL | `https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/nice_score/deploy_scoring_process` |
+| 버전 | URL | 모델 | 상태 |
+|------|-----|------|------|
+| **v2** (현행) | `https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02` | LightGBM Extension | ✅ 운영 중 |
+| v1 (구) | `https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/nice_score/deploy_scoring_process` | Python Learner | ⚠️ ExecutionError |
+
+> 상세 명세: [docs/test/endpoint.md](docs/test/endpoint.md)
 
 ### 요청
 
@@ -132,8 +141,8 @@ Score = max(0, min(1000, round(640 + 115.44 * ln(P(0) / P(1)), 0)))
 | 필드 | 타입 | 설명 |
 |------|------|------|
 | `prediction(TARGET)` | string | "0" (정상) / "1" (불량) |
-| `confidence(conf(0))` | float | 정상 확률 P(0), 0–1 |
-| `confidence(conf(1))` | float | 불량 확률 P(1), 0–1 |
+| `confidence(0)` | float | 정상 확률 P(0), 0–1 |
+| `confidence(1)` | float | 불량 확률 P(1), 0–1 |
 | `Score` | float | 신용점수, 0–1000 |
 
 ---
@@ -161,11 +170,12 @@ Read CSV (train_data.txt)
 → Generate Attributes (Score 계산)
 ```
 
-### 배포 (`deploy/deploy_scoring_process.rmp`)
+### 배포 (`deploy/deploy_scoring_process_v0.2.rmp`)
 
 ```
-외부 입력 (TARGET 없는 피처 48개)
-→ Apply Model ← Retrieve (../model/261106_pyl_lightgbm)
+외부 입력 (TARGET 없는 피처 48개, KEY 포함)
+→ Set Role (KEY → id)
+→ Apply Model ← Retrieve (../model/261109_ext_lightgbm)
 → Generate Attributes (Score 계산)
 → result
 ```
@@ -176,13 +186,16 @@ Read CSV (train_data.txt)
 
 | # | 상태 | 내용 |
 |---|------|------|
-| 1 | 해결 | Python Learner — missing label (헤더 공백 문제) |
-| 2 | 해결 | Python Learner — lightgbm 미설치 |
-| 3 | 해결 | AI Hub 배포 후 한글 주석·numpy 인코딩 에러 |
-| **4** | **⚠️ 미해결** | **AI Hub 서버 Python Extension 미구성 → ExecutionError** |
+| 1 | ✅ | Python Learner — missing label (헤더 공백 문제) |
+| 2 | ✅ | Python Learner — lightgbm 미설치 |
+| 3 | ✅ | AI Hub 배포 후 한글 주석·numpy 인코딩 에러 |
+| 4 | ✅ | AI Hub 서버 Python Extension 미구성 → LightGBM Extension으로 전환 완료 |
+| 5 | ✅ | AI Hub LightGBM Extension JAR 미설치 → 서버 설치 완료 |
+| 6 | ✅ | KEY 속성 타입 불일치 (Real vs Integer) → 재학습 + 배포 Set Role 추가 |
+| 7 | ✅ | confidence 컬럼명 불일치 → 수식 수정 (`confidence(0)`, `confidence(1)`) |
+| 8 | ✅ | Score 수식 줄바꿈 → `1e-10` 단축 표기로 해결 |
 
-> **이슈 4 상세**: `.rmmodel` 내부에 Python 코드(`rm_apply()`)가 내장되어 있어 Apply Model 단계에서 Python Extension을 호출하는데, AI Hub 서버에 Python Extension이 구성되어 있지 않아 실행 오류 발생. 관리자 조치 필요.  
-> **해결 방안**: (A) AI Hub 서버 Python Extension 구성 또는 (B) Python SDK 방식(`py_gbm:gbm_apply_from_file`) 전환
+> 상세 내용: [docs/test/troubleshooting.md](docs/test/troubleshooting.md)
 
 ---
 
