@@ -11,6 +11,8 @@ Siemens AI Platform 관련 서비스 연동 및 로컬 머신러닝 데모 프�
 | `local-ml/` | 같은 12개 공정 조건으로 결함률(%)을 예측하는 모델을 로컬에서 탐색·학습·예측해 보는 스크립트 모음 | Python, pandas, scikit-learn, joblib |
 | `defect-dashboard/` | 결함률 예측 및 최적 공정조건 추천 Panopticon 대시보드 제작물 (AI Studio GBT 모델 → AI Hub 배포 → Panopticon 시각화) | Altair AI Studio, AI Hub, Panopticon |
 | `agent-learning/` | Tool Calling → MCP Server → ReAct Agent 개념을 Siemens SDC 환경에서 단계별로 직접 구현해보는 학습 레포 | Python, httpx, FastMCP, Siemens SDC LLM Gateway, AI Hub GBT 예측 API |
+| `hd-modeling/` | 공정 데이터 기반 GBT 회귀(결함률 %) · 분류(고위험 판별 + 최적 공정조건 탐색) 모델 학습 및 AI Hub 배포. defect-predictor · defect-advisor · defect-dashboard가 이 모델을 사용함 | Altair AI Studio, AI Hub |
+| `nice-modeling/` | NICE평가정보 신용평가 데이터 기반 LightGBM 이진 분류 모델. 피처 47개 → P(불량) → 신용점수(0–1000). LightGBM Extension(JAR)으로 Python 의존성 없이 AI Hub 배포 | Altair AI Studio, AI Hub, LightGBM |
 | `test/` | 루트 공통 유틸리티. `llm_model_test.py`: SDC LLM 게이트웨이에 연결해 지원 모델 목록을 출력 (루트 `.env` 필요) | Python 표준 라이브러리 |
 
 네 폴더는 서로 독립된 프로젝트이며 코드로 연결되어 있지 않습니다. `defect-predictor`와 `defect-advisor`는 입력 스키마(12개 필드)와 패키지 구조가 거의 동일해 같은 계통의 코드베이스로 보이지만, 저장소 안에 둘 사이의 명시적인 연결(같은 import, 변경 이력 문서 등)은 확인되지 않았습니다. `local-ml`는 둘 다와 코드로 연결되어 있지 않으며 입력 컬럼 12개의 이름만 같습니다(아래 [두 프로젝트의 관계](#두-프로젝트의-관계) 참고).
@@ -127,6 +129,52 @@ Panopticon의 Python Transform이 이 두 엔드포인트를 직접 호출합니
 - 모델 출력 형태가 다릅니다. `local-ml/predict.py`는 소수 3자리로 반올림한 값과 위험 등급을, defect-predictor / defect-advisor는 외부 API가 돌려준 예측값(%)을 그대로 사용합니다.
 - **`defect-predictor`와 `defect-advisor`의 관계**: 두 패키지는 `config.py`/`schema.py`/`ml.py`/`cli.py`/`api.py` 등 상당 부분의 코드가 동일해 보입니다(문서화 과정에서 비교해 확인). `defect-advisor`가 `defect-predictor`를 복사한 뒤 최적화 기능을 추가해 만든 것으로 추정되나, 두 폴더 사이의 git 이력이나 명시적 선언은 확인하지 못해 **추정**입니다. 두 패키지는 코드로 서로 import하지 않습니다.
 
+
+---
+
+## hd-modeling
+
+### 목적
+
+공정 데이터(합성) 기반으로 **GBT 회귀 모델**(결함률 % 예측)과 **GBT 분류 모델**(고위험 판별 + 최적 공정조건 탐색)을 학습하고 AI Hub에 배포하는 ML 모델링 프로젝트입니다. `defect-predictor`, `defect-advisor`, `defect-dashboard`가 이 모델의 AI Hub 엔드포인트를 직접 호출합니다.
+
+| 모델 | 파일 | 입력 | 출력 |
+|-----|------|------|------|
+| GBT 회귀 | `strore-regression-gbt-v0.2.rmmodel` | 공정 변수 12개 | `defect_rate_pct` (결함률, %) |
+| GBT 분류 | `strore-classification-gbt-v0.3.rmmodel` | 공정 변수 12개 | `high_defect_flag` (0/1) + 최적화 탐색 |
+
+### AI Hub 엔드포인트
+
+| 용도 | 메서드 | URL |
+|---|---|---|
+| 결함률 예측 (회귀) | `POST` | `https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/defect_rate_pred/deploy` |
+| 최적 공정조건 추천 (분류+최적화) | `GET` | `https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/defect_flag_classification/deploy-optimization?target=0\|1` |
+
+폴더 구조, 모델 파라미터, API 명세는 [`hd-modeling/README.md`](hd-modeling/README.md) 및 [`hd-modeling/docs/`](hd-modeling/docs/)를 보세요.
+
+---
+
+## nice-modeling
+
+### 목적
+
+NICE평가정보 신용평가 데이터를 기반으로 **LightGBM 이진 분류 모델**을 학습하여 고객의 불량 확률을 예측하고, 오즈 로그 스케일링으로 **신용점수(0–1000점)**를 산출합니다. AI Studio LightGBM Extension(JAR)을 사용해 Python 의존성 없이 AI Hub에 배포합니다.
+
+| 항목 | 내용 |
+|---|---|
+| 알고리즘 | LightGBM 이진 분류 (gbdt, 3,000 trees) |
+| 학습 데이터 | 875,624행, 피처 47개, 불량률 약 0.4% |
+| 출력 | 신용점수 0–1000 (높을수록 우량) |
+| 현행 모델 | `261109_ext_lightgbm.rmtabmod` (LightGBM Extension 1.0.4) |
+
+### AI Hub 엔드포인트
+
+| 버전 | URL | 상태 |
+|---|---|---|
+| **v2 현행** | `https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02` | ✅ 운영 중 |
+| v1 구 | `https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/nice_score/deploy_scoring_process` | ⚠️ ExecutionError |
+
+폴더 구조, 파라미터, API 명세, 트러블슈팅은 [`nice-modeling/README.md`](nice-modeling/README.md) 및 [`nice-modeling/docs/guide-nice-scoring.html`](nice-modeling/docs/guide-nice-scoring.html)을 보세요.
 
 ---
 
