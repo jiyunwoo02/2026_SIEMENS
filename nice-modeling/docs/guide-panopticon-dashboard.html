@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NICE 신용점수 Panopticon 대시보드 가이드</title>
+<style>
+  :root {
+    --bg: #f8f9fa;
+    --surface: #ffffff;
+    --border: #e0e3e8;
+    --text: #1a1d23;
+    --text-sub: #5a6072;
+    --accent: #2563eb;
+    --accent-light: #eff4ff;
+    --success: #16a34a;
+    --success-light: #f0fdf4;
+    --warning: #d97706;
+    --warning-light: #fffbeb;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --code-bg: #f1f3f7;
+    --tag-numeric: #dbeafe;
+    --tag-numeric-text: #1e40af;
+    --tag-string: #d1fae5;
+    --tag-string-text: #065f46;
+    --tag-int: #ede9fe;
+    --tag-int-text: #5b21b6;
+    --tag-warn: #fef9c3;
+    --tag-warn-text: #854d0e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1117;
+      --surface: #1a1d2e;
+      --border: #2a2d3e;
+      --text: #e8eaf0;
+      --text-sub: #8b90a8;
+      --accent: #4f8ef7;
+      --accent-light: #1a2340;
+      --success: #34d399;
+      --success-light: #0a2a1a;
+      --warning: #fbbf24;
+      --warning-light: #2a1f0a;
+      --danger: #f87171;
+      --danger-light: #2a0f0f;
+      --code-bg: #0d0f18;
+      --tag-numeric: #1e3a5f;
+      --tag-numeric-text: #93c5fd;
+      --tag-string: #0a2a1a;
+      --tag-string-text: #6ee7b7;
+      --tag-int: #2e1f5e;
+      --tag-int-text: #c4b5fd;
+      --tag-warn: #2a1f0a;
+      --tag-warn-text: #fbbf24;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1117; --surface: #1a1d2e; --border: #2a2d3e;
+    --text: #e8eaf0; --text-sub: #8b90a8;
+    --accent: #4f8ef7; --accent-light: #1a2340;
+    --success: #34d399; --success-light: #0a2a1a;
+    --warning: #fbbf24; --warning-light: #2a1f0a;
+    --danger: #f87171; --danger-light: #2a0f0f;
+    --code-bg: #0d0f18;
+    --tag-numeric: #1e3a5f; --tag-numeric-text: #93c5fd;
+    --tag-string: #0a2a1a; --tag-string-text: #6ee7b7;
+    --tag-int: #2e1f5e; --tag-int-text: #c4b5fd;
+    --tag-warn: #2a1f0a; --tag-warn-text: #fbbf24;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif; font-size: 15px; line-height: 1.65; }
+
+  .header { background: var(--accent); color: #fff; padding: 2.5rem 2rem; }
+  .header h1 { font-size: 1.75rem; font-weight: 700; }
+  .header .subtitle { opacity: 0.85; margin-top: .3rem; font-size: .95rem; }
+  .badge { display: inline-block; background: rgba(255,255,255,.2); border-radius: 20px; padding: .2rem .75rem; font-size: .8rem; margin-top: .6rem; }
+  .badge-green { background: rgba(52,211,153,.25); }
+  .badge-purple { background: rgba(167,139,250,.3); }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+  section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--accent); display: flex; align-items: center; gap: .5rem; }
+  h2::before { content: ''; display: inline-block; width: 4px; height: 1.1rem; background: var(--accent); border-radius: 2px; }
+  h3 { font-size: .95rem; font-weight: 600; margin: 1.25rem 0 .6rem; color: var(--text); }
+  h4 { font-size: .85rem; font-weight: 600; margin: 1rem 0 .4rem; color: var(--text-sub); }
+  p { color: var(--text-sub); margin-bottom: .75rem; }
+
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th { background: var(--code-bg); color: var(--text-sub); font-weight: 600; padding: .6rem .8rem; text-align: left; border-bottom: 2px solid var(--border); }
+  td { padding: .55rem .8rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+
+  .tag { display: inline-block; border-radius: 4px; padding: .15rem .5rem; font-size: .78rem; font-weight: 600; }
+  .tag-numeric { background: var(--tag-numeric); color: var(--tag-numeric-text); }
+  .tag-string  { background: var(--tag-string);  color: var(--tag-string-text); }
+  .tag-int     { background: var(--tag-int);     color: var(--tag-int-text); }
+  .tag-warn    { background: var(--tag-warn);    color: var(--tag-warn-text); }
+
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+  .flow-box { background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: .5rem 1rem; font-size: .88rem; font-weight: 600; }
+  .flow-box small { display: block; font-weight: 400; font-size: .78rem; opacity: .8; }
+  .flow-arrow { color: var(--text-sub); font-size: 1.2rem; }
+
+  code { background: var(--code-bg); padding: .15rem .4rem; border-radius: 4px; font-size: .88rem; font-family: 'Fira Code', monospace; }
+  pre { background: var(--code-bg); padding: 1.2rem; border-radius: 8px; overflow-x: auto; font-size: .84rem; line-height: 1.6; font-family: 'Fira Code', monospace; border: 1px solid var(--border); }
+
+  .info-box  { background: var(--accent-light);  border-left: 3px solid var(--accent);  border-radius: 0 6px 6px 0; padding: .8rem 1rem; font-size: .9rem; color: var(--text); margin: .75rem 0; }
+  .warn-box  { background: var(--warning-light); border-left: 3px solid var(--warning); border-radius: 0 6px 6px 0; padding: .8rem 1rem; font-size: .9rem; color: var(--text); margin: .75rem 0; }
+  .success-box { background: var(--success-light); border-left: 3px solid var(--success); border-radius: 0 6px 6px 0; padding: .8rem 1rem; font-size: .9rem; color: var(--text); margin: .75rem 0; }
+
+  .status-ok   { color: var(--success); font-weight: 700; }
+  .status-warn { color: var(--warning); font-weight: 700; }
+  .status-err  { color: var(--danger);  font-weight: 700; }
+
+  /* 아키텍처 다이어그램 */
+  .arch-diagram { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin: 1rem 0; overflow-x: auto; }
+  .arch-diagram pre { background: none; border: none; padding: 0; font-size: .82rem; }
+
+  /* 개요 카드 그리드 */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  @media (max-width: 600px) { .overview-grid { grid-template-columns: 1fr; } }
+  .overview-card { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .overview-card .label { font-size: .78rem; color: var(--text-sub); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; margin-bottom: .4rem; }
+  .overview-card .value { font-size: .9rem; color: var(--text); font-weight: 500; }
+
+  /* 등급 구간 띠 */
+  .grade-band { display: flex; border-radius: 8px; overflow: hidden; margin: 1rem 0; height: 48px; }
+  .grade-seg { flex: 1; display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; color: #fff; flex-direction: column; gap: 2px; }
+  .grade-seg .seg-label { font-size: .7rem; opacity: .9; }
+  .grade-danger  { background: #dc2626; }
+  .grade-warn    { background: #d97706; }
+  .grade-normal  { background: #ca8a04; }
+  .grade-good    { background: #16a34a; }
+  .grade-great   { background: #0d9488; }
+  .grade-best    { background: #2563eb; }
+
+  /* 슬라이더 격자 미리보기 */
+  .slider-grid-preview { display: grid; grid-template-columns: repeat(5, 1fr); gap: .4rem; margin: 1rem 0; }
+  .slider-chip { background: var(--accent-light); border: 1px solid var(--accent); border-radius: 6px; padding: .3rem .5rem; font-size: .72rem; color: var(--accent); font-family: 'Fira Code', monospace; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* 단계 목록 */
+  .steps { list-style: none; counter-reset: step-counter; }
+  .steps li { counter-increment: step-counter; display: flex; gap: 1rem; padding: .75rem 0; border-bottom: 1px solid var(--border); }
+  .steps li:last-child { border-bottom: none; }
+  .steps li::before { content: counter(step-counter); min-width: 28px; height: 28px; background: var(--accent); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .82rem; font-weight: 700; flex-shrink: 0; }
+  .steps li .step-body { flex: 1; }
+  .steps li .step-title { font-weight: 600; color: var(--text); font-size: .9rem; margin-bottom: .2rem; }
+  .steps li .step-desc { color: var(--text-sub); font-size: .88rem; }
+
+  /* 위젯 속성 블록 */
+  .prop-block { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin: .75rem 0; }
+  .prop-row { display: flex; justify-content: space-between; align-items: baseline; padding: .25rem 0; border-bottom: 1px solid var(--border); font-size: .88rem; }
+  .prop-row:last-child { border-bottom: none; }
+  .prop-key { color: var(--text-sub); font-family: 'Fira Code', monospace; }
+  .prop-val { font-weight: 700; color: var(--accent); font-family: 'Fira Code', monospace; }
+
+  /* 개선 방향 카드 */
+  .improve-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  @media (max-width: 600px) { .improve-grid { grid-template-columns: 1fr; } }
+  .improve-card { border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .improve-card .ic-label { font-size: .78rem; color: var(--text-sub); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; margin-bottom: .3rem; }
+  .improve-card .ic-current { font-size: .88rem; color: var(--danger); margin-bottom: .25rem; }
+  .improve-card .ic-future { font-size: .88rem; color: var(--success); }
+  .ic-icon { margin-right: .3rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="max-width:900px;margin:0 auto;">
+    <h1>NICE 신용점수 Panopticon 대시보드 가이드</h1>
+    <p class="subtitle">슬라이더 47개로 신용 변수를 조절하면 AI Hub 스코어링 모델이 실시간으로 호출되어 신용점수·확률·등급이 갱신됩니다</p>
+    <span class="badge badge-green">v3 운영 중</span>
+    <span class="badge" style="margin-left:.4rem">261109_dashboard_v3_sliders.exz</span>
+    <span class="badge badge-purple" style="margin-left:.4rem">nice-scoring v2 · LightGBM Extension 1.0.4</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 1. 한눈에 보기 -->
+  <section>
+    <h2>한눈에 보기</h2>
+
+    <div class="overview-grid">
+      <div class="overview-card">
+        <div class="label">결과 파일</div>
+        <div class="value"><code>261109_dashboard_v3_sliders.exz</code></div>
+      </div>
+      <div class="overview-card">
+        <div class="label">워크북 / 대시보드 / 데이터 테이블</div>
+        <div class="value"><code>261109_Workbook</code> / <code>Dashboard1</code> / <code>DataTable1</code></div>
+      </div>
+      <div class="overview-card">
+        <div class="label">서빙 모델</div>
+        <div class="value">AI Hub <code>nice-scoring</code> 서비스 v2<br><small style="color:var(--text-sub)">deploy_scoring_process_v02 · LightGBM Extension 1.0.4</small></div>
+      </div>
+      <div class="overview-card">
+        <div class="label">데이터 소스</div>
+        <div class="value">TEXT 데이터 소스 + Python Transform (REST 호출)</div>
+      </div>
+    </div>
+
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>입력</td><td>슬라이더 47개 — 신용 변수, 범위 <strong>0 ~ 10</strong>, 기본값은 기존 샘플 요청 값</td></tr>
+        <tr><td>출력</td><td><code>Score</code> (신용점수) · <code>confidence(1)</code> (불량확률) · <code>confidence(0)</code> (정상확률) · <code>prediction(TARGET)</code> (0/1) · <code>Result</code> (판정) · <code>Grade</code> (신용등급 구간)</td></tr>
+        <tr><td>갱신 방식</td><td>슬라이더 조작 → 대시보드 파라미터 변경 → DataTable1이 AI Hub 엔드포인트 재호출 → 결과 박스 갱신</td></tr>
+        <tr><td>위젯 구성</td><td><code>NumericActionSlider</code> 47개 + <code>TextBox</code> 21개</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 2. 전체 구조 -->
+  <section>
+    <h2>전체 구조</h2>
+
+    <p>핵심은 슬라이더가 만든 <strong>대시보드 파라미터</strong>를 데이터 테이블이 <strong>같은 이름의 <code>{P_변수명}</code></strong>으로 받아 쓴다는 점입니다. 파라미터가 바뀌면 데이터 테이블이 자동으로 재실행되고, 연결된 모든 결과 박스가 함께 갱신됩니다.</p>
+
+    <div class="arch-diagram">
+<pre>
+  [슬라이더 47개]                 [DataTable1]                        [AI Hub]
+  ───────────────                 ─────────────────────────────────   ──────────────────────
+  P_R1_CBINQ_CNT05  ─┐           TEXT 소스 (헤더 + {P_변수명} 행)
+  P_R1_CBINQ_...    ─┼─ 파라미터 ─→  Python Transform
+  ...               ─┘               · JSON 조립 ({P_...} → 실제 값)
+                                     · POST  ─────────────────────────→  nice-scoring v02
+                                     · 응답 파싱  ←────────────────────     (Set Role
+                                     · Result·Grade 컬럼 계산                → Apply Model
+                                          │                                   → Generate Attrs)
+                                          ▼
+                              [결과 박스]
+                              Score · confidence · target · 판정 · 등급
+</pre>
+    </div>
+
+    <h3>레이아웃 영역</h3>
+    <table>
+      <thead><tr><th>영역</th><th>위치</th><th>구성</th></tr></thead>
+      <tbody>
+        <tr><td>제목</td><td>상단 전체</td><td>텍스트 박스 1개</td></tr>
+        <tr><td>슬라이더</td><td>좌측 약 2/3</td><td>5열 × 10행 격자, 변수 47개 (마지막 열 3칸 비어 있음)</td></tr>
+        <tr><td>KPI</td><td>우측 상단</td><td>신용점수 라벨 + 값</td></tr>
+        <tr><td>결과 행</td><td>우측 중단</td><td>불량확률 · 정상확률 · target 예측 · 판정 · 신용등급 구간</td></tr>
+        <tr><td>점수 구간 띠</td><td>우측 하단</td><td>위험 / 주의 / 보통 / 양호 / 우수 / 최우수 색 구간 6개</td></tr>
+        <tr><td>안내</td><td>우측 최하단</td><td>사용 방법 · 모델 정보</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 3. 만든 과정 -->
+  <section>
+    <h2>만든 과정</h2>
+
+    <h3>3-1. 초안 분석</h3>
+    <p>처음 대시보드는 AI Hub Endpoint 커넥터(<code>AIHub</code>)로 연결한 데이터 테이블 1개와 텍스트 박스 몇 개뿐이었으며, 두 가지 한계가 있었습니다.</p>
+    <ul style="color:var(--text-sub);padding-left:1.2rem;margin-bottom:.75rem;">
+      <li>요청 본문(<code>RequestBody</code>)이 고정 샘플 1건이라 항상 같은 결과만 보임</li>
+      <li>입력을 바꿀 위젯이 없음</li>
+    </ul>
+
+    <h3>3-2. 레퍼런스 분석</h3>
+    <p>HT 목상해 예측 플랫폼 레퍼런스 워크북을 분석해 다음 패턴을 확인했습니다.</p>
+    <table>
+      <thead><tr><th>항목</th><th>레퍼런스 방식</th></tr></thead>
+      <tbody>
+        <tr><td>입력 위젯</td><td><code>NumericActionSlider</code> (수치) · <code>ActionDropDown</code> (범주)</td></tr>
+        <tr><td>위젯-파라미터 연결</td><td><code>DashboardParameterName</code>에 파라미터 이름 지정, <code>ActionPartTriggerMode = Parameter</code></td></tr>
+        <tr><td>파라미터 정의</td><td>대시보드와 데이터 테이블 양쪽에 같은 이름의 <code>parameter</code> 선언 (이름·기본값·타입)</td></tr>
+        <tr><td>모델 호출</td><td>TEXT 데이터 소스 + Python Transform — 스크립트 안의 <code>{P_변수명}</code>이 파라미터 값으로 치환</td></tr>
+        <tr><td>결과 표시</td><td>데이터 모드 텍스트 박스가 데이터 테이블 컬럼 표시</td></tr>
+        <tr><td>범주형 선택지</td><td>값 목록을 가진 별도 TEXT 데이터 테이블을 드롭다운 소스로 사용</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3-3. 데이터 테이블 재구성</h3>
+    <p>기존 AI Hub Endpoint 커넥터를 TEXT + Python Transform 구조로 교체했습니다.</p>
+
+    <div class="flow">
+      <div class="flow-box">TEXT 데이터 소스<br><small>헤더 + {P_변수명} 행</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Python Transform<br><small>POST 호출 + 응답 파싱</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Result · Grade 컬럼 추가<br><small>table = df 반환</small></div>
+    </div>
+
+    <table>
+      <thead><tr><th>구성 요소</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr><td>TEXT 데이터 소스</td><td>헤더(<code>KEY</code> + 변수 47개)와 값 자리에 <code>{P_변수명}</code>이 든 1행. 컬럼은 모두 Numeric.</td></tr>
+        <tr><td>Python Transform</td><td><code>{P_변수명}</code>이 치환된 JSON을 엔드포인트에 POST, 응답 <code>data</code> 배열을 DataFrame으로 변환, <code>Score</code> 숫자 변환, <code>Result</code>·<code>Grade</code> 컬럼 추가 후 <code>table = df</code> 반환</td></tr>
+        <tr><td>스키마</td><td>기존 52개 컬럼 (<code>KEY</code> + 변수 47개 + 출력 4개)에 <code>Result</code>·<code>Grade</code>(TEXT) 2개 추가 → <strong>총 54개</strong></td></tr>
+        <tr><td>파라미터</td><td>변수 47개를 NUMERIC 파라미터로 선언. 이름: <code>P_</code> + 컬럼명, 기본값: 샘플 요청 값을 0~10으로 제한</td></tr>
+        <tr><td>정리</td><td>중복 키 <code>R1_CF0600224</code>를 한 번만 전송, <code>KEY</code>는 1로 고정</td></tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">⚠️ 기존에는 DataLibrary를 가리키는 <code>linkedTableId</code> 형태였으나, 파라미터와 Python Transform 사용을 위해 워크북 안에 완전한 정의를 두는 형태로 변경했습니다.</div>
+
+    <h3>3-4. 슬라이더 위젯 속성</h3>
+
+    <div class="prop-block">
+      <div class="prop-row"><span class="prop-key">Minimum / Maximum</span><span class="prop-val">0 / 10</span></div>
+      <div class="prop-row"><span class="prop-key">ValueFormatString</span><span class="prop-val">#,##0.0</span></div>
+      <div class="prop-row"><span class="prop-key">DashboardParameterName</span><span class="prop-val">P_ + 변수명</span></div>
+      <div class="prop-row"><span class="prop-key">Title</span><span class="prop-val">변수명</span></div>
+      <div class="prop-row"><span class="prop-key">ActionPartTriggerMode</span><span class="prop-val">Parameter</span></div>
+    </div>
+
+    <p style="margin-top:.5rem">결과 박스는 데이터 모드 텍스트 박스이며 <code>columnname</code>으로 표시할 컬럼을 지정합니다.</p>
+
+    <h3>3-5. 슬라이더 목록 (47개 변수)</h3>
+    <div class="slider-grid-preview">
+      <div class="slider-chip">R1_CBINQ_CNT05</div>
+      <div class="slider-chip">R1_CBINQ_CNT10_CD</div>
+      <div class="slider-chip">R1_CBINQ__CNT07_TL</div>
+      <div class="slider-chip">R1_CBINQ_CNT6M_TZ</div>
+      <div class="slider-chip">R1_CBINQ_GGN1Y</div>
+      <div class="slider-chip">R1_INQPTN_1Y_FN_03_FN</div>
+      <div class="slider-chip">R1_INQPTN_1Y_FN_A_CAN</div>
+      <div class="slider-chip">R1_INQPTN_1Y_FN_CF_YN</div>
+      <div class="slider-chip">R1_INQPTN_1Y_FN_CL_YN</div>
+      <div class="slider-chip">R1_INQPTN_1Y_FN_CR_YN</div>
+      <div class="slider-chip">R1_INQPTN_1Y_FN_FI_YN</div>
+      <div class="slider-chip">R1_INQPTN_1Y_FN_MT_YN</div>
+      <div class="slider-chip">R1_CPCBLA_LST01</div>
+      <div class="slider-chip">R1_CPCBLA_LST02</div>
+      <div class="slider-chip">R1_L23010011</div>
+      <div class="slider-chip">R1_L23010020</div>
+      <div class="slider-chip">R1_L23010080</div>
+      <div class="slider-chip">R1_L23010090</div>
+      <div class="slider-chip">R1_L23010140</div>
+      <div class="slider-chip">R1_L23010150</div>
+      <div class="slider-chip">R1_L23010160</div>
+      <div class="slider-chip">R1_L23010300</div>
+      <div class="slider-chip">R1_L23010310</div>
+      <div class="slider-chip">R1_Z22010061</div>
+      <div class="slider-chip">R1_Z22010080</div>
+      <div class="slider-chip">R1_Z22010261</div>
+      <div class="slider-chip">R1_Z22010280</div>
+      <div class="slider-chip">R1_P10010011</div>
+      <div class="slider-chip">R1_P10010020</div>
+      <div class="slider-chip">R1_P10010050</div>
+      <div class="slider-chip">R1_P10010060</div>
+      <div class="slider-chip">R1_P10010080</div>
+      <div class="slider-chip">R1_CF0600204</div>
+      <div class="slider-chip">R1_CF0600214</div>
+      <div class="slider-chip">R1_CF0600224</div>
+      <div class="slider-chip">R1_CF0600244</div>
+      <div class="slider-chip">R1_CF0600254</div>
+      <div class="slider-chip">R1_CF0600264</div>
+      <div class="slider-chip">R1_CF0600274</div>
+      <div class="slider-chip">R1_CL1200905</div>
+      <div class="slider-chip">R1_CL1200906</div>
+      <div class="slider-chip">R1_CL1200907</div>
+      <div class="slider-chip">R1_CL1200908</div>
+      <div class="slider-chip">R1_LC1100301</div>
+      <div class="slider-chip">R1_LC1100302</div>
+      <div class="slider-chip">R1_LC1100303</div>
+      <div class="slider-chip">R1_CL1200915</div>
+    </div>
+
+    <h3>3-6. .exz 파일 구조</h3>
+    <p><code>.exz</code>는 ZIP 형식입니다. 주요 구성은 다음과 같습니다.</p>
+    <table>
+      <thead><tr><th>경로</th><th>역할</th></tr></thead>
+      <tbody>
+        <tr><td><code>Workbooks/&lt;폴더&gt;/&lt;워크북&gt;/workbook.json</code></td><td>워크북 전역 설정</td></tr>
+        <tr><td><code>.../datatables/&lt;id&gt;.json</code></td><td>데이터 테이블 정의 (소스·변환·스키마·파라미터)</td></tr>
+        <tr><td><code>.../dashboards/Dashboard1.json</code></td><td>위젯 목록, 파라미터, 런타임 설정</td></tr>
+        <tr><td><code>.../datatables.list</code>, <code>dashboards.list</code></td><td>포함된 데이터 테이블·대시보드 목록</td></tr>
+        <tr><td><code>.../mangling.txt</code></td><td>한글 이름과 파일 경로 매핑</td></tr>
+        <tr><td><code>DataLibrary/datatables</code></td><td>공유 데이터 테이블 저장소 (이번 버전은 비어 있음)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 4. 지원 기능 -->
+  <section>
+    <h2>지원 기능</h2>
+
+    <table>
+      <thead><tr><th>기능</th><th>설명</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>실시간 입력 조절</strong></td>
+          <td>슬라이더 47개로 신용 변수를 0~10 범위에서 직접 조절. 슬라이더를 움직이는 즉시 모델이 재호출됩니다.</td>
+        </tr>
+        <tr>
+          <td><strong>신용점수 확인</strong></td>
+          <td><code>Score</code> — 0 ~ 1000점 (높을수록 우량)</td>
+        </tr>
+        <tr>
+          <td><strong>불량·정상 확률</strong></td>
+          <td><code>confidence(1)</code> (불량확률) · <code>confidence(0)</code> (정상확률) 동시 표시</td>
+        </tr>
+        <tr>
+          <td><strong>target 예측</strong></td>
+          <td><code>prediction(TARGET)</code> — 0 (정상) 또는 1 (불량)</td>
+        </tr>
+        <tr>
+          <td><strong>판정 문구</strong></td>
+          <td><code>Result</code> — target 값에 따라 <strong>정상</strong> / <strong>불량</strong> 표시</td>
+        </tr>
+        <tr>
+          <td><strong>신용등급 구간</strong></td>
+          <td><code>Grade</code> — 점수 구간을 6단계로 분류</td>
+        </tr>
+        <tr>
+          <td><strong>점수 구간 띠</strong></td>
+          <td>0~1000 척도와 구간별 색을 참조용으로 함께 표시</td>
+        </tr>
+        <tr>
+          <td><strong>재현 가능한 배포</strong></td>
+          <td>워크북을 <code>.exz</code>로 내보내 버전으로 관리하고 다른 환경에서 가져올 수 있습니다.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>신용등급 구간 기준 (예시)</h3>
+    <div class="grade-band">
+      <div class="grade-seg grade-danger"><span>위험</span><span class="seg-label">~499</span></div>
+      <div class="grade-seg grade-warn"><span>주의</span><span class="seg-label">500~599</span></div>
+      <div class="grade-seg grade-normal"><span>보통</span><span class="seg-label">600~699</span></div>
+      <div class="grade-seg grade-good"><span>양호</span><span class="seg-label">700~799</span></div>
+      <div class="grade-seg grade-great"><span>우수</span><span class="seg-label">800~899</span></div>
+      <div class="grade-seg grade-best"><span>최우수</span><span class="seg-label">900~</span></div>
+    </div>
+    <div class="warn-box">⚠️ 위 등급 기준은 예시입니다. 운영 기준 확정 후 Python Transform 스크립트와 구간 띠에 반영해야 합니다.</div>
+  </section>
+
+  <!-- 5. 사용 방법 -->
+  <section>
+    <h2>사용 방법</h2>
+
+    <ol class="steps">
+      <li>
+        <div class="step-body">
+          <div class="step-title">파일 가져오기</div>
+          <div class="step-desc">Panopticon Designer에서 <code>261109_dashboard_v3_sliders.exz</code>를 가져옵니다.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <div class="step-title">Python 환경 확인</div>
+          <div class="step-desc">Panopticon의 Python 서버가 실행 중이고 <code>pandas</code>·<code>requests</code> 패키지가 설치되어 있는지 확인합니다.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <div class="step-title">대시보드 열기</div>
+          <div class="step-desc"><code>261109_Workbook</code> → <code>Dashboard1</code>을 엽니다.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <div class="step-title">슬라이더 조작</div>
+          <div class="step-desc">좌측 슬라이더 47개로 신용 변수 값을 0~10 범위에서 조절합니다.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-body">
+          <div class="step-title">결과 확인</div>
+          <div class="step-desc">우측 패널의 신용점수·불량확률·정상확률·target 예측·판정·신용등급 구간이 갱신되는지 확인합니다.</div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <!-- 6. 문제 해결 기록 -->
+  <section>
+    <h2>문제 해결 기록</h2>
+
+    <table>
+      <thead><tr><th>#</th><th>증상</th><th>원인</th><th>해결</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>판정·등급 박스에서 <code>Aggregate binding failed: column ... has bad type</code></td>
+          <td>텍스트 컬럼 박스의 가중치 컬럼(<code>WeightColumnName</code>)을 텍스트 컬럼 자신으로 지정 — 가중치는 숫자형이어야 함</td>
+          <td>텍스트 컬럼 박스의 가중치 컬럼을 숫자 컬럼(<code>Score</code>)으로 변경</td>
+          <td><span class="status-ok">✅ 해결</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>운영 중 값이 나오지 않을 때 확인 항목</h3>
+    <ul style="color:var(--text-sub);padding-left:1.2rem;margin-bottom:.5rem;">
+      <li>Python 서버 기동 여부, <code>requests</code> 설치 여부</li>
+      <li>엔드포인트 인증 필요 여부 (현재 스크립트는 인증 헤더 없이 호출)</li>
+      <li>슬라이더 이름 / 파라미터 이름(<code>P_</code> + 컬럼명) / 스크립트의 <code>{P_...}</code> 자리 표시자가 모두 일치하는지</li>
+    </ul>
+
+    <div class="info-box">AI Hub 스코어링 모델 자체 트러블슈팅 이력은 <code>docs/guide-nice-scoring.html</code>의 트러블슈팅 섹션을 참조하세요.</div>
+  </section>
+
+  <!-- 7. 한계와 개선 방향 -->
+  <!-- <section>
+    <h2>한계와 개선 방향</h2>
+
+    <div class="improve-grid">
+      <div class="improve-card">
+        <div class="ic-label">KEY 입력</div>
+        <div class="ic-current"><span class="ic-icon">◆</span>현재: 1로 고정</div>
+        <div class="ic-future"><span class="ic-icon">→</span>개선: ActionTextBox로 직접 입력</div>
+      </div>
+      <div class="improve-card">
+        <div class="ic-label">점수 위치 표시</div>
+        <div class="ic-current"><span class="ic-icon">◆</span>현재: 구간 띠만 있고 현재 점수 마커 없음</div>
+        <div class="ic-future"><span class="ic-icon">→</span>개선: Bullet Graph로 점수 위치 시각화</div>
+      </div>
+      <div class="improve-card">
+        <div class="ic-label">확률 표현</div>
+        <div class="ic-current"><span class="ic-icon">◆</span>현재: 소수 형태 (0.0179)</div>
+        <div class="ic-future"><span class="ic-icon">→</span>개선: 퍼센트 서식 적용 (1.79%)</div>
+      </div>
+      <div class="improve-card">
+        <div class="ic-label">등급 기준</div>
+        <div class="ic-current"><span class="ic-icon">◆</span>현재: 예시 기준</div>
+        <div class="ic-future"><span class="ic-icon">→</span>개선: 운영 기준 확정 후 스크립트·구간 띠에 반영</div>
+      </div>
+      <div class="improve-card">
+        <div class="ic-label">변수 설명</div>
+        <div class="ic-current"><span class="ic-icon">◆</span>현재: 변수 코드명만 표시</div>
+        <div class="ic-future"><span class="ic-icon">→</span>개선: 한글 설명을 슬라이더 라벨로 추가</div>
+      </div>
+      <div class="improve-card">
+        <div class="ic-label">범주형 입력</div>
+        <div class="ic-current"><span class="ic-icon">◆</span>현재: 없음 (변수가 모두 숫자형)</div>
+        <div class="ic-future"><span class="ic-icon">→</span>개선: 범주형 발생 시 ActionDropDown + 값 목록 테이블 추가</div>
+      </div>
+      <div class="improve-card">
+        <div class="ic-label">변수 그룹화</div>
+        <div class="ic-current"><span class="ic-icon">◆</span>현재: 단일 격자</div>
+        <div class="ic-future"><span class="ic-icon">→</span>개선: TabPanel로 조회·대출·현금흐름 그룹별 분리</div>
+      </div>
+    </div>
+  </section> -->
+
+</div>
+</body>
+</html>
