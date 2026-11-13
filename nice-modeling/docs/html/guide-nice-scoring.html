@@ -197,7 +197,7 @@
       </tbody>
     </table>
 
-    <div class="warn-box">⚠️ <code>train_data.txt</code> 헤더의 <code>KEY</code> 컬럼명 앞에 공백이 있음 (<code> KEY</code>). Set Role에서 <code>KEY → id</code>를 설정하지 말고 <code>TARGET → label</code>만 유지해야 함.</div>
+    <!-- <div class="warn-box">⚠️ <code>train_data.txt</code> 헤더의 <code>KEY</code> 컬럼명 앞에 공백이 있음 (<code> KEY</code>). Set Role에서 <code>KEY → id</code>를 설정하지 말고 <code>TARGET → label</code>만 유지해야 함.</div> -->
   </section>
 
   <!-- 출력 & 신용점수 -->
@@ -426,57 +426,57 @@ print(f"신용점수: {score}")</pre>
     <table>
       <thead><tr><th>#</th><th>증상</th><th>원인</th><th>해결</th><th>상태</th></tr></thead>
       <tbody>
-        <tr>
+        <!-- <tr>
           <td>1</td>
           <td>Python Learner — <code>missing label</code></td>
           <td>헤더 <code> KEY</code> 앞 공백 → Set Role 충돌</td>
           <td>Set Role에서 <code>KEY → id</code> 항목 제거, <code>TARGET → label</code>만 유지</td>
           <td><span class="status-ok">✅ 해결</span></td>
-        </tr>
+        </tr> -->
         <tr>
-          <td>2</td>
+          <td>1</td>
           <td>Python Learner — <code>failed to run python code</code></td>
           <td>base conda 환경에 lightgbm 미설치</td>
           <td>Python312 환경에 <code>lightgbm==4.6.0</code> 설치</td>
           <td><span class="status-ok">✅ 해결</span></td>
         </tr>
         <tr>
-          <td>3</td>
+          <td>2</td>
           <td>AI Hub 배포 후 한글 주석·numpy 인코딩 에러</td>
           <td>서버 Python Extension 환경 차이</td>
           <td>한글 주석 제거, numpy → math 모듈 대체</td>
           <td><span class="status-ok">✅ 해결</span></td>
         </tr>
         <tr>
-          <td>4</td>
+          <td>3</td>
           <td>AI Hub — <code>ExecutionError: script could not be parsed</code></td>
           <td>서버 Python Extension 미구성 → <code>rm_apply()</code> 실행 불가</td>
           <td>LightGBM Extension (JAR)으로 전환 → Python 의존성 제거</td>
           <td><span class="status-ok">✅ 해결</span></td>
         </tr>
         <tr>
-          <td>5</td>
+          <td>4</td>
           <td>AI Hub — <code>LightGBMModel not registered for deserialization</code></td>
           <td>AI Hub 서버에 LightGBM Extension JAR 미설치</td>
           <td>서버에 <code>lightgbm_extension-1.0.4-all.jar</code> 설치</td>
           <td><span class="status-ok">✅ 해결</span></td>
         </tr>
         <tr>
-          <td>6</td>
+          <td>5</td>
           <td>AI Hub — <code>KEY is of value type 'Real' but should be 'Integer'</code></td>
           <td>API JSON 입력 숫자는 항상 Real로 파싱 → KEY 타입 불일치</td>
           <td>배포 프로세스에 <code>Set Role(KEY → id)</code> 추가 + 재학습·재배포</td>
           <td><span class="status-ok">✅ 해결</span></td>
         </tr>
         <tr>
-          <td>7</td>
+          <td>6</td>
           <td>AI Hub — <code>attribute 'confidence(conf(0))' is unknown</code></td>
           <td>Python Learner와 LightGBM Extension의 confidence 컬럼명 상이</td>
           <td>Score 수식을 <code>confidence(0)</code>, <code>confidence(1)</code>로 수정</td>
           <td><span class="status-ok">✅ 해결</span></td>
         </tr>
         <tr>
-          <td>8</td>
+          <td>7</td>
           <td>Score가 수식 문자열 그대로 반환</td>
           <td>AI Studio XML 저장 시 긴 소수(<code>0.0000000001</code>)에 자동 줄바꿈 삽입 → 수식 파싱 실패</td>
           <td><code>1e-10</code> 단축 표기로 변경</td>

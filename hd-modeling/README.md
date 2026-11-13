@@ -29,9 +29,10 @@ hd-modeling/
 └── docs/                                        — 문서
     ├── architecture.md
     ├── logic.md
-    ├── guide-regression.html
-    ├── guide-classification.html
-    └── guide-optimization.html
+    └── html/
+        ├── guide-regression.html
+        ├── guide-classification.html
+        └── guide-optimization.html
 ```
 
 ---
@@ -75,3 +76,7 @@ hd-modeling/
 
 `.rmp`, `.rmmodel`, `.rmhdf5table` 파일은 `.gitignore`에 의해 추적 제외됨.  
 모델 파일은 별도 스토리지(AI Studio Repository 또는 로컬)에서 관리.
+
+## 변경 이력
+
+- **2026-11-13**: 폴더 구조 갱신 — `docs/` 하위 HTML 가이드 3종(`guide-regression.html`, `guide-classification.html`, `guide-optimization.html`)을 `docs/html/`로 이동 반영.

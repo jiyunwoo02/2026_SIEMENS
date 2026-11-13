@@ -174,7 +174,7 @@ NICE평가정보 신용평가 데이터를 기반으로 **LightGBM 이진 분류
 | **v2 현행** | `https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02` | ✅ 운영 중 |
 | v1 구 | `https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/nice_score/deploy_scoring_process` | ⚠️ ExecutionError |
 
-폴더 구조, 파라미터, API 명세, 트러블슈팅은 [`nice-modeling/README.md`](nice-modeling/README.md) 및 [`nice-modeling/docs/guide-nice-scoring.html`](nice-modeling/docs/guide-nice-scoring.html)을 보세요.
+폴더 구조, 파라미터, API 명세, 트러블슈팅은 [`nice-modeling/README.md`](nice-modeling/README.md) 및 [`nice-modeling/docs/html/guide-nice-scoring.html`](nice-modeling/docs/html/guide-nice-scoring.html)을 보세요.
 
 ---
 
@@ -221,3 +221,4 @@ tools/   ← 도메인: 비즈니스 로직·스키마·라우팅
 - **2026-11-05**: `agent-learning/` 폴더 추가 — 한눈에 보기 표 및 섹션 반영.
 - **2026-11-04**: `defect-dashboard/` README 작성 및 루트 README 섹션 상세화. `defect-dashboard/` 폴더 추가 — 한눈에 보기 표 및 섹션 반영. `llm_model_test.py`를 루트에서 `test/`로 이동. 한눈에 보기 표에 `test/` 항목 추가.
 - **2026-11-02**: defect-advisor 섹션을 소스 대조 후 3건 수정. (1) intent 표에 `predict_and_find_risk` 추가, `target` 열 추가, "추정" 주석 제거. (2) 웹 UI 설명을 현재 상태(clarify 처리 완료, 최적화 결과 answer/raw JSON 표시)로 수정. (3) 검증 범위의 pytest/`.pyc` 관련 구 상태 기술 제거.
+- **2026-11-13**: nice-modeling 섹션의 HTML 가이드 경로 `docs/guide-nice-scoring.html` → `docs/html/guide-nice-scoring.html`로 수정.

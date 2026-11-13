@@ -106,6 +106,7 @@ python test/golden_llm_extract.py --only C01,P03   # 케이스 ID 접두어로 �
 | [`docs/run.md`](docs/run.md) | pytest, CLI, HTTP, curl 실행 가이드 (준비 단계에 작성자 환경의 절대 경로 포함, 위 "주의" 참고) |
 | [`docs/web_ui.md`](docs/web_ui.md) | 로컬 웹 UI 구현, API 계약, 제약 |
 | [`docs/code_inventory.md`](docs/code_inventory.md) | 파일별 역할 목록 (`aihub/` 패키지, 미사용 `aihub/prompt/` 스냅샷 포함) |
+| [`docs/html/현대자동차_결함예측_에이전트_가이드.html`](docs/html/현대자동차_결함예측_에이전트_가이드.html) | 전체 사용 가이드 (HTML) |
 
 ## 주의
 
@@ -115,3 +116,7 @@ python test/golden_llm_extract.py --only C01,P03   # 케이스 ID 접두어로 �
 - `docs/run.md`의 준비 단계에는 작성자 환경의 절대 경로(`/home/jywoo/siemens/...`)가 들어 있습니다. 다른 환경에서는 경로를 바꿔 사용하세요.
 
 > 이 문서는 소스와 `docs/`를 읽고 작성했으며, 실행해 확인하지는 않았습니다.
+
+## 변경 이력
+
+- **2026-11-13**: 문서 테이블에 `docs/html/현대자동차_결함예측_에이전트_가이드.html` 항목 추가 (HTML 가이드가 `docs/` 루트에서 `docs/html/`로 이동됨).

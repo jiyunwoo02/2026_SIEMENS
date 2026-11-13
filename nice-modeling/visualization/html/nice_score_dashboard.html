@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NICE평가정보: 신용점수 산출 대시보드</title>
+
+<!-- ===== [1] 스타일: 기존 페이지에 붙여 넣을 때 .nice-dash 안에만 적용됩니다 ===== -->
+<style>
+.nice-dash{
+  --nd-bg:#ffffff; --nd-surface:#ffffff; --nd-title-bg:#dcdce0; --nd-label-bg:#e9e9ee;
+  --nd-text:#3a3a40; --nd-muted:#7a7a84; --nd-border:#d8d8de; --nd-track:#c9c9d0; --nd-accent:#5b6270;
+  font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;
+  color:var(--nd-text); background:var(--nd-bg); padding:16px; box-sizing:border-box;
+}
+.nice-dash *{box-sizing:border-box}
+@media (prefers-color-scheme: dark){
+  .nice-dash{--nd-bg:#1b1c20; --nd-surface:#24262b; --nd-title-bg:#33353c; --nd-label-bg:#2d2f36;
+    --nd-text:#e6e6ea; --nd-muted:#9a9aa5; --nd-border:#3b3d45; --nd-track:#555863; --nd-accent:#9aa3b5}
+}
+.nice-dash .nd-title{background:var(--nd-title-bg);border-radius:8px;padding:14px;text-align:center;font-size:22px;font-weight:700;margin-bottom:18px}
+.nice-dash .nd-main{display:grid;grid-template-columns:minmax(0,2fr) minmax(300px,1fr);gap:24px;align-items:start}
+@media (max-width:900px){.nice-dash .nd-main{grid-template-columns:1fr}}
+
+/* 슬라이더 영역 */
+.nice-dash .nd-sliders{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px 16px}
+@media (max-width:1100px){.nice-dash .nd-sliders{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:600px){.nice-dash .nd-sliders{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.nice-dash .nd-slider label{display:block;font-size:11px;font-weight:700;margin-bottom:2px;word-break:break-all}
+.nice-dash .nd-slider .nd-row{display:flex;align-items:center;gap:8px}
+.nice-dash .nd-slider input[type=range]{flex:1;min-width:0;accent-color:var(--nd-accent);cursor:pointer}
+.nice-dash .nd-slider output{width:18px;text-align:right;font-size:12px;color:var(--nd-muted);font-variant-numeric:tabular-nums}
+.nice-dash .nd-note{grid-column:span 1;font-size:11px;font-style:italic;color:var(--nd-muted);align-self:center}
+
+/* 결과 영역 */
+.nice-dash .nd-side{display:flex;flex-direction:column;gap:12px}
+.nice-dash .nd-pair{display:grid;grid-template-columns:1fr 1.5fr;gap:10px}
+.nice-dash .nd-box{border:3px solid var(--nd-border);border-radius:8px;background:var(--nd-surface);display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;min-height:48px}
+.nice-dash .nd-box.thin{border-width:1px;border-radius:6px}
+.nice-dash .nd-box.label{background:var(--nd-label-bg);font-size:13px}
+.nice-dash .nd-box.big{font-size:44px;font-weight:700;min-height:110px}
+.nice-dash .nd-box.big.lbl{font-size:20px}
+.nice-dash .nd-box.val{font-size:20px;font-weight:700}
+.nice-dash .nd-box.bad{background:#f4b9b4;color:#5c120d;border-color:#f4b9b4}
+.nice-dash .nd-box.good{background:#bfe8c6;color:#14411d;border-color:#bfe8c6}
+.nice-dash .nd-card{border:1px solid var(--nd-border);border-radius:8px;background:var(--nd-surface);padding:10px}
+.nice-dash .nd-gauge{width:100%;max-width:380px;margin:0 auto;display:block}
+.nice-dash .nd-gauge .needle{transform-origin:150px 150px;transition:transform .5s ease}
+.nice-dash .nd-gauge text{fill:var(--nd-text);font-family:inherit}
+.nice-dash .nd-gauge .tick{fill:var(--nd-muted);font-size:11px}
+.nice-dash .nd-gauge .gv{font-size:20px;font-weight:700}
+.nice-dash .nd-gauge .gk{font-size:11px;fill:var(--nd-muted)}
+
+/* 점수 구간 띠 */
+.nice-dash .nd-cap{font-size:12px;color:var(--nd-muted)}
+.nice-dash .nd-bands{display:flex;gap:4px;height:44px}
+.nice-dash .nd-band{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;font-size:10px;line-height:1.25;text-align:center;opacity:.55;transition:opacity .25s,outline-color .25s;outline:2px solid transparent}
+.nice-dash .nd-band.on{opacity:1;outline-color:var(--nd-text)}
+
+.nice-dash .nd-help{font-size:12px;line-height:1.6;color:var(--nd-text)}
+.nice-dash .nd-help .mode{color:var(--nd-muted)}
+.nice-dash button.nd-reset{font:inherit;font-size:12px;padding:6px 12px;border:1px solid var(--nd-border);background:var(--nd-surface);color:var(--nd-text);border-radius:6px;cursor:pointer}
+.nice-dash button.nd-reset:hover{background:var(--nd-label-bg)}
+</style>
+</head>
+<body style="margin:0">
+
+<!-- ===== [2] 마크업 ===== -->
+<div class="nice-dash" id="niceDash">
+  <div class="nd-title">NICE평가정보: 신용점수 산출 대시보드</div>
+
+  <div class="nd-main">
+    <div class="nd-sliders" id="ndSliders"></div>
+
+    <div class="nd-side">
+      <div class="nd-pair">
+        <div class="nd-box big lbl">신용점수</div>
+        <div class="nd-box big" id="ndScore">-</div>
+      </div>
+
+      <div class="nd-pair">
+        <div class="nd-box label thin">판정 (target 예측)</div>
+        <div class="nd-box val thin" id="ndResult">-</div>
+      </div>
+      <div class="nd-pair">
+        <div class="nd-box label thin">신용등급 구간</div>
+        <div class="nd-box val thin" id="ndGrade">-</div>
+      </div>
+      <div class="nd-pair">
+        <div class="nd-box label thin">불량확률 / 정상확률</div>
+        <div class="nd-box val thin" id="ndProb" style="font-size:16px">-</div>
+      </div>
+
+      <div class="nd-card">
+        <svg class="nd-gauge" id="ndGauge" viewBox="0 0 300 185" role="img" aria-label="신용점수 게이지">
+          <g id="ndArcs"></g>
+          <text class="tick" x="26" y="170" text-anchor="middle">0</text>
+          <text class="tick" x="150" y="22" text-anchor="middle">500</text>
+          <text class="tick" x="274" y="170" text-anchor="middle">1000</text>
+          <g class="needle" id="ndNeedle">
+            <line x1="150" y1="150" x2="150" y2="62" stroke="var(--nd-text)" stroke-width="4" stroke-linecap="round"/>
+          </g>
+          <circle cx="150" cy="150" r="9" fill="var(--nd-text)"/>
+          <text class="gv" id="ndGaugeVal" x="150" y="178" text-anchor="middle">-</text>
+        </svg>
+      </div>
+
+      <div class="nd-cap">신용점수 구간 (0~1000) ※ 예시 기준</div>
+      <div class="nd-bands" id="ndBands"></div>
+
+      <div class="nd-card nd-help">
+        ※ 사용 방법<br>
+        좌측 슬라이더로 변수 47개(0~10)를 조절하면 신용점수·확률·target(0/1)이 갱신됩니다.<br>
+        모델: LightGBM Extension 1.0.4 | nice-scoring v02<br>
+        <span class="mode" id="ndMode"></span>
+        <div style="margin-top:8px"><button type="button" class="nd-reset" id="ndReset">기본값으로 되돌리기</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== [3] 스크립트 ===== -->
+<script>
+(function () {
+  // ---- 설정: endpoint를 채우면 AI Hub를 호출하고, 비워 두면 화면 확인용 데모 계산을 사용합니다.
+  var CONFIG = {
+    endpoint: "",                       // 예: AI Hub nice-scoring v02 엔드포인트 URL
+    headers: { "Content-Type": "application/json" },   // 인증이 필요하면 Authorization 헤더를 추가
+    key: 1,
+    debounceMs: 250
+  };
+
+  // [변수명, 기본값] — 대시보드의 열 순서(5열)와 동일
+  var FEATS = [
+    ["R1_CBINQ_CNT05",1],["R1_CBINQ_CNT10_CD",1],["R1_CBINQ__CNT07_TL",1],["R1_CBINQ_CNT6M_TZ",1],["R1_CBINQ_GGN1Y",0],
+    ["R1_INQPTN_1Y_FN_03_FN",1],["R1_INQPTN_1Y_FN_07_PF",0],["R1_INQPTN_6M_FN_15_Z4",4],["R1_INQPTN_1Y_FN_15_Z4",2],["R1_INQPTN_1Y_FN_15_SP",1],
+    ["R1_INQPTN_6M_Z4_30_Z4",2],["R1_INQPTN_1Y_Z4_05_Z4",2],["R1_CBINQ_CNT03_DIFF",1],["R1_CBINQ_CNT03_PF_RTO",0],["R1_CBINQ_CNT05_RTO",0],
+    ["R1_CPCBLA_CNT05_CL",0],["R1_CPCBLA_CNT05",1],["R1_L24003800",3],["R1_ZS0000187",3],["R1_PS0001190",0],
+    ["R1_PS0001728",0],["R1_LA0100016",4],["R1_LA0200013",4],["R1_LA0300016",4],["R1_LA0400005",3],
+    ["R1_C00000151",1],["R1_C11061100",1],["R1_SC0301005",3],["R1_SC0602003",1],["R1_SC1201003",2],
+    ["R1_SC1202006",2],["R1_LC0000001",3],["R1_LC0024602",2],["R1_LC0099025",2],["R1_LC0300011",0],
+    ["R1_LC0600202",2],["R1_LC0699001",2],["R1_LC0900202",2],["R1_LC2400001",2],["R1_LC2424801",1],
+    ["R1_LC3600001",2],["R1_CF0100122",1],["R1_CF0300939",1],["R1_CF0600224",1],["R1_CF1200143",1],
+    ["R1_CF1200223",2],["R1_CL1200915",1]
+  ];
+
+  // 구간 (점수 기준은 예시입니다)
+  var BANDS = [
+    { from: 0,   to: 500,  name: "위험",   color: "#b3261e", text: "#ffffff" },
+    { from: 500, to: 600,  name: "주의",   color: "#e8743b", text: "#2a1000" },
+    { from: 600, to: 700,  name: "보통",   color: "#f2c94c", text: "#2e2500" },
+    { from: 700, to: 800,  name: "양호",   color: "#a5cf4e", text: "#1d2b05" },
+    { from: 800, to: 900,  name: "우수",   color: "#4caf50", text: "#072a0a" },
+    { from: 900, to: 1000, name: "최우수", color: "#1b7a2f", text: "#ffffff" }
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var inputs = [];
+
+  // ---- 슬라이더 생성
+  var sliderBox = $("ndSliders");
+  FEATS.forEach(function (f, i) {
+    var wrap = document.createElement("div");
+    wrap.className = "nd-slider";
+    wrap.innerHTML =
+      '<label for="nd_' + i + '">' + f[0] + '</label>' +
+      '<div class="nd-row"><input type="range" id="nd_' + i + '" min="0" max="10" step="1" value="' + f[1] + '">' +
+      '<output id="nd_o' + i + '">' + f[1] + '</output></div>';
+    sliderBox.appendChild(wrap);
+    var el = wrap.querySelector("input");
+    el.addEventListener("input", function () { $("nd_o" + i).textContent = el.value; schedule(); });
+    inputs.push(el);
+  });
+  var note = document.createElement("div");
+  note.className = "nd-note";
+  note.textContent = "※ 각 변수의 범위는 0~10으로 임의 지정했습니다. 변수에 대한 개요 및 명세는 공식 문서를 참조하세요.";
+  sliderBox.appendChild(note);
+
+  // ---- 게이지 호 그리기
+  function pt(r, t) {                    // t: 0(좌) ~ 1(우)
+    var a = Math.PI * (1 - t);
+    return [150 + r * Math.cos(a), 150 - r * Math.sin(a)];
+  }
+  var arcs = "";
+  BANDS.forEach(function (b) {
+    var t1 = b.from / 1000, t2 = b.to / 1000, R = 124, r = 80;
+    var o1 = pt(R, t1), o2 = pt(R, t2), i2 = pt(r, t2), i1 = pt(r, t1);
+    arcs += '<path d="M' + o1[0].toFixed(1) + ' ' + o1[1].toFixed(1) +
+            ' A' + R + ' ' + R + ' 0 0 1 ' + o2[0].toFixed(1) + ' ' + o2[1].toFixed(1) +
+            ' L' + i2[0].toFixed(1) + ' ' + i2[1].toFixed(1) +
+            ' A' + r + ' ' + r + ' 0 0 0 ' + i1[0].toFixed(1) + ' ' + i1[1].toFixed(1) +
+            ' Z" fill="' + b.color + '" stroke="var(--nd-surface)" stroke-width="2"/>';
+  });
+  $("ndArcs").innerHTML = arcs;
+
+  // ---- 구간 띠
+  var bandBox = $("ndBands");
+  BANDS.forEach(function (b, i) {
+    var d = document.createElement("div");
+    d.className = "nd-band";
+    d.style.background = b.color; d.style.color = b.text;
+    d.style.flex = (b.to - b.from) + " 1 0";
+    d.innerHTML = (i === 0 ? "0~500" : b.from) + "<br>" + b.name;
+    d.id = "ndBand" + i;
+    bandBox.appendChild(d);
+  });
+
+  function bandOf(score) {
+    for (var i = BANDS.length - 1; i >= 0; i--) if (score >= BANDS[i].from) return i;
+    return 0;
+  }
+
+  // ---- 데모 계산 (실제 모델이 아닌 화면 확인용 임의 식)
+  function demoPredict(vals) {
+    var avg = vals.reduce(function (a, b) { return a + b; }, 0) / (vals.length * 10);
+    var p1 = 1 / (1 + Math.exp(-(-2.2 + 8 * (avg - 0.15))));
+    return { p0: 1 - p1, p1: p1 };
+  }
+  function toScore(p0, p1) {
+    var s = 640 + 115.44 * Math.log((p0 + 1e-10) / (p1 + 1e-10));
+    return Math.max(0, Math.min(1000, Math.round(s)));
+  }
+
+  // ---- AI Hub 호출
+  function remotePredict(vals) {
+    var row = { KEY: CONFIG.key };
+    FEATS.forEach(function (f, i) { row[f[0]] = vals[i]; });
+    return fetch(CONFIG.endpoint, {
+      method: "POST", headers: CONFIG.headers, body: JSON.stringify({ data: [row] })
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (j) {
+      var d = j.data[0];
+      return { p0: Number(d["confidence(0)"]), p1: Number(d["confidence(1)"]), score: Number(d["Score"]) };
+    });
+  }
+
+  // ---- 화면 갱신
+  function render(res) {
+    var score = (res.score !== undefined && !isNaN(res.score)) ? Math.round(res.score) : toScore(res.p0, res.p1);
+    var bi = bandOf(score), band = BANDS[bi];
+    var bad = res.p1 >= 0.5;
+
+    $("ndScore").textContent = score;
+    $("ndGaugeVal").textContent = score;
+    $("ndNeedle").style.transform = "rotate(" + ((score / 1000 - 0.5) * 180) + "deg)";
+
+    var rEl = $("ndResult");
+    rEl.textContent = bad ? "불량 (1)" : "정상 (0)";
+    rEl.className = "nd-box val thin " + (bad ? "bad" : "good");
+
+    var gEl = $("ndGrade");
+    gEl.textContent = band.name;
+    gEl.style.background = band.color; gEl.style.color = band.text; gEl.style.borderColor = band.color;
+
+    $("ndProb").textContent = (res.p1 * 100).toFixed(1) + "% / " + (res.p0 * 100).toFixed(1) + "%";
+
+    BANDS.forEach(function (_, i) { $("ndBand" + i).classList.toggle("on", i === bi); });
+  }
+
+  var timer = null, seq = 0;
+  function update() {
+    var vals = inputs.map(function (el) { return Number(el.value); });
+    if (!CONFIG.endpoint) { render(demoPredict(vals)); return; }
+    var my = ++seq;
+    remotePredict(vals).then(function (res) { if (my === seq) { render(res); $("ndMode").textContent = "연결: AI Hub 엔드포인트"; } })
+      .catch(function (e) { $("ndMode").textContent = "호출 실패: " + e.message; });
+  }
+  function schedule() { clearTimeout(timer); timer = setTimeout(update, CONFIG.debounceMs); }
+
+  $("ndReset").addEventListener("click", function () {
+    FEATS.forEach(function (f, i) { inputs[i].value = f[1]; $("nd_o" + i).textContent = f[1]; });
+    update();
+  });
+
+  $("ndMode").textContent = CONFIG.endpoint
+    ? "연결: AI Hub 엔드포인트"
+    : "데모 모드: 화면 확인용 임의 계산식이며 실제 모델 결과가 아닙니다.";
+  update();
+})();
+</script>
+</body>
+</html>

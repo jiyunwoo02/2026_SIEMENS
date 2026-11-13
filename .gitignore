@@ -59,3 +59,8 @@ Desktop.ini
 *.rmmodel
 *.rmhdf5table
 *.rmtabmod
+
+# [추가] Panopticon 산출물 제외
+*.exz
+# unzip 폴더 제외
+unzip_dashboard/

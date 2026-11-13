@@ -82,7 +82,13 @@ defect-advisor/
 │   ├── architecture.md  전체 아키텍처 문서
 │   ├── logic.md         처리 흐름·intent 분기·슬롯 필링 등 동작 로직 요약
 │   ├── code_inventory.md  파일별 역할 목록
-│   └── agent-v2/        최적화 기능 기획 명세서 2종 + AI Studio 트러블슈팅 기록
+│   ├── endpoints.md     API 엔드포인트 명세
+│   ├── agent-v2/        최적화 기능 기획 명세서 2종 + AI Studio 트러블슈팅 기록
+│   ├── design/          아키텍처 다이어그램 (SVG)
+│   ├── html/            가이드 문서 HTML
+│   │   └── 현대자동차_결함예측_최적화_에이전트_가이드.html
+│   └── image/           다이어그램 이미지
+│       └── architecture2.svg
 └── test/                [수정] pytest 미사용 결정으로 자동화된 단위 테스트는 없음(아래 "테스트" 절 참고).
     ├── curl_test_classification.sh  최적화 API를 curl로 직접 호출
     ├── web_smoke_test.sh            [신규] 실행 중인 서버에 curl로 /health, /chat/predict,
@@ -204,4 +210,5 @@ bash test/cli_smoke_test.sh           # CLI: python -m aihub 단일 실행 7가�
 ## 변경 이력
 
 - **2026-11-02**: 소스 대조 후 4건 수정. (1) 문서 테이블의 명세서 경로 `pre-version/` → `bak/`로 정정(본문에 이미 반영됐으나 테이블에 누락). (2) 알려진 문제의 `UNCONTROLLABLE_FIELDS` 항목을 실제 코드(`frozenset()`) 기준으로 갱신하고 `_format_optimize_only` 참고값 문구 불일치를 함께 기술. (3) `web/` 폴더 파일 목록에 `favicon.ico` 추가. (4) 폴더 구조 및 문서 테이블에 `docs/logic.md` 추가.
+- **2026-11-13**: 폴더 구조 갱신 — `docs/` 하위 HTML 가이드를 `docs/html/`로, `architecture2.svg`를 `docs/image/`로 이동 반영. `docs/endpoints.md`, `docs/design/` 항목 추가.
 

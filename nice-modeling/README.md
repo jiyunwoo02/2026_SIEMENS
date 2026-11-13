@@ -11,22 +11,47 @@ AI Studio(RapidMiner)로 학습하고 AI Hub를 통해 REST API로 서빙한다.
 ```
 nice-modeling/
 ├── data/
-│   ├── train_data.txt           — 학습 데이터 (CSV, 875,624행)
-│   └── test_data.txt            — 테스트 데이터 (JSON Lines, 245,614건)
+│   ├── train_data.txt                    — 학습 데이터 (CSV, 875,624행)
+│   ├── test_data.txt                     — 테스트 데이터 (JSON Lines, 245,614건)
+│   └── test_to_csv.py                    — JSON Lines → CSV 변환 스크립트
 ├── model/
-│   ├── 261106_pyl_lightgbm.rmmodel       ← 현행 학습 완료 모델 (3.79 MB)
-│   ├── create_lightgbm_process.rmp       — 모델 학습 프로세스
-│   └── test_scoring_process.rmp          — 로컬 테스트용 스코어링 프로세스
+│   ├── 261106_pyl_lightgbm.rmmodel       — v1 학습 모델 (Python Learner)
+│   ├── 261109_ext_lightgbm.rmtabmod      ← 현행 학습 완료 모델 (LightGBM Extension)
+│   ├── create_lightgbm_process_v0.1.rmp  — v1 모델 학습 프로세스
+│   ├── create_lightgbm_process_v0.2.rmp  — v2 모델 학습 프로세스 (현행)
+│   ├── test_scoring_process.rmp          — 로컬 테스트용 스코어링 프로세스
+│   └── docs/
+│       └── ai_studio_file_structure.md   — AI Studio 파일 구조 가이드
 ├── deploy/
-│   └── deploy_scoring_process.rmp        — AI Hub 배포용 스코어링 프로세스
+│   ├── deploy_scoring_process_v0.1.rmp   — v1 배포 프로세스
+│   └── deploy_scoring_process_v0.2.rmp   — v2 배포 프로세스 (현행)
 ├── docs/
-│   ├── guide-nice-scoring.html  — 전체 가이드 (HTML, 한눈에 보기용)
-│   ├── lightgbm.md              — LightGBM 파라미터 · 마이그레이션 가이드 (상세)
-│   └── test/
-│       ├── endpoint.md          — API 엔드포인트 명세
-│       ├── initial_guide.md     — AI Studio 모델 구축 가이드
-│       ├── logic.md             — 프로젝트 동작 원리 & 프로세스 문서
-│       └── troubleshooting.md   — 트러블슈팅 기록
+│   ├── endpoint.md                       — API 엔드포인트 명세
+│   ├── initial_guide.md                  — AI Studio 모델 구축 가이드
+│   ├── lightgbm.md                       — LightGBM 파라미터 · 마이그레이션 가이드
+│   ├── logic.md                          — 프로젝트 동작 원리 & 프로세스 문서
+│   ├── troubleshooting.md                — 트러블슈팅 기록
+│   └── html/
+│       ├── guide-nice-scoring.html       — 모델 전체 가이드 (HTML)
+│       └── guide-panopticon-dashboard.html — 판옵티콘 대시보드 가이드 (HTML)
+└── visualization/
+    ├── docs/
+    │   ├── Panopticon_dashboard_guide.md — 대시보드 사용 가이드
+    │   └── unzip_dashboard_overview.md  — 익스포트 파일 구조 개요
+    ├── html/
+    │   └── nice_score_dashboard.html    — 대시보드 HTML 시각화
+    ├── output/
+    │   └── 261112_final_dashboard.exz   — 판옵티콘 대시보드 익스포트 파일
+    └── unzip_dashboard/                 — 익스포트 압축 해제 결과물
+        ├── server_version.txt           — 판옵티콘 서버 버전 (2609.1.0.36042)
+        ├── DataLibrary/datatables/
+        └── Workbooks/NICE____/261111_UI_______Workbook/
+            ├── workbook.json            — 워크북 최상위 설정
+            ├── metadata.json            — 워크북 UUID · 버전
+            ├── dashboards/Dashboard1.json — 대시보드 레이아웃 · 파라미터
+            ├── datatables/*.json        — DataTable (Python Transform 포함)
+            ├── theme.json               — 색상 팔레트
+            └── resources/thumbnail.png
 ```
 
 ---
@@ -58,7 +83,7 @@ nice-modeling/
 | `0` | 정상 (우량) |
 | `1` | 불량 |
 
-> **주의**: `train_data.txt` 헤더의 `KEY` 컬럼명 앞에 공백이 있음 (` KEY`). Set Role 설정 시 `KEY → id` 항목을 제거하고 `TARGET → label`만 유지해야 함. (→ [troubleshooting.md](docs/test/troubleshooting.md) 이슈 1)
+> **주의**: `train_data.txt` 헤더의 `KEY` 컬럼명 앞에 공백이 있음 (` KEY`). Set Role 설정 시 `KEY → id` 항목을 제거하고 `TARGET → label`만 유지해야 함. (→ [troubleshooting.md](docs/troubleshooting.md) 이슈 1)
 
 ---
 
@@ -66,7 +91,8 @@ nice-modeling/
 
 ### LightGBM 이진 분류
 
-> 상세 파라미터·마이그레이션 가이드: [docs/lightgbm.md](docs/lightgbm.md)
+> 상세 파라미터·마이그레이션 가이드: [docs/lightgbm.md](docs/lightgbm.md)  
+> AI Studio 파일 구조: [model/docs/ai_studio_file_structure.md](model/docs/ai_studio_file_structure.md)
 
 | 하이퍼파라미터 | 값 |
 |--------------|-----|
@@ -122,7 +148,7 @@ Score = max(0, min(1000, round(640 + 115.44 * ln(P(0) / P(1)), 0)))
 | **v2** (현행) | `https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02` | LightGBM Extension | ✅ 운영 중 |
 | v1 (구) | `https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/nice_score/deploy_scoring_process` | Python Learner | ⚠️ ExecutionError |
 
-> 상세 명세: [docs/test/endpoint.md](docs/test/endpoint.md)
+> 상세 명세: [docs/endpoint.md](docs/endpoint.md)
 
 ### 요청
 
@@ -182,6 +208,38 @@ Read CSV (train_data.txt)
 
 ---
 
+## 시각화 (판옵티콘 대시보드)
+
+> 구조 상세: [visualization/docs/unzip_dashboard_overview.md](visualization/docs/unzip_dashboard_overview.md)  
+> 사용 가이드: [visualization/docs/Panopticon_dashboard_guide.md](visualization/docs/Panopticon_dashboard_guide.md)
+
+`261112_final_dashboard.exz`를 판옵티콘 서버(v2609.1.0.36042)에 임포트하면 동작한다.
+
+### 대시보드 구성
+
+- **제목**: NICE평가정보: 신용점수 산출 대시보드
+- **워크북**: NICE평가정보 / 261111_UI수정_게이지 Workbook
+- **대시보드**: Dashboard1 (단일)
+
+### 동작 방식
+
+```
+슬라이더 (47개 CB 변수 조작)
+        ↓
+Python Transform
+(requests.post → v2 엔드포인트)
+        ↓
+응답: Score, prediction(TARGET), confidence
+        ↓
+Grade 계산 (최우수 / 우수 / 양호 / 보통 / 주의 / 위험)
+Result 계산 (정상 / 불량)
+```
+
+슬라이더 범위는 모두 0–10이며, 47개 파라미터를 실시간으로 바꿔 가며 신용점수 변화를 확인할 수 있다.  
+캐시 갱신 주기는 15분(900초)이다.
+
+---
+
 ## 알려진 이슈
 
 | # | 상태 | 내용 |
@@ -195,7 +253,7 @@ Read CSV (train_data.txt)
 | 7 | ✅ | confidence 컬럼명 불일치 → 수식 수정 (`confidence(0)`, `confidence(1)`) |
 | 8 | ✅ | Score 수식 줄바꿈 → `1e-10` 단축 표기로 해결 |
 
-> 상세 내용: [docs/test/troubleshooting.md](docs/test/troubleshooting.md)
+> 상세 내용: [docs/troubleshooting.md](docs/troubleshooting.md)
 
 ---
 
@@ -203,3 +261,7 @@ Read CSV (train_data.txt)
 
 `.rmp`, `.rmmodel`, `.rmhdf5table` 파일은 `.gitignore`에 의해 추적 제외됨.  
 모델 파일은 로컬 AI Studio Repository에서 관리.
+
+## 변경 이력
+
+- **2026-11-13**: 문서 구조 갱신 반영. (1) `docs/test/` 하위 markdown 4종(`endpoint.md`, `initial_guide.md`, `logic.md`, `troubleshooting.md`)을 `docs/`로 이동. (2) HTML 가이드 2종을 `docs/html/`로 이동. (3) `visualization/Panopticon_dashboard_guide.md`를 `visualization/docs/`로 이동하고 `visualization/docs/unzip_dashboard_overview.md` 및 `visualization/html/nice_score_dashboard.html` 추가. (4) `model/docs/ai_studio_file_structure.md` 추가. (5) 깨진 링크 `docs/test/troubleshooting.md` → `docs/troubleshooting.md` 수정.

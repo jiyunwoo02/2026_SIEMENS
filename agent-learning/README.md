@@ -57,7 +57,11 @@ agent-learning/
 │   └── react_agent.py          # ReAct 패턴 Multi-Tool Agent (최대 15 스텝)
 │
 └── docs/
-    └── ai_agent_guide.html     # 개념 가이드 문서
+    ├── architecture.md         # 아키텍처 설계 문서
+    ├── code_inventory.md       # 파일별 역할 목록
+    └── html/
+        ├── ai_agent_guide.html          # AI 에이전트 개념 가이드
+        └── architecture_guide.html      # 아키텍처 가이드
 ```
 
 ---
@@ -173,3 +177,7 @@ python 03_agent/react_agent.py
 | ----------------------- | --------------------------------- | ---------------------------------------- |
 | Siemens SDC LLM Gateway | 자연어 이해, 도구 선택, 답변 생성 | OpenAI 호환, `x-api-key` 인증          |
 | AI Hub GBT 예측         | 12개 피처 → 결함률(%) 예측       | POST `{"data": [{...}]}`, 자체서명 SSL |
+
+## 변경 이력
+
+- **2026-11-13**: 폴더 구조 갱신 — `docs/` 하위 HTML 파일을 `docs/html/`로 이동(`ai_agent_guide.html`, `architecture_guide.html`). `docs/architecture.md`, `docs/code_inventory.md` 항목 추가.
