@@ -26,31 +26,38 @@ nice-modeling/
 │   ├── deploy_scoring_process_v0.1.rmp   — v1 배포 프로세스
 │   └── deploy_scoring_process_v0.2.rmp   — v2 배포 프로세스 (현행)
 ├── docs/
-│   ├── endpoint.md                       — API 엔드포인트 명세
-│   ├── initial_guide.md                  — AI Studio 모델 구축 가이드
-│   ├── lightgbm.md                       — LightGBM 파라미터 · 마이그레이션 가이드
-│   ├── logic.md                          — 프로젝트 동작 원리 & 프로세스 문서
-│   ├── troubleshooting.md                — 트러블슈팅 기록
+│   ├── NICE_ML_PROCESS_OVERVIEW.md       — 모델 개발 전체 프로세스 개요 ★
+│   ├── draft/
+│   │   ├── endpoint.md                   — API 엔드포인트 명세
+│   │   ├── initial_guide.md              — AI Studio 모델 구축 가이드
+│   │   ├── lightgbm.md                   — LightGBM 파라미터 · 마이그레이션 가이드
+│   │   ├── logic.md                      — 프로젝트 동작 원리 & 프로세스 문서
+│   │   └── troubleshooting.md            — 트러블슈팅 기록
 │   └── html/
+│       ├── NICE_ML_PROCESS_OVERVIEW.html — 모델 개발 개요 HTML 버전 ★
 │       ├── guide-nice-scoring.html       — 모델 전체 가이드 (HTML)
 │       └── guide-panopticon-dashboard.html — 판옵티콘 대시보드 가이드 (HTML)
 └── visualization/
     ├── docs/
-    │   ├── Panopticon_dashboard_guide.md — 대시보드 사용 가이드
-    │   └── unzip_dashboard_overview.md  — 익스포트 파일 구조 개요
+    │   ├── NICE_VISUALIZATION_PROCESS_OVERVIEW.md — 대시보드 구현 전체 개요 ★
+    │   ├── unzip_dashboard_overview.md            — 익스포트 파일 구조 개요
+    │   └── draft/
+    │       ├── Panopticon_dashboard_guide.md      — 대시보드 사용 가이드
+    │       └── 최종_대시보드_보고서_v1.md           — 대시보드 최종 구현 보고서 ★
     ├── html/
-    │   └── nice_score_dashboard.html    — 대시보드 HTML 시각화
+    │   ├── NICE_VISUALIZATION_PROCESS_OVERVIEW.html — 대시보드 개요 HTML 버전 ★
+    │   └── nice_score_dashboard.html              — 대시보드 HTML 시각화
     ├── output/
-    │   └── 261112_final_dashboard.exz   — 판옵티콘 대시보드 익스포트 파일
-    └── unzip_dashboard/                 — 익스포트 압축 해제 결과물
-        ├── server_version.txt           — 판옵티콘 서버 버전 (2609.1.0.36042)
+    │   └── 261112_final_dashboard.exz             — 판옵티콘 대시보드 익스포트 파일
+    └── unzip_dashboard/                           — 익스포트 압축 해제 결과물
+        ├── server_version.txt                     — 판옵티콘 서버 버전 (2609.1.0.36042)
         ├── DataLibrary/datatables/
         └── Workbooks/NICE____/261111_UI_______Workbook/
-            ├── workbook.json            — 워크북 최상위 설정
-            ├── metadata.json            — 워크북 UUID · 버전
-            ├── dashboards/Dashboard1.json — 대시보드 레이아웃 · 파라미터
-            ├── datatables/*.json        — DataTable (Python Transform 포함)
-            ├── theme.json               — 색상 팔레트
+            ├── workbook.json                      — 워크북 최상위 설정
+            ├── metadata.json                      — 워크북 UUID · 버전
+            ├── dashboards/Dashboard1.json         — 대시보드 레이아웃 · 파라미터
+            ├── datatables/*.json                  — DataTable (Python Transform 포함)
+            ├── theme.json                         — 색상 팔레트
             └── resources/thumbnail.png
 ```
 
@@ -83,7 +90,7 @@ nice-modeling/
 | `0` | 정상 (우량) |
 | `1` | 불량 |
 
-> **주의**: `train_data.txt` 헤더의 `KEY` 컬럼명 앞에 공백이 있음 (` KEY`). Set Role 설정 시 `KEY → id` 항목을 제거하고 `TARGET → label`만 유지해야 함. (→ [troubleshooting.md](docs/troubleshooting.md) 이슈 1)
+> **주의**: `train_data.txt` 헤더의 `KEY` 컬럼명 앞에 공백이 있음 (` KEY`). Set Role 설정 시 `KEY → id` 항목을 제거하고 `TARGET → label`만 유지해야 함. (→ [troubleshooting.md](docs/draft/troubleshooting.md) 이슈 1)
 
 ---
 
@@ -91,7 +98,8 @@ nice-modeling/
 
 ### LightGBM 이진 분류
 
-> 상세 파라미터·마이그레이션 가이드: [docs/lightgbm.md](docs/lightgbm.md)  
+> 전체 프로세스 개요: [docs/NICE_ML_PROCESS_OVERVIEW.md](docs/NICE_ML_PROCESS_OVERVIEW.md)  
+> 상세 파라미터·마이그레이션 가이드: [docs/draft/lightgbm.md](docs/draft/lightgbm.md)  
 > AI Studio 파일 구조: [model/docs/ai_studio_file_structure.md](model/docs/ai_studio_file_structure.md)
 
 | 하이퍼파라미터 | 값 |
@@ -148,7 +156,7 @@ Score = max(0, min(1000, round(640 + 115.44 * ln(P(0) / P(1)), 0)))
 | **v2** (현행) | `https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02` | LightGBM Extension | ✅ 운영 중 |
 | v1 (구) | `https://43-200-118-70.sslip.io/webapi/DEFAULT/api/v1/services/nice_score/deploy_scoring_process` | Python Learner | ⚠️ ExecutionError |
 
-> 상세 명세: [docs/endpoint.md](docs/endpoint.md)
+> 상세 명세: [docs/draft/endpoint.md](docs/draft/endpoint.md)
 
 ### 요청
 
@@ -210,8 +218,10 @@ Read CSV (train_data.txt)
 
 ## 시각화 (판옵티콘 대시보드)
 
+> 전체 구현 개요: [visualization/docs/NICE_VISUALIZATION_PROCESS_OVERVIEW.md](visualization/docs/NICE_VISUALIZATION_PROCESS_OVERVIEW.md)  
 > 구조 상세: [visualization/docs/unzip_dashboard_overview.md](visualization/docs/unzip_dashboard_overview.md)  
-> 사용 가이드: [visualization/docs/Panopticon_dashboard_guide.md](visualization/docs/Panopticon_dashboard_guide.md)
+> 사용 가이드: [visualization/docs/draft/Panopticon_dashboard_guide.md](visualization/docs/draft/Panopticon_dashboard_guide.md)  
+> 최종 구현 보고서: [visualization/docs/draft/최종_대시보드_보고서_v1.md](visualization/docs/draft/최종_대시보드_보고서_v1.md)
 
 `261112_final_dashboard.exz`를 판옵티콘 서버(v2609.1.0.36042)에 임포트하면 동작한다.
 
@@ -253,7 +263,7 @@ Result 계산 (정상 / 불량)
 | 7 | ✅ | confidence 컬럼명 불일치 → 수식 수정 (`confidence(0)`, `confidence(1)`) |
 | 8 | ✅ | Score 수식 줄바꿈 → `1e-10` 단축 표기로 해결 |
 
-> 상세 내용: [docs/troubleshooting.md](docs/troubleshooting.md)
+> 상세 내용: [docs/draft/troubleshooting.md](docs/draft/troubleshooting.md)
 
 ---
 
@@ -264,4 +274,5 @@ Result 계산 (정상 / 불량)
 
 ## 변경 이력
 
+- **2026-11-16**: 문서 구조 갱신 반영. (1) `docs/` 루트의 markdown 5종(`endpoint.md`, `initial_guide.md`, `lightgbm.md`, `logic.md`, `troubleshooting.md`)을 `docs/draft/`로 이동. (2) `docs/NICE_ML_PROCESS_OVERVIEW.md` 및 `docs/html/NICE_ML_PROCESS_OVERVIEW.html` 추가 (모델 개발 전체 프로세스 개요). (3) `visualization/docs/NICE_VISUALIZATION_PROCESS_OVERVIEW.md` 및 `visualization/html/NICE_VISUALIZATION_PROCESS_OVERVIEW.html` 추가 (대시보드 구현 전체 개요). (4) `visualization/docs/Panopticon_dashboard_guide.md`를 `visualization/docs/draft/`로 이동. (5) `visualization/docs/draft/최종_대시보드_보고서_v1.md` 추가. (6) 깨진 링크 전체 수정.
 - **2026-11-13**: 문서 구조 갱신 반영. (1) `docs/test/` 하위 markdown 4종(`endpoint.md`, `initial_guide.md`, `logic.md`, `troubleshooting.md`)을 `docs/`로 이동. (2) HTML 가이드 2종을 `docs/html/`로 이동. (3) `visualization/Panopticon_dashboard_guide.md`를 `visualization/docs/`로 이동하고 `visualization/docs/unzip_dashboard_overview.md` 및 `visualization/html/nice_score_dashboard.html` 추가. (4) `model/docs/ai_studio_file_structure.md` 추가. (5) 깨진 링크 `docs/test/troubleshooting.md` → `docs/troubleshooting.md` 수정.

@@ -1,0 +1,862 @@
+<title>NICE 신용점수 Panopticon 대시보드 최종 보고서</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap">
+
+<style>
+/* ── 토큰 ───────────────────────────────────── */
+:root {
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --surface2: #f8f9fd;
+  --border: #dde1ec;
+  --text: #1a1d2e;
+  --text-sub: #5a6180;
+  --accent: #2563eb;
+  --accent-light: #eff4ff;
+  --success: #16a34a;
+  --success-light: #f0fdf4;
+  --warning: #d97706;
+  --warning-light: #fffbeb;
+  --danger: #dc2626;
+  --danger-light: #fef2f2;
+  --code-bg: #eef0f7;
+  --tag-num: #dbeafe; --tag-num-t: #1e40af;
+  --tag-str: #d1fae5; --tag-str-t: #065f46;
+  --tag-new: #ede9fe; --tag-new-t: #5b21b6;
+  --tag-warn: #fef9c3; --tag-warn-t: #854d0e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d0f1a; --surface: #161928; --surface2: #1a1d30;
+    --border: #262a40; --text: #e4e8f4; --text-sub: #8891b0;
+    --accent: #4f8ef7; --accent-light: #152040;
+    --success: #34d399; --success-light: #072a1a;
+    --warning: #fbbf24; --warning-light: #271c06;
+    --danger: #f87171; --danger-light: #250909;
+    --code-bg: #0a0d1a;
+    --tag-num: #1a3160; --tag-num-t: #93c5fd;
+    --tag-str: #082a1a; --tag-str-t: #6ee7b7;
+    --tag-new: #2a1a5e; --tag-new-t: #c4b5fd;
+    --tag-warn: #261900; --tag-warn-t: #fbbf24;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d0f1a; --surface: #161928; --surface2: #1a1d30;
+  --border: #262a40; --text: #e4e8f4; --text-sub: #8891b0;
+  --accent: #4f8ef7; --accent-light: #152040;
+  --success: #34d399; --success-light: #072a1a;
+  --warning: #fbbf24; --warning-light: #271c06;
+  --danger: #f87171; --danger-light: #250909;
+  --code-bg: #0a0d1a;
+  --tag-num: #1a3160; --tag-num-t: #93c5fd;
+  --tag-str: #082a1a; --tag-str-t: #6ee7b7;
+  --tag-new: #2a1a5e; --tag-new-t: #c4b5fd;
+  --tag-warn: #261900; --tag-warn-t: #fbbf24;
+  color-scheme: dark;
+}
+
+/* ── 기본 ───────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans KR', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  padding-left: max(0px, env(safe-area-inset-left, 0px));
+  padding-right: max(0px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+}
+
+/* ── 헤더 ───────────────────────────────────── */
+.header {
+  background: var(--accent);
+  color: #fff;
+  padding: 2.5rem 0;
+}
+.header-inner {
+  max-width: 920px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+}
+.header h1 { font-size: 1.75rem; font-weight: 700; line-height: 1.3; }
+.header .subtitle { opacity: .88; margin-top: .4rem; font-size: .95rem; }
+.badge-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .9rem; }
+.badge {
+  display: inline-block;
+  background: rgba(255,255,255,.18);
+  border-radius: 20px;
+  padding: .2rem .8rem;
+  font-size: .8rem;
+  font-weight: 500;
+}
+.badge-green  { background: rgba(52,211,153,.28); }
+.badge-purple { background: rgba(167,139,250,.3); }
+.badge-gold   { background: rgba(251,191,36,.28); }
+
+/* ── 컨테이너 ───────────────────────────────── */
+.container {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 2rem max(16px, env(safe-area-inset-right, 0px)) 3rem max(16px, env(safe-area-inset-left, 0px));
+}
+
+/* ── 섹션 카드 ──────────────────────────────── */
+section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+h2 {
+  font-size: 1.08rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+h2 .ico { font-size: 1rem; }
+h2::before {
+  content: '';
+  display: inline-block;
+  width: 4px; height: 1.1rem;
+  background: var(--accent);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+h3 { font-size: .95rem; font-weight: 600; margin: 1.25rem 0 .6rem; color: var(--text); }
+h4 { font-size: .85rem; font-weight: 600; margin: 1rem 0 .4rem; color: var(--text-sub); }
+p  { color: var(--text-sub); margin-bottom: .75rem; }
+
+/* ── 테이블 ─────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; min-width: 0; }
+th {
+  background: var(--code-bg);
+  color: var(--text-sub);
+  font-weight: 600;
+  padding: .6rem .85rem;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+td { padding: .55rem .85rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+
+/* ── 태그 ───────────────────────────────────── */
+.tag { display: inline-block; border-radius: 4px; padding: .15rem .5rem; font-size: .77rem; font-weight: 600; }
+.tag-num  { background: var(--tag-num);  color: var(--tag-num-t); }
+.tag-str  { background: var(--tag-str);  color: var(--tag-str-t); }
+.tag-new  { background: var(--tag-new);  color: var(--tag-new-t); }
+.tag-warn { background: var(--tag-warn); color: var(--tag-warn-t); }
+
+/* ── 코드 ───────────────────────────────────── */
+code { background: var(--code-bg); padding: .15rem .4rem; border-radius: 4px; font-size: .88em; font-family: 'Fira Code', monospace; }
+pre {
+  background: var(--code-bg);
+  padding: 1.2rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: .84rem;
+  line-height: 1.65;
+  font-family: 'Fira Code', monospace;
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+
+/* ── 알림 박스 ──────────────────────────────── */
+.info-box  { background: var(--accent-light);  border-left: 3px solid var(--accent);  border-radius: 0 6px 6px 0; padding: .8rem 1rem; font-size: .9rem; color: var(--text); margin: .75rem 0; }
+.warn-box  { background: var(--warning-light); border-left: 3px solid var(--warning); border-radius: 0 6px 6px 0; padding: .8rem 1rem; font-size: .9rem; color: var(--text); margin: .75rem 0; }
+.success-box { background: var(--success-light); border-left: 3px solid var(--success); border-radius: 0 6px 6px 0; padding: .8rem 1rem; font-size: .9rem; color: var(--text); margin: .75rem 0; }
+
+/* ── 상태 ───────────────────────────────────── */
+.ok   { color: var(--success); font-weight: 700; }
+.warn { color: var(--warning); font-weight: 700; }
+.err  { color: var(--danger);  font-weight: 700; }
+
+/* ── 개요 카드 그리드 ───────────────────────── */
+.overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.2rem; }
+@media (max-width: 540px) { .overview-grid { grid-template-columns: 1fr; } }
+.ov-card { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+.ov-card .lbl { font-size: .77rem; color: var(--text-sub); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .35rem; }
+.ov-card .val { font-size: .9rem; color: var(--text); font-weight: 500; }
+
+/* ── 버전 뱃지 ──────────────────────────────── */
+.ver-badge { display: inline-block; border-radius: 6px; padding: .3rem .9rem; font-size: .82rem; font-weight: 700; border: 1px solid; }
+.ver-current { background: var(--success-light); color: var(--success); border-color: var(--success); }
+.ver-old     { background: var(--code-bg); color: var(--text-sub); border-color: var(--border); }
+
+/* ── 플로우 다이어그램 ──────────────────────── */
+.flow { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+.flow-box {
+  background: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: .5rem 1rem;
+  font-size: .88rem;
+  font-weight: 600;
+}
+.flow-box small { display: block; font-weight: 400; font-size: .78rem; opacity: .8; margin-top: .1rem; }
+.flow-arrow { color: var(--text-sub); font-size: 1.3rem; }
+
+/* ── 아키텍처 다이어그램 ────────────────────── */
+.arch-box { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; margin: 1rem 0; overflow-x: auto; }
+.arch-box pre { background: none; border: none; padding: 0; font-size: .81rem; }
+
+/* ── 속성 블록 ──────────────────────────────── */
+.prop-block { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin: .75rem 0; }
+.prop-row { display: flex; justify-content: space-between; align-items: baseline; padding: .28rem 0; border-bottom: 1px solid var(--border); font-size: .88rem; gap: .5rem; }
+.prop-row:last-child { border-bottom: none; }
+.prop-key { color: var(--text-sub); font-family: 'Fira Code', monospace; white-space: nowrap; }
+.prop-val { font-weight: 700; color: var(--accent); font-family: 'Fira Code', monospace; text-align: right; }
+
+/* ── 슬라이더 그리드 미리보기 ───────────────── */
+.slider-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: .35rem; margin: 1rem 0; }
+@media (max-width: 600px) { .slider-grid { grid-template-columns: repeat(3, 1fr); } }
+.slider-chip {
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: .28rem .4rem;
+  font-size: .68rem;
+  color: var(--accent);
+  font-family: 'Fira Code', monospace;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 등급 띠 ────────────────────────────────── */
+.grade-band { display: flex; border-radius: 8px; overflow: hidden; margin: 1rem 0; height: 48px; }
+.grade-seg { flex: 1; display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; color: #fff; flex-direction: column; gap: 2px; }
+.grade-seg .seg-sub { font-size: .68rem; opacity: .88; }
+.g-danger { background: #dc2626; }
+.g-warn   { background: #d97706; }
+.g-mid    { background: #ca8a04; }
+.g-good   { background: #16a34a; }
+.g-great  { background: #0d9488; }
+.g-best   { background: #2563eb; }
+
+/* ── 게이지 SVG 래퍼 ────────────────────────── */
+.gauge-wrap {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin: 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+.gauge-svg-box { flex: 0 0 auto; }
+.gauge-svg-box svg { width: 180px; height: 100px; }
+.gauge-legend { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: .35rem; }
+.gauge-legend-row { display: flex; align-items: center; gap: .55rem; font-size: .85rem; color: var(--text-sub); }
+.gauge-legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── 단계 목록 ──────────────────────────────── */
+.steps { list-style: none; counter-reset: s; }
+.steps li { counter-increment: s; display: flex; gap: 1rem; padding: .75rem 0; border-bottom: 1px solid var(--border); }
+.steps li:last-child { border-bottom: none; }
+.steps li::before {
+  content: counter(s);
+  min-width: 28px; height: 28px;
+  background: var(--accent); color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .82rem; font-weight: 700; flex-shrink: 0;
+}
+.steps li .sb { flex: 1; min-width: 0; }
+.steps li .st { font-weight: 600; color: var(--text); font-size: .9rem; margin-bottom: .2rem; }
+.steps li .sd { color: var(--text-sub); font-size: .88rem; }
+
+/* ── 개선 카드 ──────────────────────────────── */
+.improve-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+@media (max-width: 540px) { .improve-grid { grid-template-columns: 1fr; } }
+.ic { border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+.ic .ic-lbl { font-size: .77rem; color: var(--text-sub); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .35rem; }
+.ic .ic-now { font-size: .88rem; color: var(--danger); margin-bottom: .3rem; }
+.ic .ic-fut { font-size: .88rem; color: var(--success); }
+
+/* ── 비교 테이블 하이라이트 ─────────────────── */
+.row-new td { background: var(--success-light); }
+</style>
+
+<!-- ═══════════════════════════════════════════ 헤더 ═══ -->
+<div class="header">
+  <div class="header-inner">
+    <h1>NICE 신용점수 대시보드 최종 보고서</h1>
+    <p class="subtitle">261112_검수.exz — 슬라이더 47개 + 반원형 게이지를 갖춘 신용점수 인터랙티브 대시보드</p>
+    <div class="badge-row">
+      <span class="badge badge-green">🟢 최종 버전 (261112)</span>
+      <span class="badge">261112_검수.exz</span>
+      <span class="badge badge-purple">nice-scoring v2 · LightGBM Ext 1.0.4</span>
+      <span class="badge badge-gold">서버 2609.1.0.36042</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ═══════════════ 1. 개요 ═══ -->
+<section>
+  <h2><span class="ico">📋</span>개요</h2>
+
+  <p>NICE 신용평가 데이터 기반 LightGBM 분류 모델의 예측 결과를 Panopticon Designer에서 실시간으로 탐색할 수 있는 대시보드를 구축하였습니다. 사용자가 신용 변수 47개를 슬라이더로 조절하면 AI Hub 스코어링 엔드포인트가 다시 호출되어 신용점수·불량 확률·등급이 즉시 갱신됩니다. 최종 버전에서는 UI를 개선하고 <strong>반원형 게이지(Radial Gauge)</strong>를 추가하여 현재 점수 위치를 직관적으로 파악할 수 있도록 하였습니다.</p>
+
+  <div class="overview-grid">
+    <div class="ov-card">
+      <div class="lbl">결과 파일</div>
+      <div class="val"><code>261112_검수.exz</code></div>
+    </div>
+    <div class="ov-card">
+      <div class="lbl">워크북 / 대시보드 / DataTable</div>
+      <div class="val"><code>261112_검수</code> / <code>Dashboard1</code> / <code>DataTable1</code></div>
+    </div>
+    <div class="ov-card">
+      <div class="lbl">서빙 모델</div>
+      <div class="val">AI Hub <code>nice-scoring</code> v2<br><small style="color:var(--text-sub)">deploy_scoring_process_v02 · LightGBM Extension 1.0.4</small></div>
+    </div>
+    <div class="ov-card">
+      <div class="lbl">대상 서버 버전</div>
+      <div class="val"><code>2609.1.0.36042</code></div>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>입력</td><td>슬라이더 <strong>47개</strong> — 신용 변수, 범위 0 ~ 10</td></tr>
+        <tr><td>출력</td><td><code>Score</code> · <code>confidence(0)</code> · <code>confidence(1)</code> · <code>prediction(TARGET)</code> · <code>Result</code> · <code>Grade</code></td></tr>
+        <tr><td>갱신 방식</td><td>슬라이더 조작 → 대시보드 파라미터 → DataTable1이 AI Hub 재호출 → 결과 갱신</td></tr>
+        <tr><td>위젯 구성</td><td><code>NumericActionSlider</code> × 47 &nbsp;+&nbsp; <code>TextBox</code> × 14 &nbsp;+&nbsp; <code>visualization.Gauge</code> × 1 <span class="tag tag-new">신규</span></td></tr>
+        <tr><td>데이터 소스</td><td>TEXT 플러그인 + Python Transform (REST POST)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════ 2. 개발 이력 ═══ -->
+<!-- <section>
+  <h2><span class="ico">📅</span>개발 이력</h2>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>날짜</th><th>파일</th><th>주요 변경</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>261109</td>
+          <td><code>261109_dashboard_v1_draft.exz</code></td>
+          <td>AI Hub Endpoint 커넥터 초안 — 고정 샘플 1건, 위젯 없음</td>
+          <td><span class="ver-badge ver-old">초안</span></td>
+        </tr>
+        <tr>
+          <td>261109</td>
+          <td><code>261109_dashboard_v2_draft.exz</code></td>
+          <td>Python Transform 구조 전환 시도</td>
+          <td><span class="ver-badge ver-old">초안</span></td>
+        </tr>
+        <tr>
+          <td>261110</td>
+          <td><code>261110_dashboard_v2_slider.exz</code></td>
+          <td>슬라이더 47개 + Python Transform 적용, 정적 구간 띠</td>
+          <td><span class="ver-badge ver-old">이전</span></td>
+        </tr>
+        <tr>
+          <td>261110</td>
+          <td><code>261110_슬라이더적용_v2_server26.1.exz</code></td>
+          <td>서버 버전 26.1.0.35462 호환본</td>
+          <td><span class="ver-badge ver-old">호환</span></td>
+        </tr>
+        <tr class="row-new">
+          <td><strong>261111</strong></td>
+          <td><code><strong>261112_검수.exz</strong></code></td>
+          <td>UI 개선 + 반원형 게이지 추가 — TextBox 정리 (21→14개), Score 위치 실시간 표시</td>
+          <td><span class="ver-badge ver-current">✅ 최종</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section> -->
+
+<!-- ═══════════════ 3. 시스템 구조 ═══ -->
+<section>
+  <h2><span class="ico">🏗️</span>시스템 구조</h2>
+
+  <p>슬라이더가 만드는 <strong>대시보드 파라미터</strong>를 데이터 테이블이 <code>{P_변수명}</code> 자리 표시자로 받아 쓰는 것이 핵심입니다. 파라미터가 변경되면 데이터 테이블이 자동으로 재실행되고 연결된 모든 위젯이 함께 갱신됩니다.</p>
+
+  <div class="arch-box">
+<pre>
+ [슬라이더 47개]              [DataTable1]                        [AI Hub]
+ ──────────────               ──────────────────────────────────  ────────────────────
+ NumericActionSlider1  ─┐     TEXT 소스 (헤더 + {P_변수명} 행)
+ NumericActionSlider2  ─┼─ 파라미터 ──→  Python Transform
+ ...                   ─┘               · JSON 조립 ({P_...} → 슬라이더 값)
+ NumericActionSlider47 ─┘               · POST  ──────────────────────→  nice-scoring v02
+                                        · 응답 파싱  ←─────────────────     (Set Role
+                                        · Result, Grade 컬럼 추가              → Apply Model
+                                               │                               → Generate Attrs)
+                                               ▼
+                                  [결과 패널 (우측)]
+                                  ┌───────────────────────────────┐
+                                  │  신용점수 (Score)   신용등급   │
+                                  │                               │
+                                  │  ◉ 반원형 게이지 (0–1000)     │  ← 최종 버전 추가
+                                  │    Red ────── Yellow ──Green  │
+                                  │                               │
+                                  │  불량확률  정상확률  target   │
+                                  │  판정 (Result)                 │
+                                  └───────────────────────────────┘
+</pre>
+  </div>
+
+  <div class="flow">
+    <div class="flow-box">슬라이더 조작<small>파라미터 변경</small></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">TEXT 소스<small>{P_변수명} 치환</small></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">Python Transform<small>POST 호출</small></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">AI Hub 응답<small>prediction · confidence · Score</small></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">결과 위젯 갱신<small>게이지 · 텍스트 박스</small></div>
+  </div>
+</section>
+
+<!-- ═══════════════ 4. 구성 요소 상세 ═══ -->
+<section>
+  <h2><span class="ico">🔧</span>구성 요소 상세</h2>
+
+  <!-- 4-1 DataTable1 -->
+  <h3>4-1. 데이터 테이블 (DataTable1)</h3>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>내용</th></tr></thead>
+      <tbody>
+        <tr><td>데이터 소스</td><td>TEXT 플러그인 — 헤더 1행 + 데이터 1행 ({P_변수명} 자리 표시자)</td></tr>
+        <tr><td>컬럼 수</td><td>입력 48개 (<code>KEY</code> + 변수 47개) + 출력 6개 = <strong>54개</strong></td></tr>
+        <tr><td>출력 컬럼</td><td><code>prediction(TARGET)</code> <code>confidence(0)</code> <code>confidence(1)</code> <code>Score</code> <code>Result</code> <code>Grade</code></td></tr>
+        <tr><td>Transform</td><td>Python Transform — <code>pandas</code>, <code>requests</code> 사용</td></tr>
+        <tr><td>파라미터</td><td>47개 (NUMERIC, 이름: <code>P_</code> + 컬럼명)</td></tr>
+        <tr><td>캐싱</td><td>활성화 (<code>isCachingEnabled: true</code>)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>TEXT 소스 구조 (2행)</h4>
+  <pre>KEY, R1_CBINQ_CNT05, R1_CBINQ_CNT10_CD, ... (헤더)
+1, {P_R1_CBINQ_CNT05}, {P_R1_CBINQ_CNT10_CD}, ...  (슬라이더 값 자리)</pre>
+
+  <h4>Python Transform 처리 흐름</h4>
+  <pre><span style="color:var(--text-sub)"># 1. {P_변수명}이 치환된 JSON 본문 조립</span>
+json_data = {
+    "data": [{
+        "KEY": 1,
+        "R1_CBINQ_CNT05": {P_R1_CBINQ_CNT05},
+        <span style="color:var(--text-sub)"># ... 나머지 46개 변수</span>
+    }]
+}
+
+<span style="color:var(--text-sub)"># 2. AI Hub 엔드포인트 POST 호출</span>
+endpoint_url = "https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02"
+result = requests.post(endpoint_url, json=json_data, headers={"Content-Type": "application/json"})
+
+<span style="color:var(--text-sub)"># 3. 응답 → DataFrame 변환 + 파생 컬럼 추가</span>
+df = pd.DataFrame(result.json()["data"])
+df["Score"]  = pd.to_numeric(df["Score"], errors="coerce")
+df["Result"] = df["prediction(TARGET)"].apply(lambda v: "불량" if float(v) == 1 else "정상")
+df["Grade"]  = df["Score"].apply(score_grade)
+
+table = df</pre>
+
+  <!-- 4-2 슬라이더 -->
+  <h3>4-2. 슬라이더 (NumericActionSlider × 47)</h3>
+
+  <div class="prop-block">
+    <div class="prop-row"><span class="prop-key">Minimum / Maximum</span><span class="prop-val">0 / 10</span></div>
+    <div class="prop-row"><span class="prop-key">ValueFormatString</span><span class="prop-val">#,##0.0</span></div>
+    <div class="prop-row"><span class="prop-key">DashboardParameterName</span><span class="prop-val">P_ + 변수명</span></div>
+    <div class="prop-row"><span class="prop-key">Title</span><span class="prop-val">변수명 (코드명)</span></div>
+    <div class="prop-row"><span class="prop-key">ActionPartTriggerMode</span><span class="prop-val">Parameter</span></div>
+    <div class="prop-row"><span class="prop-key">배치</span><span class="prop-val">좌측 5열 × 10행 격자 (left: 0.01 / 0.15 / 0.28 / 0.41 / 0.54)</span></div>
+  </div>
+
+  <h4>변수 목록 (47개)</h4>
+  <div class="slider-grid">
+    <div class="slider-chip">R1_CBINQ_CNT05</div>
+    <div class="slider-chip">R1_CBINQ_CNT10_CD</div>
+    <div class="slider-chip">R1_CBINQ__CNT07_TL</div>
+    <div class="slider-chip">R1_CBINQ_CNT6M_TZ</div>
+    <div class="slider-chip">R1_CBINQ_GGN1Y</div>
+    <div class="slider-chip">R1_INQPTN_1Y_FN_03_FN</div>
+    <div class="slider-chip">R1_INQPTN_1Y_FN_07_PF</div>
+    <div class="slider-chip">R1_INQPTN_6M_FN_15_Z4</div>
+    <div class="slider-chip">R1_INQPTN_1Y_FN_15_Z4</div>
+    <div class="slider-chip">R1_INQPTN_1Y_FN_15_SP</div>
+    <div class="slider-chip">R1_INQPTN_6M_Z4_30_Z4</div>
+    <div class="slider-chip">R1_INQPTN_1Y_Z4_05_Z4</div>
+    <div class="slider-chip">R1_CBINQ_CNT03_DIFF</div>
+    <div class="slider-chip">R1_CBINQ_CNT03_PF_RTO</div>
+    <div class="slider-chip">R1_CBINQ_CNT05_RTO</div>
+    <div class="slider-chip">R1_CPCBLA_CNT05_CL</div>
+    <div class="slider-chip">R1_CPCBLA_CNT05</div>
+    <div class="slider-chip">R1_L24003800</div>
+    <div class="slider-chip">R1_ZS0000187</div>
+    <div class="slider-chip">R1_PS0001190</div>
+    <div class="slider-chip">R1_PS0001728</div>
+    <div class="slider-chip">R1_LA0100016</div>
+    <div class="slider-chip">R1_LA0200013</div>
+    <div class="slider-chip">R1_LA0300016</div>
+    <div class="slider-chip">R1_LA0400005</div>
+    <div class="slider-chip">R1_C00000151</div>
+    <div class="slider-chip">R1_C11061100</div>
+    <div class="slider-chip">R1_SC0301005</div>
+    <div class="slider-chip">R1_SC0602003</div>
+    <div class="slider-chip">R1_SC1201003</div>
+    <div class="slider-chip">R1_SC1202006</div>
+    <div class="slider-chip">R1_LC0000001</div>
+    <div class="slider-chip">R1_LC0024602</div>
+    <div class="slider-chip">R1_LC0099025</div>
+    <div class="slider-chip">R1_LC0300011</div>
+    <div class="slider-chip">R1_LC0600202</div>
+    <div class="slider-chip">R1_LC0699001</div>
+    <div class="slider-chip">R1_LC0900202</div>
+    <div class="slider-chip">R1_LC2400001</div>
+    <div class="slider-chip">R1_LC2424801</div>
+    <div class="slider-chip">R1_LC3600001</div>
+    <div class="slider-chip">R1_CF0100122</div>
+    <div class="slider-chip">R1_CF0300939</div>
+    <div class="slider-chip">R1_CF0600224</div>
+    <div class="slider-chip">R1_CF1200143</div>
+    <div class="slider-chip">R1_CF1200223</div>
+    <div class="slider-chip">R1_CL1200915</div>
+  </div>
+
+  <!-- 4-3 게이지 -->
+  <h3>4-3. 반원형 게이지 (visualization.Gauge) <span class="tag tag-new">최종 버전 신규</span></h3>
+
+  <p>이전 버전의 정적 구간 띠를 대체하여 <strong>현재 점수 위치를 실시간으로 가리키는 반원형 다이얼</strong>을 추가하였습니다. 500점을 기준으로 Red → Yellow → Green 단계 색상이 적용됩니다.</p>
+
+  <div class="gauge-wrap">
+    <div class="gauge-svg-box">
+      <!-- 반원형 게이지 SVG (0–1000, Red-Yellow-Green) -->
+      <svg viewBox="0 0 200 112" xmlns="http://www.w3.org/2000/svg" aria-label="신용점수 반원형 게이지 미리보기">
+        <!-- 배경 호 -->
+        <path d="M 18 100 A 82 82 0 0 1 182 100" stroke="#e0e3ec" stroke-width="20" fill="none" stroke-linecap="butt"/>
+        <!-- 위험 (0–499): 180°→90° -->
+        <path d="M 18 100 A 82 82 0 0 1 100 18" stroke="#dc2626" stroke-width="20" fill="none" stroke-linecap="butt"/>
+        <!-- 주의 (500–599): 90°→72° -->
+        <path d="M 100 18 A 82 82 0 0 1 125.4 23.2" stroke="#f97316" stroke-width="20" fill="none" stroke-linecap="butt"/>
+        <!-- 보통 (600–699): 72°→54° -->
+        <path d="M 125.4 23.2 A 82 82 0 0 1 148.3 34.7" stroke="#eab308" stroke-width="20" fill="none" stroke-linecap="butt"/>
+        <!-- 양호 (700–799): 54°→36° -->
+        <path d="M 148.3 34.7 A 82 82 0 0 1 166.4 51.6" stroke="#84cc16" stroke-width="20" fill="none" stroke-linecap="butt"/>
+        <!-- 우수 (800–899): 36°→18° -->
+        <path d="M 166.4 51.6 A 82 82 0 0 1 177.9 75.0" stroke="#16a34a" stroke-width="20" fill="none" stroke-linecap="butt"/>
+        <!-- 최우수 (900–1000): 18°→0° -->
+        <path d="M 177.9 75.0 A 82 82 0 0 1 182 100" stroke="#2563eb" stroke-width="20" fill="none" stroke-linecap="butt"/>
+        <!-- 중앙 레이블 -->
+        <text x="100" y="98" text-anchor="middle" font-size="13" font-weight="700" fill="#1a1d2e" font-family="Noto Sans KR, sans-serif">Score</text>
+        <text x="100" y="111" text-anchor="middle" font-size="9" fill="#5a6180" font-family="Noto Sans KR, sans-serif">0 ─────────── 1000</text>
+        <!-- 눈금 레이블 -->
+        <text x="12" y="108" text-anchor="middle" font-size="8" fill="#5a6180" font-family="Fira Code, monospace">0</text>
+        <text x="98" y="13" text-anchor="middle" font-size="8" fill="#5a6180" font-family="Fira Code, monospace">500</text>
+        <text x="188" y="108" text-anchor="middle" font-size="8" fill="#5a6180" font-family="Fira Code, monospace">1000</text>
+      </svg>
+    </div>
+    <div class="gauge-legend">
+      <div class="gauge-legend-row"><div class="gauge-legend-dot" style="background:#2563eb"></div>최우수 (900 이상)</div>
+      <div class="gauge-legend-row"><div class="gauge-legend-dot" style="background:#16a34a"></div>우수 (800–899)</div>
+      <div class="gauge-legend-row"><div class="gauge-legend-dot" style="background:#84cc16"></div>양호 (700–799)</div>
+      <div class="gauge-legend-row"><div class="gauge-legend-dot" style="background:#eab308"></div>보통 (600–699)</div>
+      <div class="gauge-legend-row"><div class="gauge-legend-dot" style="background:#f97316"></div>주의 (500–599)</div>
+      <div class="gauge-legend-row"><div class="gauge-legend-dot" style="background:#dc2626"></div>위험 (500 미만)</div>
+    </div>
+  </div>
+
+  <div class="prop-block">
+    <div class="prop-row"><span class="prop-key">컴포넌트</span><span class="prop-val">visualization.Gauge</span></div>
+    <div class="prop-row"><span class="prop-key">ID</span><span class="prop-val">visualization.Gauge1</span></div>
+    <div class="prop-row"><span class="prop-key">위치</span><span class="prop-val">left 0.67 · top 0.36 · width 0.31 · height 0.27</span></div>
+    <div class="prop-row"><span class="prop-key">표시 컬럼</span><span class="prop-val">Score</span></div>
+    <div class="prop-row"><span class="prop-key">게이지 형태</span><span class="prop-val">Radial (axisType: radial)</span></div>
+    <div class="prop-row"><span class="prop-key">시작/끝 각도</span><span class="prop-val">StartAngle 90 · EndAngle 270</span></div>
+    <div class="prop-row"><span class="prop-key">축 범위</span><span class="prop-val">RangeMin 0 · RangeMax 1000</span></div>
+    <div class="prop-row"><span class="prop-key">색상 팔레트</span><span class="prop-val">Stepped / Red–Yellow–Green (Limit_0: 500)</span></div>
+    <div class="prop-row"><span class="prop-key">마크 타입</span><span class="prop-val">bar · dataDriven</span></div>
+  </div>
+
+  <!-- 4-4 결과 패널 -->
+  <h3>4-4. 결과 패널 위젯 (TextBox)</h3>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>위젯 ID</th><th>위치 (top)</th><th>역할</th><th>컬럼 바인딩</th></tr></thead>
+      <tbody>
+        <tr><td><code>TextBox1</code></td><td>0.02</td><td>대시보드 제목</td><td>— (정적 텍스트)</td></tr>
+        <tr><td><code>TextBox2</code></td><td>0.11</td><td>신용점수 라벨</td><td>— (정적: "신용점수")</td></tr>
+        <tr><td><code>TextBox3</code></td><td>0.11</td><td>신용점수 값</td><td><code>Score</code> (<code>#,##0</code> 포맷)</td></tr>
+        <tr><td><code>TextBox12</code></td><td>0.28</td><td>등급 라벨</td><td>— (정적: "신용등급")</td></tr>
+        <tr><td><code>TextBox13</code></td><td>0.28</td><td>등급 값</td><td><code>Grade</code></td></tr>
+        <tr><td><code>TextBox14~15</code></td><td>0.63~</td><td>불량·정상 확률, 판정 등</td><td><code>confidence(0)</code> · <code>confidence(1)</code> · <code>Result</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════ 5. 대시보드 레이아웃 ═══ -->
+<section>
+  <h2><span class="ico">🖥️</span>대시보드 레이아웃</h2>
+
+  <div class="arch-box">
+<pre>
+ ┌──────────────────────────────────────────────────────────────────────┐
+ │                     NICE 신용점수 대시보드 (TextBox1)                   │
+ ├──────────────────────────────────────────────┬───────────────────────┤
+ │                                              │  신용점수              │
+ │  슬라이더 패널 (5열 × 10행, 변수 47개)          │  [Score 값]           │
+ │                                              │                       │
+ │  Col1      Col2      Col3      Col4      Col5│  신용등급              │
+ │  [slider] [slider] [slider] [slider] [slider]│  [Grade 값]           │
+ │  [slider] [slider] [slider] [slider] [slider]│                       │
+ │  [slider] [slider] [slider] [slider] [slider]│  ◉ 반원형 게이지       │
+ │  [slider] [slider] [slider] [slider] [slider]│    (Score 0–1000)     │
+ │  [slider] [slider] [slider] [slider] [slider]│    Red → Yellow → Green│
+ │  [slider] [slider] [slider] [slider] [slider]│                       │
+ │  [slider] [slider] [slider] [slider] [slider]│  불량확률  정상확률    │
+ │  [slider] [slider] [slider] [slider] [slider]│  target    판정       │
+ │  [slider] [slider] [slider] [slider] [slider]│                       │
+ │  [slider] [slider] [slider] [slider]         │  안내 / 모델 정보      │
+ └──────────────────────────────────────────────┴───────────────────────┘
+</pre>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>영역</th><th>위치 (left · top)</th><th>구성</th></tr></thead>
+      <tbody>
+        <tr><td>제목</td><td>전체 상단 (top 0.02)</td><td>TextBox 1개</td></tr>
+        <tr><td>슬라이더</td><td>left 0.01~0.67</td><td>NumericActionSlider 47개, 5열 격자</td></tr>
+        <tr><td>신용점수 KPI</td><td>left 0.67~, top 0.11</td><td>라벨 + Score 값 TextBox</td></tr>
+        <tr><td>신용등급</td><td>left 0.67~, top 0.28</td><td>라벨 + Grade 값 TextBox</td></tr>
+        <tr><td><strong>반원형 게이지</strong></td><td>left 0.67, top 0.36</td><td><strong>visualization.Gauge — 신규</strong></td></tr>
+        <tr><td>세부 결과</td><td>left 0.67~, top 0.63~</td><td>불량·정상 확률, target, 판정, 안내</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════ 6. 신용등급 기준 ═══ -->
+<section>
+  <h2><span class="ico">🎯</span>신용등급 분류 기준</h2>
+
+  <p>Python Transform 내 <code>score_grade</code> 함수 기준으로 등급을 산출합니다.</p>
+
+  <div class="grade-band">
+    <div class="grade-seg g-danger"><span>위험</span><span class="seg-sub">~499</span></div>
+    <div class="grade-seg g-warn"><span>주의</span><span class="seg-sub">500~599</span></div>
+    <div class="grade-seg g-mid"><span>보통</span><span class="seg-sub">600~699</span></div>
+    <div class="grade-seg g-good"><span>양호</span><span class="seg-sub">700~799</span></div>
+    <div class="grade-seg g-great"><span>우수</span><span class="seg-sub">800~899</span></div>
+    <div class="grade-seg g-best"><span>최우수</span><span class="seg-sub">900~</span></div>
+  </div>
+
+  <pre>def score_grade(score):
+    if score >= 900: return "최우수"
+    elif score >= 800: return "우수"
+    elif score >= 700: return "양호"
+    elif score >= 600: return "보통"
+    elif score >= 500: return "주의"
+    return "위험"</pre>
+
+  <div class="warn-box">⚠️ 위 등급 기준은 현재 예시 기준입니다. 운영 기준 확정 후 Python Transform 스크립트와 게이지 색상 범위에 반영해야 합니다.</div>
+</section>
+
+<!-- ═══════════════ 7. 엔드포인트 ═══ -->
+<section>
+  <h2><span class="ico">🌐</span>엔드포인트 연동</h2>
+
+  <div class="prop-block">
+    <div class="prop-row"><span class="prop-key">URL (v2 현행)</span><span class="prop-val" style="font-size:.78rem;word-break:break-all">mlops.nice.plda-cloud.com/.../nice-scoring/deploy_scoring_process_v02</span></div>
+    <div class="prop-row"><span class="prop-key">메서드</span><span class="prop-val">POST</span></div>
+    <div class="prop-row"><span class="prop-key">Content-Type</span><span class="prop-val">application/json</span></div>
+    <div class="prop-row"><span class="prop-key">인증</span><span class="prop-val">없음 (스크립트 무인증)</span></div>
+    <div class="prop-row"><span class="prop-key">요청 본문</span><span class="prop-val">{"data": [{"KEY": 1, "R1_...": 값, ...}]}</span></div>
+    <div class="prop-row"><span class="prop-key">응답 컬럼</span><span class="prop-val">prediction(TARGET) · confidence(0/1) · Score</span></div>
+  </div>
+
+  <div class="info-box">ℹ️ 현재 Python Transform 스크립트는 인증 헤더 없이 호출합니다. 보안 정책 변경 시 <code>headers</code> 딕셔너리에 토큰을 추가해야 합니다.</div>
+</section>
+
+<!-- ═══════════════ 8. 파일 패키징 ═══ -->
+
+<!-- ═══════════════ 9. 사용 방법 ═══ -->
+<section>
+  <h2><span class="ico">▶️</span>사용 방법</h2>
+
+  <ol class="steps">
+    <li>
+      <div class="sb">
+        <div class="st">파일 가져오기</div>
+        <div class="sd">Panopticon Designer에서 <code>261112_검수.exz</code>를 가져옵니다.</div>
+      </div>
+    </li>
+    <li>
+      <div class="sb">
+        <div class="st">Python 환경 확인</div>
+        <div class="sd">Panopticon의 Python 서버가 실행 중이고 <code>pandas</code>·<code>requests</code>가 설치되어 있는지 확인합니다.</div>
+      </div>
+    </li>
+    <li>
+      <div class="sb">
+        <div class="st">대시보드 열기</div>
+        <div class="sd"><code>261112_검수</code> 워크북 → <code>Dashboard1</code>을 엽니다.</div>
+      </div>
+    </li>
+    <li>
+      <div class="sb">
+        <div class="st">슬라이더 조작</div>
+        <div class="sd">좌측 슬라이더 47개로 신용 변수 값을 0–10 범위에서 조절합니다.</div>
+      </div>
+    </li>
+    <li>
+      <div class="sb">
+        <div class="st">결과 확인</div>
+        <div class="sd">우측 패널의 신용점수·게이지·등급이 실시간으로 갱신되는지 확인합니다.</div>
+      </div>
+    </li>
+  </ol>
+
+  <div class="warn-box" style="margin-top:1rem">
+    ⚠️ <strong>서버 버전이 다를 때 (26.1 환경)</strong>: <code>server_version.txt</code>, <code>metadata.json</code>, <code>DataLibrary/datatables</code> 내부의 버전 문자열(<code>2609.1.0.36042</code>)을 대상 서버 버전으로 교체한 뒤 재압축합니다.
+  </div>
+</section>
+
+<!-- ═══════════════ 10. 문제 해결 ═══ -->
+<!-- <section>
+  <h2><span class="ico">🔍</span>문제 해결 기록</h2>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>#</th><th>증상</th><th>원인</th><th>해결</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><code>Aggregate binding failed: column … has bad type</code></td>
+          <td>텍스트 컬럼 박스의 <code>WeightColumnName</code>을 텍스트 컬럼 자신으로 지정 — 가중치는 숫자형이어야 함</td>
+          <td>가중치 컬럼을 숫자형 <code>Score</code>로 변경</td>
+          <td><span class="ok">✅ 해결</span></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>대시보드 가져오기 거부</td>
+          <td><code>server_version.txt</code> 버전이 서버 버전보다 높음</td>
+          <td>세 곳의 버전 문자열을 대상 서버 버전으로 교체</td>
+          <td><span class="ok">✅ 해결</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>값이 나오지 않을 때 확인 항목</h3>
+  <ul style="color:var(--text-sub);padding-left:1.2rem;margin-bottom:.5rem;line-height:2">
+    <li>Python 서버 기동 여부, <code>requests</code> 패키지 설치 여부</li>
+    <li>엔드포인트 URL 접근 가능 여부 (인증 헤더 필요 시 스크립트에 추가)</li>
+    <li>슬라이더 <code>DashboardParameterName</code> ↔ 데이터 테이블 파라미터 이름 ↔ 스크립트 <code>{P_...}</code> 세 가지가 모두 일치하는지</li>
+  </ul>
+</section> -->
+
+<!-- ═══════════════ 11. 이전 버전 대비 변경 ═══ -->
+<!-- <section>
+  <h2><span class="ico">🔄</span>이전 버전 대비 변경 사항</h2>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>항목</th><th>이전 (261110_v2_slider)</th><th>최종 (261112_검수)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>점수 위치 표시</strong></td>
+          <td>정적 색 구간 띠만 표시 (현재 점수 마커 없음)</td>
+          <td class="ok"><strong>반원형 게이지 — 실시간 Score 위치 표시</strong></td>
+        </tr>
+        <tr>
+          <td><strong>색상 체계</strong></td>
+          <td>고정 구간 색 6개</td>
+          <td class="ok">Red–Yellow–Green Stepped 팔레트 (500점 경계)</td>
+        </tr>
+        <tr>
+          <td><strong>TextBox 수</strong></td>
+          <td>21개</td>
+          <td class="ok">14개 (UI 정리) + visualization.Gauge 1개</td>
+        </tr>
+        <tr>
+          <td><strong>파라미터 기본값</strong></td>
+          <td>샘플 기준값 (동일)</td>
+          <td>샘플 기준값 (동일)</td>
+        </tr>
+        <tr>
+          <td><strong>슬라이더 수</strong></td>
+          <td>47개</td>
+          <td>47개 (동일)</td>
+        </tr>
+        <tr>
+          <td><strong>Python Transform</strong></td>
+          <td>동일 로직</td>
+          <td>동일 로직</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+═══════════════ 12. 향후 개선 방향 ═══
+<!-- <section>
+  <h2><span class="ico">🚀</span>향후 개선 방향</h2>
+
+  <div class="improve-grid">
+    <div class="ic">
+      <div class="ic-lbl">KEY 입력</div>
+      <div class="ic-now">◆ 현재: 1로 고정</div>
+      <div class="ic-fut">→ 개선: ActionTextBox로 직접 입력</div>
+    </div>
+    <div class="ic">
+      <div class="ic-lbl">확률 서식</div>
+      <div class="ic-now">◆ 현재: 소수 형태 (0.0179)</div>
+      <div class="ic-fut">→ 개선: 퍼센트 서식 적용 (1.79%)</div>
+    </div>
+    <div class="ic">
+      <div class="ic-lbl">등급 기준</div>
+      <div class="ic-now">◆ 현재: 예시 기준 (500 단위)</div>
+      <div class="ic-fut">→ 개선: 운영 기준 확정 후 스크립트·게이지에 반영</div>
+    </div>
+    <div class="ic">
+      <div class="ic-lbl">변수 설명</div>
+      <div class="ic-now">◆ 현재: 코드명만 표시</div>
+      <div class="ic-fut">→ 개선: 슬라이더 라벨에 한글 설명 추가</div>
+    </div>
+    <div class="ic">
+      <div class="ic-lbl">변수 그룹화</div>
+      <div class="ic-now">◆ 현재: 단일 격자</div>
+      <div class="ic-fut">→ 개선: TabPanel로 조회·대출·현금흐름 그룹 분리</div>
+    </div>
+    <div class="ic">
+      <div class="ic-lbl">범주형 입력</div>
+      <div class="ic-now">◆ 현재: 없음 (변수 전부 숫자형)</div>
+      <div class="ic-fut">→ 개선: 범주형 발생 시 ActionDropDown + 값 목록 테이블</div>
+    </div>
+  </div>
+</section> 
+-->
+
+</div>

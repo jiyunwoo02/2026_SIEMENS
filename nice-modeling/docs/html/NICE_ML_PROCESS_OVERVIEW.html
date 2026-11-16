@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NICE 신용점수 모델 프로세스 개요</title>
+<style>
+  :root {
+    --bg: #f8f9fa;
+    --surface: #ffffff;
+    --border: #e0e3e8;
+    --text: #1a1d23;
+    --text-sub: #5a6072;
+    --accent: #2563eb;
+    --accent-light: #eff4ff;
+    --success: #16a34a;
+    --success-light: #f0fdf4;
+    --warning: #d97706;
+    --warning-light: #fffbeb;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --code-bg: #f1f3f7;
+    --tag-numeric: #dbeafe;
+    --tag-numeric-text: #1e40af;
+    --tag-string: #d1fae5;
+    --tag-string-text: #065f46;
+    --tag-int: #ede9fe;
+    --tag-int-text: #5b21b6;
+    --tag-warn: #fef9c3;
+    --tag-warn-text: #854d0e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1117; --surface: #1a1d2e; --border: #2a2d3e;
+      --text: #e8eaf0; --text-sub: #8b90a8;
+      --accent: #4f8ef7; --accent-light: #1a2340;
+      --success: #34d399; --success-light: #0a2a1a;
+      --warning: #fbbf24; --warning-light: #2a1f0a;
+      --danger: #f87171; --danger-light: #2a0f0f;
+      --code-bg: #0d0f18;
+      --tag-numeric: #1e3a5f; --tag-numeric-text: #93c5fd;
+      --tag-string: #0a2a1a; --tag-string-text: #6ee7b7;
+      --tag-int: #2e1f5e; --tag-int-text: #c4b5fd;
+      --tag-warn: #2a1f0a; --tag-warn-text: #fbbf24;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1117; --surface: #1a1d2e; --border: #2a2d3e;
+    --text: #e8eaf0; --text-sub: #8b90a8;
+    --accent: #4f8ef7; --accent-light: #1a2340;
+    --success: #34d399; --success-light: #0a2a1a;
+    --warning: #fbbf24; --warning-light: #2a1f0a;
+    --danger: #f87171; --danger-light: #2a0f0f;
+    --code-bg: #0d0f18;
+    --tag-numeric: #1e3a5f; --tag-numeric-text: #93c5fd;
+    --tag-string: #0a2a1a; --tag-string-text: #6ee7b7;
+    --tag-int: #2e1f5e; --tag-int-text: #c4b5fd;
+    --tag-warn: #2a1f0a; --tag-warn-text: #fbbf24;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif; font-size: 15px; line-height: 1.65; }
+
+  /* ── Header ── */
+  .header { background: var(--accent); color: #fff; padding: 2.5rem 2rem; }
+  .header h1 { font-size: 1.75rem; font-weight: 700; }
+  .header .subtitle { opacity: .85; margin-top: .3rem; font-size: .95rem; }
+  .badge { display: inline-block; background: rgba(255,255,255,.2); border-radius: 20px; padding: .2rem .75rem; font-size: .8rem; margin-top: .6rem; }
+  .badge-green { background: rgba(52,211,153,.25); }
+  .badge + .badge { margin-left: .4rem; }
+
+  /* ── Layout ── */
+  .container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+  section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; }
+
+  /* ── Headings ── */
+  h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; color: var(--accent); display: flex; align-items: center; gap: .5rem; }
+  h2::before { content: ''; display: inline-block; width: 4px; height: 1.1rem; background: var(--accent); border-radius: 2px; flex-shrink: 0; }
+  h3 { font-size: .95rem; font-weight: 600; margin: 1.25rem 0 .6rem; color: var(--text); }
+  h4 { font-size: .82rem; color: var(--text-sub); font-weight: 600; margin: 1rem 0 .4rem; text-transform: uppercase; letter-spacing: .04em; }
+
+  p { color: var(--text-sub); margin-bottom: .75rem; }
+  ul { margin: .5rem 0 .75rem 1.3rem; }
+  li { color: var(--text-sub); margin-bottom: .3rem; }
+  li strong { color: var(--text); }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; margin: .75rem 0; }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th { background: var(--code-bg); color: var(--text-sub); font-weight: 600; padding: .6rem .8rem; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; }
+  td { padding: .55rem .8rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+
+  /* ── Code ── */
+  code { background: var(--code-bg); padding: .15rem .4rem; border-radius: 4px; font-size: .88rem; font-family: 'Fira Code', 'Consolas', monospace; }
+  pre { background: var(--code-bg); padding: 1.2rem; border-radius: 8px; overflow-x: auto; font-size: .84rem; line-height: 1.6; font-family: 'Fira Code', 'Consolas', monospace; border: 1px solid var(--border); margin: .75rem 0; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  /* ── Tags ── */
+  .tag { display: inline-block; border-radius: 4px; padding: .15rem .5rem; font-size: .78rem; font-weight: 600; }
+  .tag-numeric { background: var(--tag-numeric); color: var(--tag-numeric-text); }
+  .tag-string  { background: var(--tag-string);  color: var(--tag-string-text); }
+  .tag-int     { background: var(--tag-int);     color: var(--tag-int-text); }
+  .tag-warn    { background: var(--tag-warn);    color: var(--tag-warn-text); }
+
+  /* ── Info / Warn boxes ── */
+  .info-box { background: var(--accent-light);  border-left: 3px solid var(--accent);  border-radius: 0 6px 6px 0; padding: .8rem 1rem; font-size: .9rem; color: var(--text); margin: .75rem 0; }
+  .warn-box  { background: var(--warning-light); border-left: 3px solid var(--warning); border-radius: 0 6px 6px 0; padding: .8rem 1rem; font-size: .9rem; color: var(--text); margin: .75rem 0; }
+  .info-box p, .warn-box p { color: inherit; margin: 0; }
+
+  /* ── Flow ── */
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+  .flow-box { background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: .5rem 1rem; font-size: .88rem; font-weight: 600; line-height: 1.4; text-align: center; }
+  .flow-box small { display: block; font-weight: 400; opacity: .8; font-size: .78rem; }
+  .flow-arrow { color: var(--text-sub); font-size: 1.2rem; }
+
+  /* ── Param grid ── */
+  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  @media (max-width: 600px) { .param-grid { grid-template-columns: 1fr; } }
+  .param-block { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .param-block h4 { margin-bottom: .6rem; }
+  .param-row { display: flex; justify-content: space-between; align-items: baseline; padding: .25rem 0; border-bottom: 1px solid var(--border); font-size: .88rem; }
+  .param-row:last-child { border-bottom: none; }
+  .param-key { color: var(--text-sub); font-family: 'Fira Code', monospace; }
+  .param-val { font-weight: 700; color: var(--accent); font-family: 'Fira Code', monospace; }
+
+  /* ── Score cards ── */
+  .score-row { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0; }
+  .score-card { flex: 1; min-width: 140px; border-radius: 8px; padding: 1rem; text-align: center; }
+  .score-high { background: var(--success-light); border: 1px solid var(--success); }
+  .score-mid  { background: var(--warning-light); border: 1px solid var(--warning); }
+  .score-low  { background: var(--danger-light);  border: 1px solid var(--danger); }
+  .score-card .sc-label { font-weight: 700; font-size: 1rem; }
+  .score-card .sc-range { font-size: .82rem; color: var(--text-sub); margin-top: .25rem; }
+  .score-high .sc-label { color: var(--success); }
+  .score-mid  .sc-label { color: var(--warning); }
+  .score-low  .sc-label { color: var(--danger); }
+
+  /* ── Status ── */
+  .status-ok   { color: var(--success); font-weight: 700; }
+  .status-warn { color: var(--warning); font-weight: 700; }
+  .status-err  { color: var(--danger);  font-weight: 700; }
+
+  /* ── Version badges ── */
+  .version-tab { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .version-badge { border-radius: 6px; padding: .3rem .9rem; font-size: .82rem; font-weight: 700; border: 1px solid; }
+  .version-current { background: var(--success-light); color: var(--success); border-color: var(--success); }
+  .version-old     { background: var(--code-bg);        color: var(--text-sub); border-color: var(--border); }
+
+  /* ── Timeline ── */
+  .timeline { margin: .75rem 0; }
+  .tl-row { display: flex; gap: 1rem; padding: .6rem 0; border-bottom: 1px solid var(--border); font-size: .9rem; align-items: flex-start; }
+  .tl-row:last-child { border-bottom: none; }
+  .tl-date { color: var(--text-sub); white-space: nowrap; min-width: 90px; padding-top: .05rem; }
+  .tl-commit { font-family: 'Fira Code', monospace; background: var(--code-bg); border-radius: 4px; padding: .1rem .4rem; font-size: .8rem; white-space: nowrap; }
+  .tl-desc { flex: 1; color: var(--text); }
+
+  /* ── Dir tree ── */
+  .dir-tree { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; font-family: 'Fira Code', monospace; font-size: .84rem; line-height: 1.8; overflow-x: auto; }
+  .dir-tree .dir  { color: var(--accent); font-weight: 600; }
+  .dir-tree .file { color: var(--text); }
+  .dir-tree .cmt  { color: var(--text-sub); }
+
+  /* ── Comparison verdict ── */
+  .verdict { background: var(--success-light); border: 1px solid var(--success); border-radius: 8px; padding: .8rem 1.1rem; font-size: .93rem; color: var(--text); margin: .75rem 0; display: flex; align-items: center; gap: .6rem; }
+  .verdict-icon { font-size: 1.2rem; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ HEADER ══════════════════ -->
+<div class="header">
+  <div style="max-width:900px;margin:0 auto;">
+    <h1>NICE 신용점수 모델 프로세스 개요</h1>
+    <p class="subtitle">LightGBM 기반 신용점수 분류 모델 개발 및 AI Hub 배포</p>
+    <span class="badge badge-green">v2 운영 중</span>
+    <span class="badge">261109_ext_lightgbm · LightGBM Extension 1.0.4</span>
+    <span class="badge">작성일: 2026-11-16</span>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- ══════════════════ 1. 최종 결과물 ══════════════════ -->
+<section>
+  <h2>1. 최종 결과물 구성</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>구분</th><th>파일명</th><th>경로</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>학습 데이터</td><td><code>input_data.rmhdf5table</code></td><td><code>data/</code></td><td>875,624 rows, 49 features</td></tr>
+      <tr><td>평가 데이터</td><td><code>test_data.rmhdf5table</code> / <code>test_data.csv</code></td><td><code>data/</code></td><td>스코어링용</td></tr>
+      <tr><td>ML 모델링 프로세스</td><td><code>create_lightgbm_process_v0.2.rmp</code></td><td><code>model/</code></td><td>학습 프로세스 최종본</td></tr>
+      <tr><td>학습 완료 모델</td><td><code>261109_ext_lightgbm.rmtabmod</code></td><td><code>model/</code></td><td>Extension 포맷 저장</td></tr>
+      <tr><td>AI Hub 배포 프로세스</td><td><code>deploy_scoring_process_v0.2.rmp</code></td><td><code>deploy/</code></td><td>스코어링 배포 최종본</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ══════════════════ 2. ML 모델링 ══════════════════ -->
+<section>
+  <h2>2. ML 모델링 프로세스 — <code>create_lightgbm_process_v0.2</code></h2>
+
+  <h3>2.1 데이터 전처리 흐름</h3>
+  <div class="flow">
+    <div class="flow-box">Open File<br><small>train_data.txt</small></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">Read CSV<br><small>구분자: 쉼표 / timezone: Asia/Seoul</small></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">Numerical to Polynominal<br><small>TARGET 0/1 → nominal</small></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">Set Role<br><small>TARGET → label, KEY → id</small></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">LightGBM 학습</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">Store<br><small>261109_ext_lightgbm</small></div>
+  </div>
+
+  <h3>2.2 학습 데이터 명세</h3>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>항목</th><th>값</th></tr></thead>
+    <tbody>
+      <tr><td>소스 파일</td><td><code>train_data.txt</code> → <code>input_data.rmhdf5table</code></td></tr>
+      <tr><td>행 수</td><td>875,624 rows</td></tr>
+      <tr><td>피처 수</td><td>49개 (regular attributes)</td></tr>
+      <tr><td>결측치</td><td>없음 (no NaN)</td></tr>
+      <tr><td>타겟</td><td><code>TARGET</code> (0 / 1 이진 분류)</td></tr>
+      <tr><td>키</td><td><code>KEY</code> (id 역할, 학습 피처에서 제외)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>2.3 LightGBM 하이퍼파라미터</h3>
+  <div class="param-grid">
+    <div class="param-block">
+      <h4>UI 파라미터</h4>
+      <div class="param-row"><span class="param-key">boosting</span><span class="param-val">gbdt</span></div>
+      <div class="param-row"><span class="param-key">num_iterations</span><span class="param-val">3,000</span></div>
+      <div class="param-row"><span class="param-key">learning_rate</span><span class="param-val">0.005</span></div>
+      <div class="param-row"><span class="param-key">num_leaves</span><span class="param-val">8</span></div>
+      <div class="param-row"><span class="param-key">max_depth</span><span class="param-val">3</span></div>
+      <div class="param-row"><span class="param-key">min_data_in_leaf</span><span class="param-val">800</span></div>
+      <div class="param-row"><span class="param-key">feature_fraction</span><span class="param-val">0.3</span></div>
+      <div class="param-row"><span class="param-key">bagging_fraction</span><span class="param-val">1.0</span></div>
+      <div class="param-row"><span class="param-key">early_stopping</span><span class="param-val">none</span></div>
+      <div class="param-row"><span class="param-key">random_seed (process)</span><span class="param-val">2001</span></div>
+    </div>
+    <div class="param-block">
+      <h4>Expert Parameters</h4>
+      <div class="param-row"><span class="param-key">seed</span><span class="param-val">317</span></div>
+      <div class="param-row"><span class="param-key">lambda_l1</span><span class="param-val">15</span></div>
+      <div class="param-row"><span class="param-key">lambda_l2</span><span class="param-val">200</span></div>
+      <div class="param-row"><span class="param-key">min_gain_to_split</span><span class="param-val">0.5</span></div>
+      <div class="param-row"><span class="param-key">scale_pos_weight</span><span class="param-val">240</span></div>
+    </div>
+  </div>
+  <!-- <div class="warn-box">⚠️ <strong>scale_pos_weight = 240</strong>: 불균형 클래스 대응 — 불량(1) 대비 정상(0)이 약 240배 많은 클래스 불균형을 반영한 가중치</div> -->
+
+  <h3>2.4 모델 저장 포맷</h3>
+  <ul>
+    <li><strong>Extension 포맷(<code>.rmtabmod</code>)</strong> 사용: <code>lightgbm_extension-1.0.4</code> 기반 jar로 학습한 ext 형식으로 저장</li>
+    <!-- <li>pyl 포맷 모델(<code>261106_pyl_lightgbm.rmmodel</code>)과의 파라미터 불일치 문제 방지를 위해 ext 포맷으로 재학습 후 저장</li> -->
+  </ul>
+</section>
+
+<!-- ══════════════════ 3. 예측 메커니즘 ══════════════════ -->
+<section>
+  <h2>3. 예측 및 점수 산출 메커니즘</h2>
+
+  <h3>3.1 TARGET 정의</h3>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>값</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td><code>0</code></td><td><strong>정상</strong> — 대출/신용 거래에서 연체·불량 이력 없음</td></tr>
+      <tr><td><code>1</code></td><td><strong>불량</strong> — 연체·부도 등 신용 사고 발생</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>모델은 주어진 피처(47개 신용 관련 변수)를 바탕으로 각 고객이 <code>0(정상)</code>일지 <code>1(불량)</code>일지를 예측하는 <strong>이진 분류 모델</strong>이다.</p>
+  <!-- <div class="info-box"><code>scale_pos_weight = 240</code> 설정은 학습 데이터에서 불량(1) 대비 정상(0)이 약 240배 많은 심각한 클래스 불균형을 반영한 것이다.</div> -->
+
+  <h3>3.2 예측 흐름</h3>
+  <div class="flow">
+    <div class="flow-box">입력 피처 (47개)</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">LightGBM 모델</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">confidence(0)<br><small>정상일 확률 P(TARGET=0)</small></div>
+    <div class="flow-box">confidence(1)<br><small>불량일 확률 P(TARGET=1)</small></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">prediction(TARGET)<br><small>확률이 더 높은 클래스</small></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">Score<br><small>log-odds 기반 (0~1,000)</small></div>
+  </div>
+
+  <h3>3.3 신용점수 산출 원리</h3>
+  <p>confidence(0)과 confidence(1)은 항상 합이 1이다. 두 값의 비율(오즈, odds)을 로그 변환하여 선형 점수로 변환한다.</p>
+  <pre>odds  = confidence(0) / confidence(1)   # 정상/불량 확률 비율
+Score = 640 + (80/ln2) × ln(odds)
+      = 640 + 115.42 × ln(odds)</pre>
+
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>상황</th><th>odds</th><th>ln(odds)</th><th>Score (대략)</th></tr></thead>
+    <tbody>
+      <tr><td>정상 확률 압도적으로 높음</td><td>≫ 1</td><td>양수 (큰 값)</td><td>640 초과, 최대 1,000</td></tr>
+      <tr><td>정상·불량 확률 동일</td><td>= 1</td><td>0</td><td><strong>640</strong> (기준점)</td></tr>
+      <tr><td>불량 확률이 더 높음</td><td>&lt; 1</td><td>음수</td><td>640 미만, 최소 0</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- <div class="score-row">
+    <div class="score-card score-high">
+      <div class="sc-label">우량</div>
+      <div class="sc-range">Score ≥ 700</div>
+      <div class="sc-range" style="margin-top:.4rem">P(불량) 매우 낮음</div>
+    </div>
+    <div class="score-card score-mid">
+      <div class="sc-label">중간</div>
+      <div class="sc-range">400 ≤ Score &lt; 700</div>
+      <div class="sc-range" style="margin-top:.4rem">기준점(640) 근방</div>
+    </div>
+    <div class="score-card score-low">
+      <div class="sc-label">불량 위험</div>
+      <div class="sc-range">Score &lt; 400</div>
+      <div class="sc-range" style="margin-top:.4rem">P(불량) 높음</div>
+    </div>
+  </div> -->
+
+  <ul style="margin-top:.5rem">
+    <li>점수가 <strong>높을수록 신용 우량</strong> (정상 가능성 ↑)</li>
+    <li>기준점 640은 odds = 1 (정상·불량 확률 50:50)일 때의 점수</li>
+    <!-- <li>PDO(Points to Double Odds) = 80: odds가 2배가 될 때 점수가 80점 상승</li> -->
+  </ul>
+</section>
+
+<!-- ══════════════════ 4. AI Hub 배포 프로세스 ══════════════════ -->
+<section>
+  <h2>4. AI Hub 배포 프로세스 — <code>deploy_scoring_process_v0.2</code></h2>
+
+  <h3>4.1 배포 프로세스 흐름</h3>
+  <div class="flow">
+    <div class="flow-box">외부 입력<br><small>피처 47개 + KEY</small></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">Set Role<br><small>KEY → id</small></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">Apply Model<br><small>← Retrieve 261109_ext_lightgbm</small></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">Generate Attributes<br><small>Score 산출</small></div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">Result</div>
+  </div>
+
+  <h3>4.2 신용점수 산출 공식</h3>
+
+  <h4>원본 Python 공식</h4>
+<pre>def rm_main(data):
+    anchor = 640
+    pdo    = 80
+    factor = pdo / np.log(2)   # 80 / ln(2) ≈ 115.41560327
+    offset = anchor             # 640
+
+    p_pos = data['confidence(1)'].values + 1e-10   # 불량(1) 확률
+    p_neg = data['confidence(0)'].values + 1e-10   # 정상(0) 확률
+
+    odds = p_neg / p_pos   # confidence(0) / confidence(1)
+
+    data['Score'] = offset + (factor * np.log(odds))
+    data['Score'] = data['Score'].clip(lower=0, upper=1000).round(0).astype(int)
+    return data</pre>
+
+  <h4>RapidMiner 구현 공식</h4>
+<pre>Score = max(0, min(1000, round(640 + (115.44 * log(([confidence(0)] + 1e-10) / ([confidence(1)] + 1e-10))), 0)))</pre>
+
+  <h4>공식 구성 요소 비교</h4>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>요소</th><th>Python</th><th>RapidMiner</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>기준점 (anchor/offset)</td><td>640</td><td>640</td><td><span class="status-ok">동일</span></td></tr>
+      <tr><td>PDO (Points to Double Odds)</td><td>80</td><td>—</td><td>Python에서 factor 도출에 사용</td></tr>
+      <tr><td>Factor</td><td><code>80 / ln(2) = 115.41560327</code></td><td><code>115.44</code></td><td><span class="status-warn">근사값 (2자리 반올림 시 115.42)</span></td></tr>
+      <tr><td>log 함수</td><td><code>np.log()</code> (자연로그)</td><td><code>log()</code> (자연로그)</td><td><span class="status-ok">동일</span></td></tr>
+      <tr><td>odds</td><td><code>confidence(0) / confidence(1)</code></td><td><code>confidence(0) / confidence(1)</code></td><td><span class="status-ok">동일</span></td></tr>
+      <tr><td>epsilon 처리</td><td><code>+1e-10</code> (양쪽)</td><td><code>+1e-10</code> (양쪽)</td><td><span class="status-ok">동일</span></td></tr>
+      <tr><td>범위 클리핑</td><td><code>clip(0, 1000)</code></td><td><code>max(0, min(1000, ...))</code></td><td><span class="status-ok">동일</span></td></tr>
+      <tr><td>반올림</td><td><code>.round(0).astype(int)</code></td><td><code>round(..., 0)</code></td><td><span class="status-ok">동일</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h4>동일 여부 검토</h4>
+  <div class="verdict"><span class="verdict-icon">✅</span><strong>결론: 실질적으로 동일</strong> (단, factor에 미세한 반올림 오차 존재)</div>
+  <!-- <div class="table-wrap">
+  <table>
+    <thead><tr><th>항목</th><th>값</th></tr></thead>
+    <tbody>
+      <tr><td>Python factor 정확값</td><td><code>80 / ln(2) = 115.41560327</code></td></tr>
+      <tr><td>RapidMiner factor</td><td><code>115.44</code></td></tr>
+      <tr><td>절대 오차</td><td><code>+0.02440</code> (+0.021%)</td></tr>
+      <tr><td>raw 점수 오차 (최대)</td><td><code>0.02440 × |ln(odds)|</code> ≈ 최대 ~0.135점 (유효 점수 범위 내)</td></tr>
+      <tr><td>정수 점수 차이</td><td><strong>0점</strong> (전 구간 테스트 결과 동일)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="info-box">raw 점수 오차가 최대 ~0.135점이므로, 반올림 임계값(xx.5) 근방에서 극히 드물게 1점 차이가 발생할 수 있으나, 실용적으로는 동일한 공식으로 간주.<br><br>
+  <strong>완전 일치를 보장하려면</strong>: RapidMiner Generate Attributes의 factor <code>115.44</code>를 <code>80 / ln(2) = 115.41560</code>으로 교체</div> -->
+</section>
+
+<!-- ══════════════════ 5. AI Hub API ══════════════════ -->
+<section>
+  <h2>5. AI Hub 배포 및 API (v2)</h2>
+
+  <h3>5.1 배포 정보</h3>
+  <div class="version-tab">
+    <span class="version-badge version-current">v2 현행</span>
+    <span class="version-badge version-old">v1 구버전 (Python Learner — ExecutionError)</span>
+  </div>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>항목</th><th>값</th></tr></thead>
+    <tbody>
+      <tr><td>플랫폼</td><td>Altair AI Hub</td></tr>
+      <tr><td>서버</td><td><code>mlops.nice.plda-cloud.com</code></td></tr>
+      <tr><td>서비스명</td><td><code>nice-scoring</code></td></tr>
+      <tr><td>프로세스명</td><td><code>deploy_scoring_process_v02</code></td></tr>
+      <tr><td>모델</td><td><code>261109_ext_lightgbm.rmtabmod</code></td></tr>
+      <tr><td>상태</td><td><span class="status-ok">✅ 운영 중</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>5.2 Endpoint</h3>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>항목</th><th>값</th></tr></thead>
+    <tbody>
+      <tr><td>URL</td><td><code>https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02</code></td></tr>
+      <tr><td>Method</td><td><code>POST</code></td></tr>
+      <tr><td>Content-Type</td><td><code>application/json</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>5.3 송신 파라미터 (Request Body)</h3>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>항목</th><th>설명</th></tr></thead>
+    <tbody>
+      <tr><td><code>data</code></td><td>배열 형태, 복수 행 동시 요청 가능</td></tr>
+      <tr><td><code>TARGET</code></td><td><strong>송신하지 않음</strong> (예측 대상 컬럼)</td></tr>
+      <!-- <tr><td>결측값</td><td><code>null</code> 사용</td></tr> -->
+      <tr><td>총 컬럼 수</td><td><strong>48개</strong> (<code>KEY</code> 1개 + 피처 47개)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h4>입력 컬럼 전체 목록</h4>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>순서</th><th>컬럼명</th><th>타입</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><code>KEY</code></td><td><span class="tag tag-int">integer</span></td></tr>
+      <tr><td>2</td><td><code>R1_CBINQ_CNT05</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>3</td><td><code>R1_CBINQ_CNT10_CD</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>4</td><td><code>R1_CBINQ__CNT07_TL</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>5</td><td><code>R1_CBINQ_CNT6M_TZ</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>6</td><td><code>R1_CBINQ_GGN1Y</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>7</td><td><code>R1_INQPTN_1Y_FN_03_FN</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>8</td><td><code>R1_INQPTN_1Y_FN_07_PF</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>9</td><td><code>R1_INQPTN_6M_FN_15_Z4</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>10</td><td><code>R1_INQPTN_1Y_FN_15_Z4</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>11</td><td><code>R1_INQPTN_1Y_FN_15_SP</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>12</td><td><code>R1_INQPTN_6M_Z4_30_Z4</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>13</td><td><code>R1_INQPTN_1Y_Z4_05_Z4</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>14</td><td><code>R1_CBINQ_CNT03_DIFF</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>15</td><td><code>R1_CBINQ_CNT03_PF_RTO</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>16</td><td><code>R1_CBINQ_CNT05_RTO</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>17</td><td><code>R1_CPCBLA_CNT05_CL</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>18</td><td><code>R1_CPCBLA_CNT05</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>19</td><td><code>R1_L24003800</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>20</td><td><code>R1_ZS0000187</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>21</td><td><code>R1_PS0001190</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>22</td><td><code>R1_PS0001728</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>23</td><td><code>R1_LA0100016</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>24</td><td><code>R1_LA0200013</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>25</td><td><code>R1_LA0300016</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>26</td><td><code>R1_LA0400005</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>27</td><td><code>R1_C00000151</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>28</td><td><code>R1_C11061100</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>29</td><td><code>R1_SC0301005</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>30</td><td><code>R1_SC0602003</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>31</td><td><code>R1_SC1201003</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>32</td><td><code>R1_SC1202006</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>33</td><td><code>R1_LC0000001</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>34</td><td><code>R1_LC0024602</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>35</td><td><code>R1_LC0099025</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>36</td><td><code>R1_LC0300011</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>37</td><td><code>R1_LC0600202</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>38</td><td><code>R1_LC0699001</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>39</td><td><code>R1_LC0900202</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>40</td><td><code>R1_LC2400001</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>41</td><td><code>R1_LC2424801</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>42</td><td><code>R1_LC3600001</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>43</td><td><code>R1_CF0100122</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>44</td><td><code>R1_CF0300939</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>45</td><td><code>R1_CF0600224</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>46</td><td><code>R1_CF1200143</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>47</td><td><code>R1_CF1200223</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+      <tr><td>48</td><td><code>R1_CL1200915</code></td><td><span class="tag tag-numeric">real</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>5.4 응답 형식 (Response)</h3>
+  <p>응답은 요청 시 송신한 전체 컬럼(KEY + 47개 피처)을 그대로 포함하며, 추가로 추론 결과 필드가 붙어서 반환된다.</p>
+<pre>{
+  "data": [
+    {
+      "KEY": 1,
+      "R1_CBINQ_CNT05": 2.0,
+      "R1_CBINQ_CNT10_CD": 1.0,
+      "... (47개 피처 컬럼)": "...",
+      "prediction(TARGET)": "0",
+      "confidence(0)": 0.9821,
+      "confidence(1)": 0.0179,
+      "Score": 928
+    }
+  ]
+}</pre>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>필드</th><th>구분</th><th>설명</th></tr></thead>
+    <tbody>
+      <tr><td><code>KEY</code></td><td><span class="tag tag-warn">입력 echo</span></td><td>요청 시 입력한 식별자</td></tr>
+      <tr><td><code>R1_CBINQ_CNT05</code> ~ <code>R1_CL1200915</code> (47개)</td><td><span class="tag tag-warn">입력 echo</span></td><td>요청 시 송신한 피처 컬럼 그대로 반환</td></tr>
+      <tr><td><code>prediction(TARGET)</code></td><td><span class="tag tag-string">추론 결과</span></td><td>예측 클래스 (<code>"0"</code>: 정상, <code>"1"</code>: 불량)</td></tr>
+      <tr><td><code>confidence(0)</code></td><td><span class="tag tag-numeric">추론 결과</span></td><td>정상일 확률 P(0), 범위 0~1</td></tr>
+      <tr><td><code>confidence(1)</code></td><td><span class="tag tag-numeric">추론 결과</span></td><td>불량일 확률 P(1), 범위 0~1</td></tr>
+      <tr><td><code>Score</code></td><td><span class="tag tag-numeric">추론 결과</span></td><td>신용점수 (0~1,000, 높을수록 우량)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>5.5 요청 예시</h3>
+  <h4>cURL</h4>
+<pre>curl -X POST "https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": [{
+      "KEY": 1,
+      "R1_CBINQ_CNT05": 2.0,
+      "R1_CBINQ_CNT10_CD": 1.0,
+      "R1_CBINQ__CNT07_TL": 1.0,
+      "R1_CBINQ_CNT6M_TZ": 1.0,
+      "R1_CBINQ_GGN1Y": 2.0,
+      "R1_INQPTN_1Y_FN_03_FN": 3.0,
+      "R1_INQPTN_1Y_FN_07_PF": 2.0,
+      "R1_INQPTN_6M_FN_15_Z4": 4.0,
+      "R1_INQPTN_1Y_FN_15_Z4": 2.0,
+      "R1_INQPTN_1Y_FN_15_SP": 3.0,
+      "R1_INQPTN_6M_Z4_30_Z4": 2.0,
+      "R1_INQPTN_1Y_Z4_05_Z4": 2.0,
+      "R1_CBINQ_CNT03_DIFF": 1.0,
+      "R1_CBINQ_CNT03_PF_RTO": 2.0,
+      "R1_CBINQ_CNT05_RTO": 2.0,
+      "R1_CPCBLA_CNT05_CL": 0.0,
+      "R1_CPCBLA_CNT05": 1.0,
+      "R1_L24003800": 3.0,
+      "R1_ZS0000187": 3.0,
+      "R1_PS0001190": 0.0,
+      "R1_PS0001728": 0.0,
+      "R1_LA0100016": 4.0,
+      "R1_LA0200013": 4.0,
+      "R1_LA0300016": 4.0,
+      "R1_LA0400005": 3.0,
+      "R1_C00000151": 0.0,
+      "R1_C11061100": 0.0,
+      "R1_SC0301005": 2.0,
+      "R1_SC0602003": 2.0,
+      "R1_SC1201003": 1.0,
+      "R1_SC1202006": 1.0,
+      "R1_LC0000001": 1.0,
+      "R1_LC0024602": 0.0,
+      "R1_LC0099025": 0.0,
+      "R1_LC0300011": 0.0,
+      "R1_LC0600202": 0.0,
+      "R1_LC0699001": 0.0,
+      "R1_LC0900202": 0.0,
+      "R1_LC2400001": 0.0,
+      "R1_LC2424801": 0.0,
+      "R1_LC3600001": 0.0,
+      "R1_CF0100122": 0.0,
+      "R1_CF0300939": 1.0,
+      "R1_CF0600224": 0.0,
+      "R1_CF1200143": 0.0,
+      "R1_CF1200223": 0.0,
+      "R1_CL1200915": 2.0
+    }]
+  }'</pre>
+
+  <h4>Python</h4>
+<pre>import requests
+
+url = "https://mlops.nice.plda-cloud.com/webapi/DEFAULT/api/v1/services/nice-scoring/deploy_scoring_process_v02"
+headers = {"Content-Type": "application/json"}
+
+payload = {
+    "data": [{
+        "KEY": 1,
+        "R1_CBINQ_CNT05": 2.0,
+        # ... (나머지 47개 컬럼)
+        "R1_CL1200915": 2.0
+    }]
+}
+
+response = requests.post(url, headers=headers, json=payload)
+result = response.json()
+
+score = result["data"][0]["Score"]
+print(f"신용점수: {score}")</pre>
+</section>
+
+<!-- ══════════════════ 6. 개발 과정 ══════════════════ -->
+<!-- <section>
+  <h2>6. 개발 과정 (v0.2 기준)</h2>
+
+  <h3>6.1 개발 타임라인</h3>
+  <div class="timeline">
+    <div class="tl-row"><span class="tl-date">2026-11-06</span><span class="tl-commit">adb905c</span><span class="tl-desc">프로젝트 시작 (<code>nice-test</code> 초기화)</span></div>
+    <div class="tl-row"><span class="tl-date">2026-11-09</span><span class="tl-commit">8ffca2e</span><span class="tl-desc">LightGBM 모델 포맷 변경: <strong>pyl → ext</strong> (Extension 포맷 채택)</span></div>
+    <div class="tl-row"><span class="tl-date">2026-11-09</span><span class="tl-commit">dde5546</span><span class="tl-desc">ext_lightgbm 모델 수정</span></div>
+    <div class="tl-row"><span class="tl-date">2026-11-09</span><span class="tl-commit">23677ce</span><span class="tl-desc">KEY 컬럼 역할을 <code>id</code>로 설정 (학습 피처에서 KEY 제외)</span></div>
+    <div class="tl-row"><span class="tl-date">2026-11-09</span><span class="tl-commit">f467c16</span><span class="tl-desc">배포 프로세스에 KEY → id 설정 반영</span></div>
+    <div class="tl-row"><span class="tl-date">2026-11-09</span><span class="tl-commit">b83519f ~ 096c451</span><span class="tl-desc">Score 산출 공식 반복 수정 (5회, Score ~ Score-5)</span></div>
+    <div class="tl-row"><span class="tl-date">2026-11-09</span><span class="tl-commit">8ec771b</span><span class="tl-desc"><code>input_data.rmhdf5table</code> 생성 (학습 데이터 HDF5 변환)</span></div>
+    <div class="tl-row"><span class="tl-date">2026-11-10</span><span class="tl-commit">5a05f44</span><span class="tl-desc">분류 스코어링 프로세스 생성 (<code>deploy_scoring_process_v0.2</code>)</span></div>
+    <div class="tl-row"><span class="tl-date">2026-11-10</span><span class="tl-commit">89a12b6</span><span class="tl-desc">스코어링용 <code>test_data.rmhdf5table</code> / <code>test_data.csv</code> 추가</span></div>
+  </div>
+
+  <h3>6.2 주요 변경 포인트</h3>
+
+  <h4>pyl → ext 포맷 전환 (2026-11-09)</h4>
+  <ul>
+    <li><strong>변경 이유</strong>: pyl 포맷 모델(<code>261106_pyl_lightgbm.rmmodel</code>)과 Extension 기반 LightGBM 간 파라미터 기준 불일치 발생</li>
+    <li><strong>조치</strong>: <code>lightgbm_extension-1.0.4-all.jar</code> 기준의 ext 포맷으로 재학습하여 <code>261109_ext_lightgbm.rmtabmod</code> 저장</li>
+    <li><strong>효과</strong>: 배포 프로세스와 모델 간 파라미터 일관성 확보</li>
+  </ul>
+
+  <h4>KEY 컬럼 역할 추가 (2026-11-09)</h4>
+  <ul>
+    <li><strong>변경 이유</strong>: LightGBM은 <code>id</code> role 컬럼을 피처로 사용하지 않으므로, KEY를 id로 설정하여 학습 데이터에서 제외</li>
+    <li><strong>조치</strong>: <code>Set Role</code>에 <code>KEY → id</code> 추가, 재학습 및 배포 프로세스 반영</li>
+  </ul>
+
+  <h4>Score 공식 반복 수정 (2026-11-09, 5회)</h4>
+  <ul>
+    <li>신용점수 스케일, 기준점, log-odds 계산식 조정</li>
+    <li>최종 공식: <code>640 + 115.44 × log(confidence(0) / confidence(1))</code></li>
+  </ul>
+</section> -->
+
+<!-- ══════════════════ 7. 디렉토리 구조 ══════════════════ -->
+<!-- <section>
+  <h2>7. 프로젝트 디렉토리 구조</h2>
+  <div class="dir-tree">
+<span class="dir">nice-test/</span>
+├── <span class="dir">data/</span>
+│   ├── <span class="file">input_data.rmhdf5table</span>   <span class="cmt"># 학습 데이터 (875,624 rows)</span>
+│   ├── <span class="file">train_data.txt</span>           <span class="cmt"># 원천 학습 데이터 (CSV)</span>
+│   ├── <span class="file">test_data.rmhdf5table</span>    <span class="cmt"># 스코어링용 평가 데이터</span>
+│   └── <span class="file">test_data.csv</span>            <span class="cmt"># 스코어링용 평가 데이터 (CSV)</span>
+├── <span class="dir">model/</span>
+│   ├── <span class="file">create_lightgbm_process_v0.2.rmp</span>   <span class="cmt"># ML 모델링 프로세스 (최종)</span>
+│   └── <span class="file">261109_ext_lightgbm.rmtabmod</span>       <span class="cmt"># 학습 완료 모델 (최종)</span>
+└── <span class="dir">deploy/</span>
+    └── <span class="file">deploy_scoring_process_v0.2.rmp</span>    <span class="cmt"># AI Hub 배포 프로세스 (최종)</span>
+  </div>
+</section>
+
+</div>/container -->
+</body>
+</html>
